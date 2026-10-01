@@ -1,0 +1,16 @@
+name = "bolsa-abierta-gateway"
+main = "worker.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGIN = "https://carlosmartinezfyd.github.io"
+SNAPSHOT_URL = "https://carlosmartinezfyd.github.io/bolsa-abierta/data/state.json"
+GITHUB_REPOSITORY = "carlosmartinezfyd/bolsa-abierta"
+GITHUB_REF = "main"
+# GITHUB_TOKEN is a Worker secret, NEVER a vars value or frontend setting.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bolsa-abierta-gateway"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
