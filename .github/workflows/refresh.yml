@@ -1,0 +1,80 @@
+name: Official source refresh
+run-name: 'Official refresh ${{ inputs.request_id || github.event_name }}'
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'Optional public gateway request ID (32 lowercase hex characters)'
+        required: false
+        default: ''
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: official-source-publication
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -e '.[test]'
+      - name: Test before collection
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py'
+          node --test tests/*.test.cjs tests/*.test.mjs
+      - name: Restore durable publication state
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin data-state; then
+            git fetch origin data-state
+            git worktree add --detach saved-state FETCH_HEAD
+          else
+            git worktree add --detach saved-state HEAD
+            git -C saved-state switch --orphan data-state
+          fi
+      - name: Collect and validate official sources
+        id: collect
+        continue-on-error: true
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
+      - name: Build a snapshot with explicit check status
+        env:
+          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
+        run: |
+          python -m bolsa_abierta --data-dir saved-state/runtime export --output site
+          python -c "import json,os,pathlib,urllib.parse; base=os.environ.get('PUBLIC_API_BASE',''); assert not base or urllib.parse.urlsplit(base).scheme=='https'; pathlib.Path('site/web/config.js').write_text('window.BA_CONFIG = '+json.dumps({'apiBase':base})+';\n',encoding='utf-8')"
+      - name: Save evidence and metadata durably
+        shell: bash
+        run: |
+          git -C saved-state config user.name 'github-actions[bot]'
+          git -C saved-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C saved-state add runtime
+          if ! git -C saved-state diff --cached --quiet; then
+            git -C saved-state commit -m 'Record official source check'
+            git -C saved-state push origin HEAD:refs/heads/data-state
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Signal complete collector failure after publishing diagnostic state
+        if: steps.collect.outcome == 'failure'
+        run: exit 1

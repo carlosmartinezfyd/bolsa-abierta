@@ -1,0 +1,11 @@
+.runtime/
+site/
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.wrangler/
+.dev.vars
+node_modules/
+gateway/wrangler.toml

@@ -1,0 +1,18 @@
+{
+  "file": "carm-2026-09-30.pdf",
+  "publisher": "Región de Murcia, Consejería de Educación y Formación Profesional",
+  "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJVACANTESSEC_SINCUBRIR-499487.pdf&IDCONTENIDO=209318&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4254",
+  "announcement_url": "https://rrhheducacion.carm.es/30-09-2026-relacion-de-vacantes-sin-cubrir-secundaria-y-otros-cuerpos/",
+  "collected_on": "2026-10-01",
+  "document_issued_at": "2026-09-30T14:35:00+02:00",
+  "process_id": "3133",
+  "sha256": "81cd8ac0cbf38e828198fe37b0f7fb7132aeaa585c1633fe749ef1b3cec41280",
+  "byte_size": 170551,
+  "pages": 5,
+  "page_counts": [21, 22, 22, 12, 0],
+  "rows": 77,
+  "places": 85,
+  "evidence": "Original bytes recovered from the official download in the prior source audit. pdfplumber table totals and the independent pdftotext centre-code/quantity sequence agree. Page 5 is the signature block, not a vacancy table. Identical original rows at page 1, rows 18 and 19 are retained.",
+  "authentication": "Electronic signature and signer identity were not cryptographically authenticated.",
+  "scope": "Reviewed seven-column landscape weekly unfilled-vacancy template. New plausible speciality codes preserve their original labels; unrecognized schema, incomplete rows, pages or inconsistent metadata are rejected. OCR and other PDF cross-reference layouts are unsupported."
+}
