@@ -155,3 +155,11 @@ test('approved historical metadata keeps an omitted copy incorporated',()=>{
  assert.doesNotMatch(context.window.BAV.shell(m),/Documento sin incorporar/);
  m.view='sources';assert.match(context.window.BAV.shell(m),/0 publicación\(es\) sin incorporar/);
 });
+test('official source status matches reordered and encoded equivalent PDF query parameters',()=>{
+ const m=model();m.view='sources';
+ m.state.catalog.sources=[{id:'carm-pdf',name:'PDF oficial',url:'https://www.carm.es/web/descarga?ALIAS=ARCH&IDCONTENIDO=209318&RASTRO=c77%24m22725%2C22759'}];
+ m.state.catalog.checks=[{id:'bytes-hash',url:'https://www.carm.es/web/descarga?RASTRO=c77$m22725,22759&IDCONTENIDO=209318&ALIAS=ARCH',checked_at:'2026-10-01T09:03:17Z',status:'read',success:true}];
+ assert.doesNotMatch(context.window.BAV.shell(m),/Sin comprobación reciente registrada para esta referencia/);
+ m.state.catalog.checks[0].url=m.state.catalog.checks[0].url.replace('209318','209319');
+ assert.match(context.window.BAV.shell(m),/Sin comprobación reciente registrada para esta referencia/);
+});
