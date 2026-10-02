@@ -316,6 +316,11 @@
   }
 
   document.addEventListener("click", (event) => {
+    const menu=document.querySelector?.('.mobile-more[open]');
+    if(menu&&(!menu.contains(event.target)||event.target.closest('[data-action],[data-view]'))){
+      if(event.target.closest('[data-action="about"]'))menu.querySelector('summary').focus();
+      menu.open=false;
+    }
     if (event.target.closest(".skip")) {
       event.preventDefault();
       document.getElementById("main")?.focus();
@@ -473,6 +478,14 @@
     true,
   );
   document.addEventListener("keydown", (event) => {
+    if (document.querySelector?.('dialog[open]')) return;
+    const menu = document.querySelector?.('.mobile-more[open]');
+    if (event.key === "Escape" && menu && !dialog.open) {
+      event.preventDefault();
+      menu.open = false;
+      menu.querySelector('summary').focus();
+      return;
+    }
     if (event.key === "Escape" && !dialog.open && model.extraFiltersOpen) {
       event.preventDefault();
       closeFilters();

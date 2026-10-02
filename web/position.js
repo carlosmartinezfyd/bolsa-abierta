@@ -4,6 +4,9 @@
   const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const date=value=>new Intl.DateTimeFormat('es',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Madrid'}).format(new Date(value));
   const name=value=>String(value).toLocaleLowerCase('es').replace(/(^|[\s,/-])\p{L}/gu,c=>c.toLocaleUpperCase('es'));
+  const fold=value=>String(value).normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase('es');
+  const canSearch=query=>String(query).replace(/[^\p{L}\p{N}]/gu,'').length>=3;
+  function filterSpecialties(items,query){const tokens=fold(query).split(/\s+/).filter(Boolean);return items.filter(s=>tokens.every(t=>fold(`${s.name} ${s.body} ${s.code}`).includes(t)));}
   function officialURL(value){try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='www.carm.es'&&!u.username&&!u.password&&!u.port&&u.pathname==='/web/descarga'?u.href:null;}catch{return null;}}
   function validateResponse(data){
     const v=data?.version;
@@ -35,13 +38,16 @@
       finally{state.busy=false;emit();}
     }
     async function search(specialty,query){
+      query=query.trim();specialty=specialty||'';
       const ticket=++sequence;Object.assign(state,{specialty,query,results:[],draft:null,error:'',message:'',searched:false,busy:true});emit();
+      if(!canSearch(query)){state.busy=false;state.error='Escribe al menos tres letras o tu número de lista.';emit();return;}
       try{const data=validateResponse(await request('/api/positions/search',{specialty,query}));if(ticket!==sequence)return;
-        if(!Array.isArray(data.results)||data.results.some(p=>p.specialty!==specialty))throw Error('Coincidencias no válidas.');
+        if(!Array.isArray(data.results)||data.results.some(p=>(specialty&&p.specialty!==specialty)||!state.catalog.specialties.some(s=>s.code===p.specialty)))throw Error('Coincidencias no válidas.');
         state.results=data.results;state.more=!!data.more;state.searched=true;state.searchVersion=data.version;
-      }catch{if(ticket===sequence)state.error='No se ha podido buscar. Escribe al menos tres letras o tu número de lista.';}
+      }catch{if(ticket===sequence)state.error='No se ha podido consultar la lista. Vuelve a intentarlo.';}
       finally{if(ticket===sequence){state.busy=false;emit();}}
     }
+    function editQuery(query){++sequence;Object.assign(state,{query,results:[],draft:null,error:'',message:'',searched:false,busy:false,more:false});emit();}
     function choose(id){state.draft=state.results.find(p=>p.id===id)||null;state.error='';emit();}
     async function confirm(){
       if(!state.draft)return;state.busy=true;state.error='';emit();
@@ -61,7 +67,20 @@
         state.error=e.status===404?'Tu selección ya no aparece en esta publicación. Vuelve a buscarla.':e.message==='No se ha confirmado una nueva comprobación de esta lista.'?e.message:'No se ha podido completar la consulta. Se conserva el resultado anterior.';
       }finally{state.busy=false;emit();}
     }
-    return {state,init,search,choose,confirm,clear,refresh,subscribe(fn){notify=fn;}};
+    return {state,init,search,editQuery,choose,confirm,clear,refresh,subscribe(fn){notify=fn;}};
+  }
+  function specialtyLabel(s){const selected=s.catalog.specialties.find(x=>x.code===s.specialty);return selected?name(selected.name):'Todas las especialidades';}
+  function searchDate(s){const v=s.searched&&s.searchVersion||s.catalog.version;return `Lista del ${date(v.published_at)}${v.coverage==='reviewed_amendments'?' · con correcciones':''}`;}
+  function specialtyOptions(s,query=''){
+    const items=filterSpecialties(s.catalog.specialties,query);
+    return `<button type="button" data-position="select-specialty" data-specialty="" aria-pressed="${!s.specialty}">Todas las especialidades</button>${items.map(x=>`<button type="button" data-position="select-specialty" data-specialty="${x.code}" aria-pressed="${s.specialty===x.code}"><strong>${E(name(x.name))}</strong><span>${E(name(x.body))} · ${x.code}</span></button>`).join('')}${items.length?'':'<p>No hay especialidades con ese nombre.</p>'}`;
+  }
+  function searchFeedback(s){
+    const message=s.error||(s.busy?'Buscando…':s.searched?(s.results.length?`${s.more?'Más de 20':s.results.length} ${s.results.length===1?'coincidencia':'coincidencias'}`:(s.specialty?`No hay coincidencias en ${specialtyLabel(s)}`:'No hay coincidencias en esta publicación')):'');
+    const status=`<p class="position-status" role="status" aria-live="polite">${E(message)}</p>`;
+    if(!s.searched)return status;
+    if(!s.results.length)return `${status}<div class="position-empty">${s.specialty?'':'<p>Prueba con un apellido o con tu número de lista.</p>'}<div class="buttons">${s.specialty?'<button class="button" data-position="all-specialties">Buscar en todas las especialidades</button>':'<button class="button" data-position="edit">Editar búsqueda</button>'}<a href="https://www.educarm.es/consultalistainterinos" target="_blank" rel="noopener noreferrer">Consultar en Educarm ↗</a></div></div>`;
+    return `${status}<section class="position-matches" aria-label="Coincidencias"><ul>${s.results.map(p=>`<li><button data-position="choose" data-person="${p.id}"><span class="position-match-main"><strong>${E(name(p.name))}</strong><span>${E(name(p.specialty_name))} · ${E(name(p.body_name))}</span><small>N.º ${E(p.list_number)} · ${E(p.block_name)}</small></span><span class="position-select-label" aria-hidden="true">→</span></button></li>`).join('')}</ul>${s.more?'<p class="position-refine">Añade otro apellido o filtra por especialidad para ver menos coincidencias.</p>':''}</section>`;
   }
   function render(s){
     const disabled=s.busy?'disabled':'';
@@ -72,14 +91,21 @@
       <div class="position-card-footer"><span>N.º de lista ${E(p.list_number)}</span><button class="button primary" data-position="refresh" ${disabled}>${s.busy?'Consultando…':s.catalog.refresh_available?'Actualizar':'Volver a consultar'}</button></div></section>${status}
       <details class="position-details"><summary>Ver detalle</summary><div><p>El puesto cuenta las personas que aparecen antes en esta especialidad, siguiendo el orden y los bloques del documento. No es la posición actual entre disponibles.</p><dl><dt>Publicación</dt><dd>Lista definitiva · curso 2026/2027</dd><dt>Bloque</dt><dd>${E(p.block_name)}</dd><dt>Página del PDF</dt><dd>${p.page}</dd><dt>Documentos comprobados</dt><dd>${E(date(v.checked_at))}</dd></dl>${v.coverage==='reviewed_amendments'?`<p>Correcciones incorporadas:</p><ul>${v.amendments.map(a=>`<li><a href="${E(officialURL(a.source_url))}" target="_blank" rel="noopener noreferrer">Orden firmada el ${E(date(a.signed_at))} ↗</a></li>`).join('')}</ul>`:`<p>Referencia del ${E(date(v.published_at))}. Las correcciones posteriores y los cambios de disponibilidad aún no están incorporados.</p>`}<a href="${E(officialURL(amendment?.source_url||v.source_url))}#page=${p.page}" target="_blank" rel="noopener noreferrer">Abrir documento oficial ↗</a></div></details>`;}
     if(s.draft){const p=s.draft;return `<section class="position-card position-confirm"><p class="position-eyebrow">Confirma tu selección</p><h2 tabindex="-1" id="position-person">${E(name(p.name))}</h2><p>${E(name(p.specialty_name))}</p><p class="muted">N.º ${E(p.list_number)} · ${E(p.block_name)}</p><div class="buttons"><button class="button primary" data-position="confirm" ${disabled}>Esta es mi ficha</button><button class="button" data-position="back" ${disabled}>Volver</button></div></section>${status}`;}
-    const groups=new Map();for(const x of s.catalog.specialties){if(!groups.has(x.body))groups.set(x.body,[]);groups.get(x.body).push(x);}
-    return `<section class="position-search"><h2>Encuentra tu ficha</h2><form id="position-form"><label class="field" for="position-specialty">Especialidad<select id="position-specialty" name="specialty" required><option value="">Selecciona tu especialidad</option>${[...groups].map(([body,items])=>`<optgroup label="${E(name(body))}">${items.map(x=>`<option value="${x.code}" ${s.specialty===x.code?'selected':''}>${E(name(x.name))} · ${x.code}</option>`).join('')}</optgroup>`).join('')}</select></label><label class="field" for="position-query">Nombre y apellidos o número de lista<input id="position-query" name="query" required minlength="3" maxlength="100" autocomplete="off" value="${E(s.query)}" placeholder="Escribe tus apellidos" /></label><button class="button primary" type="submit" ${disabled}>${s.busy?'Buscando…':'Buscar mi ficha'}</button></form><p class="position-search-date">Lista publicada el ${E(date((s.searched?s.searchVersion:s.catalog.version).published_at))}</p></section>${status}
-      ${s.searched?`<section class="position-matches" aria-labelledby="position-matches-title"><h2 id="position-matches-title" tabindex="-1">${s.results.length?'Selecciona tu nombre':'Sin coincidencias'}</h2>${!s.results.length?'<p>Prueba con ambos apellidos o comprueba la especialidad.</p>':`<ul>${s.results.map(p=>`<li><button data-position="choose" data-person="${p.id}"><strong>${E(name(p.name))}</strong><span>N.º ${E(p.list_number)} · ${E(p.block_name)}</span><span class="position-select-label">Seleccionar →</span></button></li>`).join('')}</ul>`}${s.more?'<p>Hay más coincidencias. Añade tu nombre o el segundo apellido.</p>':''}</section>`:''}`;
+    return `<section class="position-search" aria-label="Buscar mi ficha"><form id="position-form" role="search"><label for="position-query">Tu nombre o número de lista</label><div class="position-query-row"><div class="position-query-wrap"><input id="position-query" name="query" type="search" required minlength="3" maxlength="100" autocomplete="off" spellcheck="false" enterkeyhint="search" value="${E(s.query)}" placeholder="Nombre y apellidos"/><button type="button" class="position-clear" data-position="clear-query" aria-label="Borrar búsqueda" ${s.query?'':'hidden'}>×</button></div><button class="button primary" type="submit">Buscar</button></div><div class="position-filter-row"><button type="button" class="position-specialty-button" data-position="specialties" aria-haspopup="dialog"><span>Especialidad</span><strong id="position-specialty-label">${E(specialtyLabel(s))}</strong><span aria-hidden="true">⌄</span></button></div></form><p class="position-search-date">${E(searchDate(s))}</p><div id="position-feedback">${searchFeedback(s)}</div></section><dialog id="position-specialty-dialog" class="position-picker" aria-labelledby="position-picker-title"><div class="position-picker-head"><h2 id="position-picker-title">Especialidad</h2><button type="button" data-position="close-specialties" aria-label="Cerrar especialidades">×</button></div><label for="position-specialty-query" class="sr-only">Buscar especialidad</label><input id="position-specialty-query" type="search" placeholder="Buscar especialidad…" autocomplete="off"/><div id="position-specialty-options" class="position-specialty-options">${specialtyOptions(s)}</div></dialog>`;
   }
-  let browserModel,started=false;
+  let browserModel,searchTimer,started=false;
   function mount(){
     const target=document.getElementById('position-root');if(!target)return;
-    function paint(){const root=document.getElementById('position-root');if(root)root.innerHTML=render(browserModel.state);}
+    function paint(){
+      const root=document.getElementById('position-root');if(!root)return;const s=browserModel.state;
+      // Preserve the live input node, caret and mobile keyboard while suggestions arrive.
+      if(root.querySelector('#position-form')&&s.catalog&&!s.person&&!s.draft){
+        root.querySelector('#position-feedback').innerHTML=searchFeedback(s);
+        root.querySelector('#position-specialty-label').textContent=specialtyLabel(s);
+        root.querySelector('.position-search-date').textContent=searchDate(s);
+        root.querySelector('[data-position="clear-query"]').hidden=!s.query;
+      }else root.innerHTML=render(s);
+    }
     if(!browserModel){let storage;try{storage=window.localStorage;}catch{}
       browserModel=createModel({storage,request:async(path,body)=>{
         const base=window.BA_CONFIG?.apiBase||'';
@@ -88,18 +114,35 @@
         if(!response.ok)throw Object.assign(Error('Consulta fallida.'),{status:response.status});return response.json();
       },requestRefresh:()=>BA.refreshSource(fetch,window.BA_CONFIG||{},()=>{})});browserModel.subscribe(paint);
     }
-    paint();target.oninput=event=>{if(event.target.id==='position-query')browserModel.state.query=event.target.value;};
-    target.onchange=event=>{if(event.target.id==='position-specialty')browserModel.state.specialty=event.target.value;};
+    const cancelSearch=()=>{clearTimeout(searchTimer);searchTimer=null;};
+    cancelSearch();
+    function scheduleSearch(event){
+      if(event.target.id==='position-specialty-query'){document.getElementById('position-specialty-options').innerHTML=specialtyOptions(browserModel.state,event.target.value);return;}
+      if(event.target.id!=='position-query')return;
+      cancelSearch();browserModel.editQuery(event.target.value);
+      if(!event.isComposing&&canSearch(event.target.value))searchTimer=setTimeout(()=>{if(document.getElementById('position-form'))void browserModel.search(browserModel.state.specialty,browserModel.state.query);},450);
+    }
+    function closePicker(){document.getElementById('position-specialty-dialog')?.close();document.querySelector('[data-position="specialties"]')?.focus({preventScroll:true});}
+    paint();target.oninput=scheduleSearch;target.oncompositionend=scheduleSearch;
     target.onclick=async event=>{
       const button=event.target.closest('[data-position]');if(!button||button.disabled)return;const action=button.dataset.position;
-      if(action==='choose'){browserModel.choose(button.dataset.person);document.getElementById('position-person')?.focus();}
+      cancelSearch();
+      if(action==='specialties'){const picker=document.getElementById('position-specialty-dialog');picker.querySelector('#position-specialty-query').value='';picker.querySelector('#position-specialty-options').innerHTML=specialtyOptions(browserModel.state);picker.showModal();document.getElementById('position-specialty-query').focus();}
+      if(action==='close-specialties')closePicker();
+      if(action==='select-specialty'||action==='all-specialties'){
+        closePicker();browserModel.state.specialty=button.dataset.specialty||'';browserModel.editQuery(browserModel.state.query);
+        if(canSearch(browserModel.state.query))await browserModel.search(browserModel.state.specialty,browserModel.state.query);
+      }
+      if(action==='edit'){const input=document.getElementById('position-query');input.focus({preventScroll:true});input.select();}
+      if(action==='clear-query'){const input=document.getElementById('position-query');input.value='';browserModel.editQuery('');input.focus({preventScroll:true});}
+      if(action==='choose'){browserModel.choose(button.dataset.person);document.getElementById('position-person')?.focus({preventScroll:true});}
       if(action==='confirm'){await browserModel.confirm();document.getElementById('position-person')?.focus();}
-      if(action==='change'){browserModel.clear();document.getElementById('position-specialty')?.focus();}
+      if(action==='change'){browserModel.clear();document.getElementById('position-query')?.focus({preventScroll:true});}
       if(action==='back'){browserModel.choose(null);document.getElementById('position-query')?.focus();}
       if(action==='retry')await browserModel.init();if(action==='refresh'){await browserModel.refresh();document.querySelector('[data-position="refresh"]')?.focus();}
     };
-    target.onsubmit=async event=>{if(event.target.id!=='position-form')return;event.preventDefault();const form=new FormData(event.target);await browserModel.search(form.get('specialty'),form.get('query'));document.getElementById('position-matches-title')?.focus();};
+    target.onsubmit=async event=>{if(event.target.id!=='position-form')return;event.preventDefault();cancelSearch();const form=new FormData(event.target);await browserModel.search(browserModel.state.specialty,form.get('query'));};
     if(!started){started=true;void browserModel.init();}
   }
-  return {createModel,validateResponse,render,mount};
+  return {createModel,validateResponse,render,filterSpecialties,mount};
 });

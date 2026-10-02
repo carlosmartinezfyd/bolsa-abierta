@@ -221,6 +221,7 @@ small,
   flex-direction: column;
   gap: 5px;
 }
+.mobile-more{display:none}
 .nav-button {
   display: flex;
   align-items: center;
@@ -3000,3 +3001,22 @@ dialog::backdrop {
     max-height: calc(100dvh - var(--nav-height) - 24px);
   }
 }
+
+/* Keep the mobile header small without losing access to secondary sections. */
+@media (max-width: 900px) {
+  .sidebar{padding:10px 14px 0}
+  .sidebar .brand{padding-bottom:10px}
+  .sidebar .brand-subtitle{display:none}
+  .sidebar .nav{grid-template-columns:minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1fr);gap:4px;margin:0}
+  .nav>.nav-button:nth-child(n+3){display:none}
+  .sidebar .nav-button{flex-direction:row;gap:7px;min-height:44px;padding:10px 8px;font-size:14px;white-space:nowrap}
+  .sidebar-bottom{display:none}
+  .mobile-more{display:block;position:relative;min-width:0}
+  .mobile-more summary{list-style:none;cursor:pointer;height:100%}
+  .mobile-more summary::-webkit-details-marker{display:none}
+  .mobile-more-panel{position:absolute;top:calc(100% + 8px);right:0;width:min(270px,calc(100vw - 28px));padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 24px rgb(20 40 32 / .12);max-height:calc(100dvh - var(--nav-height) - 20px);overflow-y:auto}
+  .mobile-more-panel .nav-button{justify-content:flex-start;text-align:left;min-height:48px}
+  .mobile-more-panel .nav-button.active:before{display:none}
+}
+
+@media(max-width:380px){.sidebar .nav-button{font-size:13px;gap:6px;padding:10px 6px}}

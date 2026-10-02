@@ -1,6 +1,6 @@
 # Consulta de posición publicada
 
-`#position` busca por especialidad y nombre o número oficial de lista. Exige confirmar la ficha y recuerda únicamente su identificador en el navegador. El número destacado es el ordinal de la fila admitida en una publicación concreta, contando sus bloques en el orden del documento. No representa disponibilidad actual ni probabilidad de adjudicación.
+`#position` busca por nombre o número oficial de lista, con especialidad opcional y coincidencias mientras se escribe. Exige confirmar la ficha y recuerda únicamente su identificador en el navegador. El número destacado es el ordinal de la fila admitida en una publicación concreta, contando sus bloques en el orden del documento. No representa disponibilidad actual ni probabilidad de adjudicación.
 
 ## Referencia incorporada
 
@@ -8,7 +8,7 @@ Resolución definitiva CARM de 22 de julio de 2026, curso 2026/2027, con las dos
 
 Los anexos de exclusiones y reclamaciones se excluyen, incluida la segunda página de la orden complementaria. Se conservan los números de siete cifras y se distinguen los números repetidos entre bloques. Cada incorporación conserva su documento y página propios; el enlace de la ficha conduce a esa evidencia. El puesto se recalcula respetando el orden de los bloques y el número dentro del bloque. La corrección de Trompeta exige además los dos números contiguos comprobados en la página 504 de la base.
 
-El manifiesto contiene solo metadatos y cantidades por especialidad. Los nombres se guardan en D1, sin DNI ni puntuaciones. No se añaden datos nominales o PDFs de estas listas al repositorio, a `data-state` ni a Pages. La API devuelve hasta 20 coincidencias por especialidad y exige al menos tres caracteres. Las consultas viajan en POST, no en la URL; respuestas sin caché y con `X-Robots-Tag: noindex`.
+El manifiesto contiene solo metadatos y cantidades por especialidad. Los nombres se guardan en D1, sin DNI ni puntuaciones. No se añaden datos nominales o PDFs de estas listas al repositorio, a `data-state` ni a Pages. La API devuelve hasta 20 coincidencias por consulta, con filtro opcional de especialidad y exige al menos tres caracteres. Las consultas viajan en POST, no en la URL; respuestas sin caché y con `X-Robots-Tag: noindex`.
 
 ## Operación
 

@@ -126,14 +126,17 @@ export async function positionRoute(request,env,reply){
     if(path==='/api/positions' && request.method==='GET')return reply({version,specialties,refresh_available:!!env.GITHUB_TOKEN});
     if(path==='/api/positions/search' && request.method==='POST'){
       const body=await jsonBody(request,2048);
-      if(!validText(body.query,100) || !specialties.some(s=>s.code===body.specialty))invalid();
-      const query=fold(body.query), tokens=query.split(/[ ,]+/).filter(Boolean);
+      if(!validText(body.query,100) || (body.specialty!==undefined && body.specialty!=='' && !specialties.some(s=>s.code===body.specialty)))invalid();
+      const query=fold(body.query), tokens=query.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
       if(query.replace(/[^\p{L}\p{N}]/gu,'').length<3 || tokens.length>6 || /[%_\\]/.test(query))invalid();
       const numeric=/^\d{7,8}$/.test(query);
-      const condition=numeric?'list_number=?':tokens.map(()=>'search_name LIKE ?').join(' AND ');
-      const values=numeric?[query]:tokens.map(t=>'%'+t+'%');
-      const results=(await db.prepare(`SELECT payload FROM position_rows WHERE version_id=? AND specialty=? AND ${condition} ORDER BY rank LIMIT 21`)
-        .bind(version.id,body.specialty,...values).all()).results;
+      // Repeated surnames must occur twice; token order and accents do not matter.
+      const counts=new Map();for(const t of tokens)counts.set(t,(counts.get(t)||0)+1);
+      const condition=numeric?'list_number=?':[...counts].map(()=>'search_name LIKE ?').join(' AND ');
+      const values=numeric?[query]:[...counts].map(([t,n])=>'%'+Array(n).fill(t).join('%')+'%');
+      const scoped=Boolean(body.specialty);
+      const results=(await db.prepare(`SELECT payload FROM position_rows WHERE version_id=? ${scoped?'AND specialty=?':''} AND ${condition} ORDER BY ${scoped?'rank':'search_name,specialty,rank'} LIMIT 21`)
+        .bind(version.id,...(scoped?[body.specialty]:[]),...values).all()).results;
       return reply({version,results:results.slice(0,20).map(r=>JSON.parse(r.payload)),more:results.length>20});
     }
     const match=path.match(/^\/api\/positions\/([a-f0-9]{32})$/);

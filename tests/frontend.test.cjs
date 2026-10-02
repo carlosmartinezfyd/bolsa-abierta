@@ -361,12 +361,18 @@ test("saved search displays each document group without combining vacancy totals
 });
 async function controller(fetcher, config = {}, hash = "#vacancies") {
   const listeners = {},
+    dialogListeners = {},
     windowListeners = {},
     historyEntries = [],
     main = { focused: false, focus() { this.focused = true; } },
     app = { innerHTML: "" },
     toast = { textContent: "", classList: { add() {}, remove() {} } },
-    dialog = { addEventListener() {}, close() {}, open: false };
+    dialog = {
+      addEventListener(kind, handler) { dialogListeners[kind] = handler; },
+      showModal() { this.open = true; },
+      close() { this.open = false; dialogListeners.close?.(); },
+      open: false,
+    };
   const document = {
     getElementById: (id) =>
       ({ app, toast, main, "detail-dialog": dialog })[id] || null,
@@ -407,6 +413,8 @@ async function controller(fetcher, config = {}, hash = "#vacancies") {
   await new Promise((resolve) => setImmediate(resolve));
   return {
     app,
+    document,
+    dialog,
     toast,
     listeners,
     historyEntries,
@@ -866,4 +874,28 @@ test("official source status matches reordered and encoded equivalent PDF query 
     context.window.BAV.shell(m),
     /Sin comprobación reciente registrada para esta referencia/,
   );
+});
+
+
+test('Escape in the specialty modal is not intercepted by previously open vacancy filters',async()=>{
+  const c=await controller(async()=>({ok:true,json:async()=>seed}));
+  c.listeners.toggle({target:{id:'extra-filters',isConnected:true,open:true}});
+  c.navigate('position');
+  c.document.querySelector=selector=>selector==='dialog[open]'?{open:true}:null;
+  let prevented=false;
+  c.listeners.keydown({key:'Escape',preventDefault(){prevented=true;}});
+  assert.equal(prevented,false);
+});
+
+test('closing About opened from the mobile menu restores focus to its visible summary',async()=>{
+  const c=await controller(async()=>({ok:true,json:async()=>seed}));
+  let focused=null;
+  const summary={isConnected:true,focus(){focused=this;c.document.activeElement=this;}};
+  const button={isConnected:true,dataset:{action:'about'},focus(){focused=this;}};
+  const menu={open:true,contains:()=>true,querySelector:()=>summary};
+  c.document.activeElement=button;
+  c.document.querySelector=selector=>selector==='.mobile-more[open]'&&menu.open?menu:null;
+  c.listeners.click({target:{closest:selector=>['[data-action],[data-view]','[data-action="about"]','[data-action]'].includes(selector)?button:null}});
+  assert.equal(menu.open,false);assert.equal(c.dialog.open,true);
+  focused=null;c.dialog.close();assert.equal(focused,summary);
 });
