@@ -365,7 +365,7 @@
           const check = checks
             .filter((c) => c.id === s.id || sameSourceUrl(c.url, s.url))
             .at(-1);
-          return `<article class="source-row"><div><h3>${E(s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `<p>Intento: ${E(BA.date(check.checked_at, { hour: "2-digit", minute: "2-digit" }))}${check.error ? " · " + E(check.error) : ""}</p>` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
+          return `<article class="source-row"><div><h3>${E(s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `<p>Intento: ${E(BA.date(check.checked_at, { hour: "2-digit", minute: "2-digit" }))}${check.error ? " · " + E(check.error) : ""}</p>` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.id === "aepd-information" ? "Las preferencias se guardan en este navegador." : s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
         })
         .join("")}</div></section>` +
       (checks.length
