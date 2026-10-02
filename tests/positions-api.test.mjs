@@ -11,6 +11,18 @@ const version={id:'a'.repeat(64),sha256:'a'.repeat(64),published_at:'2026-07-22'
 const row=(n,name='PRUEBA, ANA')=>({id:String(n).padStart(32,'0'),specialty:'0590001',specialty_name:'FILOSOFIA',body_name:'SECUNDARIA',
   block:'68',block_name:'Bloque 1',list_number:`250000${n}0`,name,search_name:name,rank:n,page:2});
 
+test('reviewed amendment rows retain their own official document and page',async()=>{
+  const f=setup();try{
+    const corrected={...version,id:'c'.repeat(64),coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'b'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
+    assert.equal((await f.ingest({action:'begin',version:corrected})).status,200);
+    assert.equal((await f.ingest({action:'rows',id:corrected.id,rows:[row(1),{...row(2),page:1,source_id:'208249'}]})).status,200);
+    assert.equal((await f.ingest({action:'activate',id:corrected.id})).status,200);
+    const result=await (await f.call('/api/positions/'+row(2).id)).json();
+    assert.equal(result.person.source_id,'208249');assert.equal(result.person.page,1);
+    assert.equal(result.version.amendments[0].sha256,'b'.repeat(64));
+  }finally{f.db.close();}
+});
+
 function setup(){
   const db=new DatabaseSync(':memory:');
   db.exec(readFileSync(new URL('../gateway/schema.sql',import.meta.url),'utf8'));

@@ -155,6 +155,8 @@ class OfficialClient:
                             if not location:
                                 raise SourceError('Official redirect has no destination', 'invalid_redirect')
                             current = urljoin(current, location)
+                            if urlsplit(current).hostname in ('validate.perfdrive.com', 'captcha.perfdrive.com'):
+                                raise SourceError('Official origin requires browser verification', 'access_challenge')
                             _allowed_url(current)
                             continue
                         if status == 304:
