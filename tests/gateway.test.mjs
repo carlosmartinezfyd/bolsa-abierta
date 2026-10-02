@@ -101,11 +101,26 @@ test('state uses fixed snapshot, exposes capabilities and retains relative artif
   assert.equal(state.documents[0].artifact_url, 'documents/hash.pdf');
   assert.equal(f.calls[0].url.split('?')[0], env.SNAPSHOT_URL);
   assert.equal(f.calls[0].options.cache, 'no-store');
-  assert.equal(f.calls[0].options.redirect, 'error');
+  assert.equal(f.calls[0].options.redirect, 'manual');
   const disabled = await f.handler(new Request('https://gateway.example/api/state'), {...env, GITHUB_TOKEN:''});
   assert.equal((await disabled.json()).capabilities.source_check, 'snapshot_only');
   const missingOrigin = await f.handler(new Request('https://gateway.example/api/state'), {...env, ALLOWED_ORIGIN:''});
   assert.equal((await missingOrigin.json()).capabilities.source_check, 'snapshot_only');
+});
+
+test('redirects are rejected without following the snapshot or sending credentials to another host', async () => {
+  const f = fixture((_url, options) => {
+    assert.equal(options.redirect, 'manual');
+    return new Response(null, {status:302, headers:{Location:'https://other.example/'}});
+  });
+  const state = await f.handler(new Request('https://gateway.example/api/state'), env);
+  assert.equal(state.status,502);
+  const dispatch = await f.handler(request(), env);
+  const job = await dispatch.json();
+  assert.equal(job.status,'queued');
+  assert.match(job.message,/incierta/);
+  assert.equal(f.calls.length,2);
+  assert.ok(f.calls.every(call=>!call.url.includes('other.example')));
 });
 
 test('poll CAS permits one snapshot fetch per ten seconds and completes only matching id', async () => {

@@ -1,10 +1,14 @@
 # Comprobación pública con Workers Free, D1 y GitHub Actions
 
-Esta pasarela permite que el visitante pulse «Comprobar ahora» desde GitHub Pages sin instalar nada. Cloudflare conserva una solicitud compartida y activa exclusivamente `refresh.yml` del repositorio configurado. GitHub Actions obtiene las fuentes oficiales y publica la instantánea; la pasarela confirma el resultado cuando ve su identificador en esa publicación. No se ha creado ninguna cuenta ni desplegado la pasarela durante esta implementación.
+Esta pasarela permite que el visitante pulse «Actualizar» desde GitHub Pages sin instalar nada. Cloudflare conserva una solicitud compartida y activa exclusivamente `refresh.yml` del repositorio configurado. GitHub Actions obtiene las fuentes oficiales y publica la instantánea; la pasarela confirma el resultado cuando ve su identificador en esa publicación.
 
 El captador y el parser siguen ejecutándose en GitHub Actions. El Worker no recibe URLs de fuentes, PDFs, referencias Git ni nombres de workflow desde el navegador. El esquema D1 guarda trabajos y límites, sin documentos ni credenciales públicas.
 
 La lectura de `state.json` tiene un límite de protección de 16 MiB. El exportador limita la ventana pública a 8 MiB: mantiene las dos copias comparadas y retira primero las filas históricas más antiguas, conservando sus metadatos y PDF; SQLite conserva el historial íntegro. También debe comprobarse el tiempo de CPU de Workers Free con el tamaño real; el límite de bytes no garantiza que un JSON grande entre en el presupuesto de CPU. Si se aproxima al límite de CPU, reducir la ventana o separar el catálogo del contenido por documento antes de ampliar el uso.
+
+## Despliegue de Bolsa Abierta
+
+Worker: `https://bolsa-abierta-gateway.cmartinezmtez.workers.dev`. Base D1: `bolsa-abierta-gateway`, creada en la jurisdicción UE. La web se conecta mediante `PUBLIC_API_BASE`; el acceso de GitHub se configura exclusivamente como secreto `GITHUB_TOKEN`. La API indica `snapshot_only` hasta que exista ese secreto. No se necesita contratar un plan de pago.
 
 ## Alcance y límites
 
@@ -44,7 +48,7 @@ Los otros resultados terminales son `partial` y `failed`. El workflow también d
 
 ## Configuración de Cloudflare
 
-Los siguientes comandos son para el administrador y no se han ejecutado en esta entrega. Requieren una cuenta Cloudflare con Workers Free y Node.js para usar Wrangler. Los visitantes solo necesitan el navegador. También se pueden crear el Worker, la base y el secreto desde el panel de Cloudflare.
+Los siguientes comandos son para reproducir la configuración desde una cuenta nueva. Requieren una cuenta Cloudflare con Workers Free y Node.js para usar Wrangler. Los visitantes solo necesitan el navegador. También se pueden crear el Worker, la base y el secreto desde el panel de Cloudflare.
 
 Desde la raíz del repositorio, en PowerShell:
 
