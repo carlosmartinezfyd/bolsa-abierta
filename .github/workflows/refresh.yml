@@ -47,6 +47,15 @@ jobs:
             git worktree add --detach saved-state HEAD
             git -C saved-state switch --orphan data-state
           fi
+      - name: Verify the published personal-position reference
+        id: positions
+        continue-on-error: true
+        env:
+          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
+          POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
+        # Nominal data stays on this ephemeral runner and in private D1. Never add
+        # this directory to data-state or upload it as a public artifact.
+        run: python -m bolsa_abierta.position_sync
       - name: Collect and validate official sources
         id: collect
         continue-on-error: true
@@ -76,5 +85,5 @@ jobs:
       - uses: actions/deploy-pages@v4
         id: deployment
       - name: Signal complete collector failure after publishing diagnostic state
-        if: steps.collect.outcome == 'failure'
+        if: steps.collect.outcome == 'failure' || steps.positions.outcome == 'failure'
         run: exit 1

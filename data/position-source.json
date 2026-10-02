@@ -1,0 +1,1258 @@
+{
+  "sha256": "cbe8220877138bcf0c6f20e53354f976549737c16d2dbe18c90ebe523f11058a",
+  "published_at": "2026-07-22",
+  "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=Resoluci%C3%B3n+Definitiva+listas+de+interinos+2026-2027.pdf&IDCONTENIDO=208095&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4491%2C72314%2C4500%2C4092%2C75599",
+  "row_count": 12895,
+  "scope": "published_list",
+  "coverage": "baseline_only",
+  "specialties": [
+    {
+      "code": "0590001",
+      "name": "FILOSOFIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 165
+    },
+    {
+      "code": "0590002",
+      "name": "GRIEGO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 45
+    },
+    {
+      "code": "0590003",
+      "name": "LATIN",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 100
+    },
+    {
+      "code": "0590004",
+      "name": "LENGUA CASTELLANA Y LITERATURA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 580
+    },
+    {
+      "code": "0590005",
+      "name": "GEOGRAFIA E HISTORIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 801
+    },
+    {
+      "code": "0590006",
+      "name": "MATEMATICAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 762
+    },
+    {
+      "code": "0590007",
+      "name": "FISICA Y QUIMICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 403
+    },
+    {
+      "code": "0590008",
+      "name": "BIOLOGIA Y GEOLOGIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 505
+    },
+    {
+      "code": "0590009",
+      "name": "DIBUJO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 437
+    },
+    {
+      "code": "0590010",
+      "name": "FRANCES",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 286
+    },
+    {
+      "code": "0590011",
+      "name": "INGLES",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 785
+    },
+    {
+      "code": "0590012",
+      "name": "ALEMAN",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 40
+    },
+    {
+      "code": "0590013",
+      "name": "ITALIANO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 8
+    },
+    {
+      "code": "0590016",
+      "name": "MUSICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 255
+    },
+    {
+      "code": "0590017",
+      "name": "EDUCACION FISICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 717
+    },
+    {
+      "code": "0590018",
+      "name": "ORIENTACION EDUCATIVA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 457
+    },
+    {
+      "code": "0590019",
+      "name": "TECNOLOGIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 550
+    },
+    {
+      "code": "0590061",
+      "name": "ECONOMIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 315
+    },
+    {
+      "code": "0590101",
+      "name": "ADMINISTRACION DE EMPRESAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 292
+    },
+    {
+      "code": "0590102",
+      "name": "ANALISIS Y QUIMICA INDUSTRIAL",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 45
+    },
+    {
+      "code": "0590103",
+      "name": "ASESORIA Y PROCESOS DE IMAGEN PERSONAL",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 16
+    },
+    {
+      "code": "0590104",
+      "name": "CONSTRUCCIONES CIVILES Y EDIFICACION",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 115
+    },
+    {
+      "code": "0590105",
+      "name": "FORMACION Y ORIENTACION LABORAL",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 357
+    },
+    {
+      "code": "0590106",
+      "name": "HOSTELERIA Y TURISMO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 93
+    },
+    {
+      "code": "0590107",
+      "name": "INFORMATICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 149
+    },
+    {
+      "code": "0590108",
+      "name": "INTERVENCION SOCIOCOMUNITARIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 126
+    },
+    {
+      "code": "0590109",
+      "name": "NAVEGACION E INSTALACIONES MARINAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 5
+    },
+    {
+      "code": "0590110",
+      "name": "ORGANIZACION Y GESTION COMERCIAL",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 237
+    },
+    {
+      "code": "0590111",
+      "name": "ORGANIZACION Y PROCESOS DE MANTENIMIENTO DE VEHICULOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 54
+    },
+    {
+      "code": "0590112",
+      "name": "ORGANIZACION Y PROYECTOS DE FABRICACION MECANICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 43
+    },
+    {
+      "code": "0590113",
+      "name": "ORGANIZACION Y PROYECTOS DE SISTEMAS ENERGETICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 27
+    },
+    {
+      "code": "0590114",
+      "name": "PROCESOS DE CULTIVO ACUICOLA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 10
+    },
+    {
+      "code": "0590115",
+      "name": "PROCESOS DE PRODUCCION AGRARIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 282
+    },
+    {
+      "code": "0590116",
+      "name": "PROCESOS EN LA INDUSTRIA ALIMENTARIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 23
+    },
+    {
+      "code": "0590117",
+      "name": "PROCESOS DIAGNOSTICOS CLINICOS Y PRODUCTOS ORTOPROTESICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 50
+    },
+    {
+      "code": "0590118",
+      "name": "PROCESOS SANITARIOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 91
+    },
+    {
+      "code": "0590119",
+      "name": "PROCESOS Y MEDIOS DE COMUNICACION",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 13
+    },
+    {
+      "code": "0590120",
+      "name": "PROCESOS Y PRODUCTOS DE TEXTIL, CONFECCION Y PIEL",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 10
+    },
+    {
+      "code": "0590122",
+      "name": "PROCESOS Y PRODUCTOS EN ARTES GRAFICAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 14
+    },
+    {
+      "code": "0590123",
+      "name": "PROCESOS Y PRODUCTOS EN MADERA Y MUEBLE",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 2
+    },
+    {
+      "code": "0590124",
+      "name": "SISTEMAS ELECTRONICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 59
+    },
+    {
+      "code": "0590125",
+      "name": "SISTEMAS ELECTROTECNICOS Y AUTOMATICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 56
+    },
+    {
+      "code": "0590205",
+      "name": "INSTALACION Y MANTENIMIENTO DE EQUIPOS TERMICOS Y DE FLUIDOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 29
+    },
+    {
+      "code": "0590206",
+      "name": "INSTALACIONES ELECTROTECNICAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 87
+    },
+    {
+      "code": "0590207",
+      "name": "INSTALACIONES Y EQUIPOS DE CRIA Y CULTIVO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 2
+    },
+    {
+      "code": "0590208",
+      "name": "LABORATORIO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 247
+    },
+    {
+      "code": "0590210",
+      "name": "MAQUINAS, SERVICIOS Y PRODUCCION",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 2
+    },
+    {
+      "code": "0590212",
+      "name": "OFICINA DE PROYECTOS DE CONSTRUCCION",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 35
+    },
+    {
+      "code": "0590213",
+      "name": "OFICINA DE PROYECTOS DE FABRICACION MECANICA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 2
+    },
+    {
+      "code": "0590214",
+      "name": "OPERACIONES Y EQUIPOS DE ELABORACION DE PRODUCTOS ALIMENTARIOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 20
+    },
+    {
+      "code": "0590215",
+      "name": "OPERACIONES DE PROCESOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 13
+    },
+    {
+      "code": "0590216",
+      "name": "OPERACIONES Y EQUIPOS DE PRODUCCION AGRARIA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 52
+    },
+    {
+      "code": "0590219",
+      "name": "PROCEDIMIENTOS DE DIAGNOSTICO CLINICO Y ORTOPROTESICO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 80
+    },
+    {
+      "code": "0590220",
+      "name": "PROCEDIMIENTOS SANITARIOS Y ASISTENCIALES",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 144
+    },
+    {
+      "code": "0590221",
+      "name": "PROCESOS COMERCIALES",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 151
+    },
+    {
+      "code": "0590222",
+      "name": "PROCESOS DE GESTION ADMINISTRATIVA",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 207
+    },
+    {
+      "code": "0590224",
+      "name": "PRODUCCION TEXTIL Y TRATAMIENTOS FISICO-QUIMICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 1
+    },
+    {
+      "code": "0590225",
+      "name": "SERVICIOS A LA COMUNIDAD",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 291
+    },
+    {
+      "code": "0590227",
+      "name": "SISTEMAS Y APLICACIONES INFORMATICAS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 163
+    },
+    {
+      "code": "0590229",
+      "name": "TECNICAS Y PROCEDIMIENTOS DE IMAGEN Y SONIDO",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 10
+    },
+    {
+      "code": "0590231",
+      "name": "EQUIPOS ELECTRONICOS",
+      "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
+      "count": 53
+    },
+    {
+      "code": "0592001",
+      "name": "ALEMAN",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 15
+    },
+    {
+      "code": "0592002",
+      "name": "ARABE",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 5
+    },
+    {
+      "code": "0592004",
+      "name": "CHINO",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 1
+    },
+    {
+      "code": "0592006",
+      "name": "ESPAÑOL",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 12
+    },
+    {
+      "code": "0592008",
+      "name": "FRANCES",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 42
+    },
+    {
+      "code": "0592011",
+      "name": "INGLES",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 99
+    },
+    {
+      "code": "0592012",
+      "name": "ITALIANO",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 19
+    },
+    {
+      "code": "0592013",
+      "name": "JAPONES",
+      "body": "CUERPO DE PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+      "count": 1
+    },
+    {
+      "code": "0593001",
+      "name": "ACORDEON",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593002",
+      "name": "ARMONIA Y MELODIA ACOMPAÑADA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 7
+    },
+    {
+      "code": "0593003",
+      "name": "ARPA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593006",
+      "name": "CANTO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0593007",
+      "name": "CARACTERIZACION",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593008",
+      "name": "CLARINETE",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0593009",
+      "name": "CLAVE",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593010",
+      "name": "COMPOSICION",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 9
+    },
+    {
+      "code": "0593014",
+      "name": "CONTRABAJO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0593017",
+      "name": "DANZA ESPAÑOLA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593020",
+      "name": "DIRECCION DE CORO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0593022",
+      "name": "DIRECCION DE ESCENA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593023",
+      "name": "DIRECCION DE ORQUESTA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 11
+    },
+    {
+      "code": "0593024",
+      "name": "DRAMATURGIA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593029",
+      "name": "EXPRESION CORPORAL",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593030",
+      "name": "FAGOT",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0593031",
+      "name": "FLAUTA DE PICO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593032",
+      "name": "FLAUTA TRAVESERA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 7
+    },
+    {
+      "code": "0593035",
+      "name": "GUITARRA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593036",
+      "name": "GUITARRA FLAMENCA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0593038",
+      "name": "HISTORIA DE LA LITERATURA DRAMATICA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0593039",
+      "name": "HISTORIA DE LA MUSICA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593042",
+      "name": "INSTRUMENTOS DE PUA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0593043",
+      "name": "INTERPRETACION",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 8
+    },
+    {
+      "code": "0593050",
+      "name": "MUSICA DE CAMARA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0593051",
+      "name": "MUSICOLOGIA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593052",
+      "name": "OBOE",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0593055",
+      "name": "ORTOFONIA Y DICCION",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0593057",
+      "name": "PEDAGOGIA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0593058",
+      "name": "PERCUSION",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0593059",
+      "name": "PIANO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0593060",
+      "name": "PIANO APLICADO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 15
+    },
+    {
+      "code": "0593061",
+      "name": "IMPROVISACION Y ACOMPAÑAMIENTO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0593066",
+      "name": "SAXOFON",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 10
+    },
+    {
+      "code": "0593072",
+      "name": "TROMBON",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593073",
+      "name": "TROMBOM-TUBA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593075",
+      "name": "TROMPETA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593076",
+      "name": "TUBA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0593077",
+      "name": "VIOLA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 10
+    },
+    {
+      "code": "0593078",
+      "name": "VIOLIN",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0593079",
+      "name": "VIOLONCHELO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593083",
+      "name": "CANTE FLAMENCO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593089",
+      "name": "FLAMENCOLOGIA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593093",
+      "name": "INSTRUMENTOS DE PUA",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593097",
+      "name": "INSTRUMENTOS HISTORICOS DE VIENTO",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0593098",
+      "name": "REPERTORIO CON PIANO PARA INSTRUMENTOS",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0593100",
+      "name": "TECNOLOGIA MUSICAL",
+      "body": "CUERPO DE CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0594007",
+      "name": "CARACTERIZACION",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0594116",
+      "name": "ACROBACIA APLICADA AL ARTE DRAMATICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0594117",
+      "name": "CREACION AUDIOVISUAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0594118",
+      "name": "DRAMATURGIA Y ESCRITURA DRAMATICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0594119",
+      "name": "ESGRIMA APLICADA AL ARTE DRAMATICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0594120",
+      "name": "ESTETICA E HISTORIA DEL ARTE",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0594122",
+      "name": "INTERPRETACION EN EL AUDIOVISUAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0594123",
+      "name": "INTERPRETACION EN EL TEATRO MUSICAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 18
+    },
+    {
+      "code": "0594124",
+      "name": "INTERPRETACION EN EL TEATRO DE TEXTO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0594130",
+      "name": "TEORIA DE LAS ARTES DEL ESPECTACULO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 14
+    },
+    {
+      "code": "0594401",
+      "name": "ACORDEON",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 15
+    },
+    {
+      "code": "0594402",
+      "name": "ARPA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 8
+    },
+    {
+      "code": "0594403",
+      "name": "CANTO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 10
+    },
+    {
+      "code": "0594404",
+      "name": "CLARINETE",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 19
+    },
+    {
+      "code": "0594405",
+      "name": "CLAVE",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0594406",
+      "name": "CONTRABAJO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0594407",
+      "name": "CORO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 15
+    },
+    {
+      "code": "0594408",
+      "name": "FAGOT",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 4
+    },
+    {
+      "code": "0594410",
+      "name": "FLAUTA TRAVESERA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 21
+    },
+    {
+      "code": "0594411",
+      "name": "FLAUTA DE PICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0594412",
+      "name": "FUNDAMENTOS DE COMPOSICION",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 20
+    },
+    {
+      "code": "0594414",
+      "name": "GUITARRA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 27
+    },
+    {
+      "code": "0594415",
+      "name": "GUITARRA FLAMENCA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 9
+    },
+    {
+      "code": "0594416",
+      "name": "HISTORIA DE LA MUSICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 14
+    },
+    {
+      "code": "0594417",
+      "name": "INSTRUMENTOS DE CUERDA PULSADA DEL RENACIMIENTO Y BARROCO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 1
+    },
+    {
+      "code": "0594418",
+      "name": "INSTRUMENTOS DE PUA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 7
+    },
+    {
+      "code": "0594419",
+      "name": "OBOE",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 15
+    },
+    {
+      "code": "0594421",
+      "name": "ORQUESTA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 12
+    },
+    {
+      "code": "0594422",
+      "name": "PERCUSION",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 25
+    },
+    {
+      "code": "0594423",
+      "name": "PIANO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 63
+    },
+    {
+      "code": "0594424",
+      "name": "SAXOFON",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 23
+    },
+    {
+      "code": "0594426",
+      "name": "TROMBON",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 10
+    },
+    {
+      "code": "0594427",
+      "name": "TROMPA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 13
+    },
+    {
+      "code": "0594428",
+      "name": "TROMPETA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 23
+    },
+    {
+      "code": "0594429",
+      "name": "TUBA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 14
+    },
+    {
+      "code": "0594431",
+      "name": "VIOLA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 16
+    },
+    {
+      "code": "0594432",
+      "name": "VIOLA DA GAMBA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0594433",
+      "name": "VIOLIN",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 36
+    },
+    {
+      "code": "0594434",
+      "name": "VIOLONCHELLO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 18
+    },
+    {
+      "code": "0594435",
+      "name": "DANZA ESPAÑOLA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 13
+    },
+    {
+      "code": "0594436",
+      "name": "DANZA CLASICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 18
+    },
+    {
+      "code": "0594437",
+      "name": "DANZA CONTEMPORANEA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 5
+    },
+    {
+      "code": "0594438",
+      "name": "FLAMENCO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 20
+    },
+    {
+      "code": "0594439",
+      "name": "HISTORIA DE LA DANZA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 26
+    },
+    {
+      "code": "0594441",
+      "name": "CANTO APLICADO AL ARTE DRAMATICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 13
+    },
+    {
+      "code": "0594443",
+      "name": "DANZA APLICADA AL ARTE DRAMATICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 8
+    },
+    {
+      "code": "0594444",
+      "name": "DICCION Y EXPRESION ORAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0594445",
+      "name": "DIRECCION ESCENICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0594448",
+      "name": "ESPACIO ESCENICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 6
+    },
+    {
+      "code": "0594449",
+      "name": "EXPRESION CORPORAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 18
+    },
+    {
+      "code": "0594454",
+      "name": "INTERPRETACION EN EL TEATRO DEL GESTO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 25
+    },
+    {
+      "code": "0594455",
+      "name": "LITERATURA DRAMATICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 15
+    },
+    {
+      "code": "0594460",
+      "name": "LENGUAJE MUSICAL",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 38
+    },
+    {
+      "code": "0594461",
+      "name": "BAJO ELECTRICO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0594463",
+      "name": "GUITARRA ELECTRICA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 2
+    },
+    {
+      "code": "0594464",
+      "name": "REPERTORIO CON PIANO PARA DANZA",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 11
+    },
+    {
+      "code": "0594465",
+      "name": "CANTE FLAMENCO",
+      "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+      "count": 3
+    },
+    {
+      "code": "0595507",
+      "name": "DIBUJO ARTISTICO Y COLOR",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 78
+    },
+    {
+      "code": "0595508",
+      "name": "DIBUJO TECNICO",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 10
+    },
+    {
+      "code": "0595509",
+      "name": "DISEÑO DE INTERIORES",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 7
+    },
+    {
+      "code": "0595510",
+      "name": "DISEÑO DE MODA",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 5
+    },
+    {
+      "code": "0595511",
+      "name": "DISEÑO DE PRODUCTO",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 4
+    },
+    {
+      "code": "0595512",
+      "name": "DISEÑO GRAFICO",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 29
+    },
+    {
+      "code": "0595515",
+      "name": "FOTOGRAFIA",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 19
+    },
+    {
+      "code": "0595516",
+      "name": "HISTORIA DEL ARTE",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 22
+    },
+    {
+      "code": "0595517",
+      "name": "JOYERIA Y ORFEBRERIA",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 2
+    },
+    {
+      "code": "0595520",
+      "name": "MATERIALES Y TECNOLOGIA: DISEÑO",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 11
+    },
+    {
+      "code": "0595521",
+      "name": "MEDIOS AUDIOVISUALES",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 13
+    },
+    {
+      "code": "0595522",
+      "name": "MEDIOS INFORMATICOS",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 7
+    },
+    {
+      "code": "0595523",
+      "name": "ORGANIZACION INDUSTRIAL Y LEGISLACION",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 11
+    },
+    {
+      "code": "0595525",
+      "name": "VOLUMEN",
+      "body": "CUERPO DE PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 13
+    },
+    {
+      "code": "0596008",
+      "name": "DECORACION",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 30
+    },
+    {
+      "code": "0596608",
+      "name": "FOTOGRAFIA Y PROCESOS DE REPRODUCCION",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 30
+    },
+    {
+      "code": "0596609",
+      "name": "MODELISMO Y MAQUETISMO",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 9
+    },
+    {
+      "code": "0596610",
+      "name": "MOLDES Y REPRODUCCIONES",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 3
+    },
+    {
+      "code": "0596612",
+      "name": "TALLA EN PIEDRA Y MADERA",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 5
+    },
+    {
+      "code": "0596613",
+      "name": "TECNICAS CERAMICAS",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 5
+    },
+    {
+      "code": "0596615",
+      "name": "TECNICAS DE JOYERIA Y BISUTERIA",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 3
+    },
+    {
+      "code": "0596616",
+      "name": "TECNICAS DE ORFEBRERIA Y PLATERIA",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 2
+    },
+    {
+      "code": "0596617",
+      "name": "TECNICAS DE PATRONAJE Y CONFECCION",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 2
+    },
+    {
+      "code": "0596618",
+      "name": "TECNICAS DEL METAL",
+      "body": "CUERPO DE MAESTROS DE TALLER DE ARTES PLÁSTICAS Y DISEÑO",
+      "count": 3
+    },
+    {
+      "code": "0598001",
+      "name": "COCINA Y PASTELERIA",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 82
+    },
+    {
+      "code": "0598002",
+      "name": "ESTETICA",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 81
+    },
+    {
+      "code": "0598003",
+      "name": "FABRICACION E INSTALACION DE CARPINTERIA Y MUEBLE",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 8
+    },
+    {
+      "code": "0598004",
+      "name": "MANTENIMIENTO DE VEHICULOS",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 79
+    },
+    {
+      "code": "0598005",
+      "name": "MECANIZADO Y MANTENIMIENTO DE MAQUINAS",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 27
+    },
+    {
+      "code": "0598006",
+      "name": "PATRONAJE Y CONFECCION",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 38
+    },
+    {
+      "code": "0598007",
+      "name": "PELUQUERIA",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 106
+    },
+    {
+      "code": "0598008",
+      "name": "PRODUCCION DE ARTES GRAFICAS",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 10
+    },
+    {
+      "code": "0598009",
+      "name": "SERVICIOS DE RESTAURACION",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 32
+    },
+    {
+      "code": "0598010",
+      "name": "SOLDADURA",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 15
+    },
+    {
+      "code": "0598021",
+      "name": "TALLER DE VIDRIO Y CERAMICA",
+      "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
+      "count": 4
+    }
+  ]
+}

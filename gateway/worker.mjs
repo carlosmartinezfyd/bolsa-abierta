@@ -1,4 +1,5 @@
 // Fixed-destination public gateway. Secrets and dispatch decisions stay in Worker/D1.
+import {positionRoute} from './positions.mjs';
 const COOLDOWN = 5 * 60_000;
 const ACTIVE_LEASE = 20 * 60_000;
 const POLL_INTERVAL = 10_000;
@@ -142,6 +143,11 @@ export function createGateway(dependencies = {}) {
     const failure = (message, status) => reply({error:message}, status);
     const url = new URL(request.url);
     if (origin && origin !== env.ALLOWED_ORIGIN) return failure('Origen no permitido.', 403);
+    if (url.pathname === '/internal/positions' || url.pathname === '/api/positions' || url.pathname.startsWith('/api/positions/')) {
+      headers['X-Robots-Tag'] = 'noindex, nofollow, nosnippet';
+      if (request.method === 'OPTIONS' && !origin) return failure('Origen no permitido.',403);
+      return positionRoute(request,env,reply);
+    }
     if (url.search) return failure('La petición no admite parámetros.', 400);
     if (!['/api/state','/api/refresh'].includes(url.pathname) && !/^\/api\/refresh\/[a-f0-9]{32}$/.test(url.pathname)) {
       return failure('Recurso no encontrado.',404);

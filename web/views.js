@@ -348,7 +348,7 @@
         : "") +
       `<section class="saved-summary panel"><div>${U.icon("bookmark")}<div><h2>${U.count(saved.length, "registro guardado", "registros guardados")}${Number(m.state.history_window?.omitted_documents) > 0 ? " disponibles" : ""}</h2><p>Guardados por publicación.</p></div></div><div class="buttons">${U.button("view-saved", "Ver guardadas", "arrow", "primary")}${U.button("export-preferences", "Exportar preferencias", "download")}</div></section>
  <div class="two-col"><section class="panel"><h2>Funciones que sigo</h2><p>Funciones presentes en los listados disponibles.</p><div class="search-input mt15">${U.icon("search")}<input class="input" id="profile-search" type="search" placeholder="Función o código…" aria-label="Buscar funciones"></div><div class="profile-functions" id="function-list">${functions.map(([code, name]) => `<label class="function-option" data-function-search="${E(BA.norm(code + " " + name))}"><input type="checkbox" data-profile-function="${E(code)}" ${m.prefs.functions.includes(code) ? "checked" : ""}><span>${E(BA.title(name))}<span class="row-secondary mono">${E(code)}</span></span></label>`).join("")}</div><p id="profile-empty" class="hidden" role="status">No hay funciones que coincidan con la búsqueda.</p><div class="profile-footer"><p class="profile-count" id="profile-count">${U.count(m.prefs.functions.length, "función seleccionada", "funciones seleccionadas")}</p>${U.button("apply-profile", "Aplicar mis funciones", "arrow", "primary")}</div></section>
- <div><section class="panel section"><h2>Mi posición en lista</h2><p>Disponible en Educarm. Los listados de vacantes no permiten calcular tu posición.</p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
+ <div><section class="panel section"><h2>Mi posición</h2><p><a href="#position" data-view="position">Consultar mi ficha en la lista publicada</a></p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
  <section class="panel"><h2>Preferencias y privacidad</h2><p>Las preferencias se guardan en este navegador. Las alertas externas no están disponibles.</p><p>Última revisión personal: <strong>${E(BA.date(m.prefs.lastSeen))}</strong>.</p><div class="buttons mt16">${U.button("reset-preferences", "Borrar preferencias locales", "", "danger")}</div></section></div></div>`
     );
   }
@@ -406,8 +406,8 @@
     );
   }
   function home(m) {
-    const doc = m.state.documents.find(
-      (d) => d.id === m.state.current_id && d.status === "approved",
+    const doc = (m.state?.documents || []).find(
+      (d) => d.id === m.state?.current_id && d.status === "approved",
     );
     const seen = new Set();
     const sample = (doc?.rows || [])
@@ -422,25 +422,29 @@
       0,
     );
     return `<div class="landing">
-      <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#vacancies" data-view="vacancies">Ir a la consulta ${U.icon("arrow")}</a></nav></header>
+      <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#position" data-view="position">Mi posición ${U.icon("arrow")}</a></nav></header>
       <main id="main" class="landing-main" tabindex="-1">
-        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Secundaria y otros cuerpos</p><h1 id="landing-title">Consulta las vacantes docentes de Murcia.</h1><p class="landing-lead">Busca por especialidad, municipio o jornada. Compara los listados y guarda las plazas que te interesan.</p><a class="button primary landing-cta" href="#vacancies" data-view="vacancies">Consultar vacantes ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
+        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Secundaria y otros cuerpos</p><h1 id="landing-title">Consulta tu puesto en las listas docentes de Murcia.</h1><p class="landing-lead">Encuentra tu ficha en las listas de interinos de Secundaria y otros cuerpos. Consulta tu puesto en la publicación oficial y las vacantes de tu especialidad.</p><a class="button primary landing-cta" href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
         <aside class="landing-publication" aria-label="Última publicación incorporada"><div class="landing-publication-head"><span>Último listado incorporado</span>${U.icon("calendar")}</div>${doc ? `<h2>${E(BA.date(doc.published_at))}</h2><p class="landing-scope">Vacantes sin cubrir</p><ul class="landing-sample">${sample.map((row) => `<li><strong>${E(BA.title(row.function))}</strong><span>${E(BA.title(row.municipality))} · ${row.workload === "full" ? "Jornada completa" : E(row.hours) + " h"}</span></li>`).join("")}</ul><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Ver ${U.count(places, "plaza", "plazas")}${U.icon("arrow")}</button><p class="landing-availability">La publicación no confirma la disponibilidad actual.</p>` : `<h2>Consulta de publicaciones</h2><p class="landing-scope">Todavía no hay un listado validado disponible.</p><a class="landing-publication-link" href="#sources" data-view="sources">Ver fuentes ${U.icon("arrow")}</a>`}</aside></section>
-        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Filtra las vacantes</h2><p>Filtra las plazas por tu especialidad, destino y tipo de jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, desaparecen o cambian entre publicaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Guarda tu selección</h2><p>Marca las plazas que te interesan y las funciones que sigues. Se guardan en este navegador.</p><a href="#profile" data-view="profile">Mi seguimiento ${U.icon("arrow")}</a></article></section>
+        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Encuentra tu ficha</h2><p>Elige tu especialidad y busca por nombre o número de lista.</p><a href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, desaparecen o cambian entre publicaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Consulta las vacantes</h2><p>Busca las plazas por especialidad, municipio y jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article></section>
         <section class="landing-origin" aria-labelledby="landing-origin-title"><div><h2 id="landing-origin-title">El origen de los datos</h2><p>Los datos proceden de RRHH Educación y CARM. Puedes consultar la fecha de cada publicación y abrir su fuente.</p></div><a href="#sources" data-view="sources">Consultar fuentes ${U.icon("arrow")}</a></section>
       </main><footer class="landing-footer"><p>Bolsa Abierta es un proyecto independiente de la CARM. Las solicitudes y adjudicaciones se tramitan por los canales oficiales.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
   }
-  const views = { vacancies, changes, acts, profile, sources };
+  function position() {
+    return '<div class="position-workspace"><header class="position-heading"><h1>Mi posición</h1></header><div id="position-root"></div></div>';
+  }
+  const views = { position, vacancies, changes, acts, profile, sources };
   function shell(m) {
     if (m.view === "home") return home(m);
     const nav = [
+      ["position", "Mi posición", "person"],
       ["vacancies", "Vacantes", "grid"],
       ["changes", "Cambios", "changes"],
       ["acts", "Actos", "calendar"],
       ["profile", "Mi seguimiento", "bookmark"],
       ["sources", "Fuentes", "shield"],
     ];
-    return `<div class="shell"><aside class="sidebar" id="site-nav"><a class="brand brand-home" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span><span class="brand-name">Bolsa Abierta</span><span class="brand-subtitle">Región de Murcia</span></span></a><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${views[m.view](m)}</main></div></div>`;
+    return `<div class="shell"><aside class="sidebar" id="site-nav"><a class="brand brand-home" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span><span class="brand-name">Bolsa Abierta</span><span class="brand-subtitle">Región de Murcia</span></span></a><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${m.state || m.view === "position" ? views[m.view](m) : '<p role="status">No se han podido cargar las publicaciones. <a href="#position" data-view="position">Consultar mi posición</a></p>'}</main></div></div>`;
   }
   window.BAV = { current, allRows, displayed, shell, results };
 })();

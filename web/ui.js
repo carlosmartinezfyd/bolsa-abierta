@@ -3,6 +3,7 @@
   "use strict";
   const E = BA.escape;
   const paths = {
+    person: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
     "sort-up": '<path d="M7 20V4m-4 4 4-4 4 4M14 6h7m-7 6h5m-5 6h3"/>',
     "sort-down": '<path d="M7 4v16m-4-4 4 4 4-4M14 6h3m-3 6h5m-5 6h7"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
