@@ -47,6 +47,10 @@ jobs:
             git worktree add --detach saved-state HEAD
             git -C saved-state switch --orphan data-state
           fi
+      - name: Discover the course sources and retain pending documents
+        id: inventory
+        continue-on-error: true
+        run: python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
       - name: Verify the published personal-position reference
         id: positions
         continue-on-error: true
@@ -55,7 +59,7 @@ jobs:
           POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
         # Nominal data stays on this ephemeral runner and in private D1. Never add
         # this directory to data-state or upload it as a public artifact.
-        run: python -m bolsa_abierta.position_sync
+        run: python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory
       - name: Collect and validate official sources
         id: collect
         continue-on-error: true
@@ -74,6 +78,9 @@ jobs:
           git -C saved-state config user.name 'github-actions[bot]'
           git -C saved-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C saved-state add runtime
+          for path in source-inventory.json source-documents.json; do
+            if [ -f "saved-state/$path" ]; then git -C saved-state add "$path"; fi
+          done
           if ! git -C saved-state diff --cached --quiet; then
             git -C saved-state commit -m 'Record official source check'
             git -C saved-state push origin HEAD:refs/heads/data-state
@@ -84,22 +91,20 @@ jobs:
           path: site
       - uses: actions/deploy-pages@v4
         id: deployment
-      - name: Audit official roster amendments
-        id: position_updates
-        continue-on-error: true
-        # This inventory cannot change personal positions. Nominal documents and
-        # the full report stay on the ephemeral runner, outside site/data-state.
-        run: python -m bolsa_abierta.position_updates
       - name: Record roster audit outcome
         if: always()
         env:
-          AUDIT_OUTCOME: ${{ steps.position_updates.outcome }}
+          AUDIT_OUTCOME: ${{ steps.positions.outcome }}
+          INVENTORY_OUTCOME: ${{ steps.inventory.outcome }}
         run: |
           if [ "$AUDIT_OUTCOME" = "success" ]; then
-            echo 'Roster document audit: all required documents match reviewed hashes.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Position publication: required document bytes verified and generation activated.' >> "$GITHUB_STEP_SUMMARY"
           else
-            echo 'Roster document audit: incomplete or pending review. No amendments have been applied by this audit; published positions retain their stated coverage.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Position publication incomplete: previous generation and check date retained.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f saved-state/source-inventory.json ]; then
+            python -c "import json,os; r=json.load(open('saved-state/source-inventory.json')); f=open(os.environ['GITHUB_STEP_SUMMARY'],'a'); f.write('\nCourse source coverage: '+json.dumps({k:r[k] for k in ('index_complete','downloads_complete','review_complete','status_counts')})+'\n')"
           fi
       - name: Signal complete collector failure after publishing diagnostic state
-        if: steps.collect.outcome == 'failure' || steps.positions.outcome == 'failure'
+        if: steps.collect.outcome == 'failure' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure'
         run: exit 1

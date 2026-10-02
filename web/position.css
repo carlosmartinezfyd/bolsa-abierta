@@ -43,6 +43,9 @@
 .position-rank strong{font-size:clamp(64px,10vw,100px);font-weight:500;color:var(--accent);letter-spacing:-5px;line-height:1.2;margin:4px 0 12px}
 .position-rank small{font-size:.4em;vertical-align:super;letter-spacing:0;margin-left:5px}
 .position-rank time{font-size:14px}
+.position-award{padding:26px 0;overflow-wrap:anywhere}
+.position-award h3{font-size:21px;line-height:1.4;margin:14px 0 8px}
+.position-award p{margin:8px 0}
 .position-card-footer{border-top:1px solid var(--border);padding-top:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:13px}
 .position-card-footer .button{min-height:42px}
 .position-status{font-size:14px;color:var(--muted);margin:18px 0 12px}

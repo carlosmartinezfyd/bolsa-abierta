@@ -11,6 +11,60 @@ const version={id:'a'.repeat(64),sha256:'a'.repeat(64),published_at:'2026-07-22'
 const row=(n,name='PRUEBA, ANA')=>({id:String(n).padStart(32,'0'),specialty:'0590001',specialty_name:'FILOSOFIA',body_name:'SECUNDARIA',
   block:'68',block_name:'Bloque 1',list_number:`250000${n}0`,name,search_name:name,rank:n,page:2});
 
+const document={content_id:'209126',kind:'award',sha256:'d'.repeat(64),published_at:'2026-09-24',pages:2,row_count:1,
+  source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=209126',specialties:[{code:'0590I09',name:'DIBUJO / INGLES',body:'SECUNDARIA',count:1}]};
+const multiple={...version,id:'e'.repeat(64),coverage:'multi_source',row_count:3,ranked_specialties:version.specialties,
+  specialties:[...version.specialties,...document.specialties],documents:[document]};
+const award={...row(1),id:'f'.repeat(32),specialty:'0590I09',source_id:'209126',record_type:'award',rank:null,
+  block:'',block_name:'',destination:'IES DE PRUEBA · MURCIA',workload:'10 horas',dni:'SHOULD NOT BE STORED'};
+
+test('complete bilingual award documents become searchable without claiming a rank',async()=>{
+  const f=setup();try{
+    assert.equal((await f.ingest({action:'begin',version:multiple})).status,200);
+    assert.equal((await f.ingest({action:'rows',id:multiple.id,rows:[row(1),row(2),award]})).status,200);
+    assert.equal((await f.ingest({action:'activate',id:multiple.id})).status,200);
+    const data=await (await f.call('/api/positions/search',{query:'Prueba',specialty:'0590I09'})).json();
+    assert.equal(data.results.length,1);assert.equal(data.results[0].rank,null);
+    assert.equal(data.results[0].record_type,'award');assert.equal(data.results[0].destination,award.destination);
+    assert.equal('dni' in data.results[0],false);
+    assert.equal(data.version.documents[0].published_at,'2026-09-24');
+    assert.equal((await (await f.call('/api/positions/'+row(1).id)).json()).person.rank,1);
+  }finally{f.db.close();}
+});
+
+test('missing evidence records cannot activate and fabricated award ranks are rejected',async()=>{
+  const f=setup();try{
+    assert.equal((await f.ingest({action:'begin',version:multiple})).status,200);
+    assert.equal((await f.ingest({action:'rows',id:multiple.id,rows:[{...award,rank:1}]})).status,400);
+    assert.equal((await f.ingest({action:'rows',id:multiple.id,rows:[{...award,source_id:'99999'}]})).status,400);
+    await f.ingest({action:'rows',id:multiple.id,rows:[row(1),row(2)]});
+    assert.equal((await f.ingest({action:'activate',id:multiple.id})).status,409);
+    assert.equal((await f.call('/api/positions')).status,503);
+  }finally{f.db.close();}
+});
+
+test('manifest rejects wrong per-document totals and non-official evidence',async()=>{
+  const f=setup();try{
+    for(const doc of [{...document,row_count:2},{...document,source_url:'https://example.org/a.pdf'},
+      {...document,kind:'provisional'},{...document,content_id:'208095'}]){
+      assert.equal((await f.ingest({action:'begin',version:{...multiple,documents:[doc]}})).status,400);
+    }
+  }finally{f.db.close();}
+});
+
+test('accumulated valid source metadata is not limited to a few weekly documents',async()=>{
+  const f=setup();try{
+    const documents=Array.from({length:30},(_,i)=>({...document,content_id:String(300000+i),
+      source_url:'https://www.carm.es/web/descarga?IDCONTENIDO='+String(300000+i),
+      specialties:Array.from({length:42},(_,n)=>({code:'0590'+String(n).padStart(3,'0'),name:'ESPECIALIDAD DE PRUEBA '.repeat(5),body:'CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA',count:1})),row_count:42}));
+    const totals=new Map(version.specialties.map(s=>[s.code,{...s}]));
+    for(const d of documents)for(const s of d.specialties){if(!totals.has(s.code))totals.set(s.code,{...s,count:0});totals.get(s.code).count+=s.count;}
+    const v={...multiple,documents,row_count:1262,specialties:[...totals.values()]};
+    assert.ok(JSON.stringify(v).length>160000);
+    assert.equal((await f.ingest({action:'begin',version:v})).status,200);
+  }finally{f.db.close();}
+});
+
 test('reviewed amendment rows retain their own official document and page',async()=>{
   const f=setup();try{
     const corrected={...version,id:'c'.repeat(64),coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'b'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
@@ -69,6 +123,12 @@ test('global search remains bounded when many specialties match',async()=>{
     await f.ingest({action:'activate',id:v.id});
     const result=await (await f.call('/api/positions/search',{query:'prueba'})).json();
     assert.equal(result.results.length,20);assert.equal(result.more,true);
+    assert.equal(result.next_offset,20);
+    const next=await (await f.call('/api/positions/search',{query:'prueba',offset:20,version_id:v.id})).json();
+    assert.equal(next.results.length,2);assert.equal(next.more,false);
+    assert.equal(new Set([...result.results,...next.results].map(r=>r.id)).size,22);
+    assert.equal((await f.call('/api/positions/search',{query:'prueba',offset:20,version_id:'f'.repeat(64)})).status,409);
+    assert.equal((await f.call('/api/positions/search',{query:'prueba',offset:-20,version_id:v.id})).status,400);
   }finally{f.db.close();}
 });
 

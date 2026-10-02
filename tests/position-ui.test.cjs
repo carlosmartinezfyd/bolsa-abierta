@@ -3,6 +3,43 @@ const P=require('../web/position.js');
 const version={id:'a'.repeat(64),sha256:'a'.repeat(64),scope:'published_list',coverage:'baseline_only',published_at:'2026-07-22',checked_at:'2026-10-02T12:00:00Z',source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208095'};
 const person={id:'1'.repeat(32),name:'PRUEBA, ANA',specialty:'0590001',specialty_name:'FILOSOFIA',body_name:'SECUNDARIA',block:'68',block_name:'Bloque 1',list_number:'25000010',rank:7,page:2};
 const catalog={version,specialties:[{code:'0590001',name:'FILOSOFIA',body:'SECUNDARIA',count:10}],refresh_available:false};
+
+test('exact-name results can continue across publications and changing query cancels paging',async()=>{
+  let finish;
+  const model=P.createModel({request:async(path,body)=>path.endsWith('/search')?
+    body.offset?new Promise(resolve=>{finish=resolve;}):{version,results:[person],more:true,next_offset:20}:catalog});
+  await model.init();await model.search('','Prueba');
+  assert.match(P.render(model.state),/Ver más coincidencias/);
+  assert.equal(typeof model.loadMore,'function');
+  const request=model.loadMore();
+  finish({version,results:[{...person,id:'2'.repeat(32)}],more:false,next_offset:null});await request;
+  assert.equal(model.state.results.length,2);
+  await model.search('','Prueba');const pending=model.loadMore();model.editQuery('Otra');
+  finish({version,results:[person],more:false,next_offset:null});await pending;
+  assert.equal(model.state.results.length,0);assert.equal(model.state.query,'Otra');
+});
+
+test('bilingual award shows its own dated destination without a fabricated ordinal',async()=>{
+  const doc={content_id:'209126',kind:'award',sha256:'d'.repeat(64),published_at:'2026-09-24',pages:25,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=209126'};
+  const v={...version,id:'e'.repeat(64),coverage:'multi_source',documents:[doc]};
+  const p={...person,record_type:'award',specialty:'0590I09',specialty_name:'DIBUJO / INGLES',source_id:'209126',rank:null,block:'',block_name:'',destination:'IES DE PRUEBA · MURCIA',workload:'10 horas'};
+  assert.doesNotThrow(()=>P.validateResponse({version:v,person:p}));
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,rank:97}}));
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,source_id:'99999'}}));
+  const model=P.createModel({request:async path=>path.endsWith('/search')?{version:v,results:[p]}:{...catalog,version:v,specialties:[{code:p.specialty,name:p.specialty_name,body:'SECUNDARIA',count:1}]}});
+  await model.init();await model.search('','Prueba');assert.equal(model.state.error,'');
+  const search=P.render(model.state);assert.match(search,/Adjudicación/);assert.match(search,/24 sept 2026/);
+  const html=P.render({...model.state,person:p,version:v});
+  assert.match(html,/IES De Prueba/);assert.match(html,/10 horas/);assert.match(html,/24 sept 2026/);
+  assert.match(html,/IDCONTENIDO=209126.*#page=2/);
+  assert.doesNotMatch(html,/Puesto en la lista|<small>º|22 jul 2026/);
+});
+
+test('destination display separates municipality and does not repeat its source suffix',()=>{
+  assert.equal(typeof P.awardDestination,'function');
+  assert.deepEqual(P.awardDestination('IES LA FLORIDA (TORRES DE COTILLAS (LAS)) · TORRES DE COTILLAS (LAS)'),
+    {center:'IES La Florida',municipality:'Torres De Cotillas (Las)'});
+});
 test('amended position points to its actual PDF and explains consolidated coverage only in detail',()=>{
   const corrected={...version,id:'b'.repeat(64),coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'c'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
   const p={...person,page:1,source_id:'208249'};

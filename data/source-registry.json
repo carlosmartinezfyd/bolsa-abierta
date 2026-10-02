@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "course": "2026-2027",
+  "since": "2026-06-01",
+  "limits": {
+    "max_feed_pages": 80,
+    "max_requests": 160,
+    "max_seconds": 240,
+    "max_details": 50,
+    "max_undated_details": 5
+  },
+  "sources": [
+    {
+      "id": "rrhh-feed",
+      "kind": "rss",
+      "url": "https://rrhheducacion.carm.es/feed/"
+    },
+    {
+      "id": "rrhh-map",
+      "kind": "map",
+      "url": "https://rrhheducacion.carm.es/mapa-web/"
+    },
+    {
+      "id": "annual-lists",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75599&IDTIPO=100"
+    },
+    {
+      "id": "awards",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=4036&IDTIPO=100&RASTRO=c798%24m3911"
+    }
+  ]
+}
