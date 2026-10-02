@@ -2,7 +2,9 @@
 
 Consulta de tu puesto en una lista publicada de interinos de Murcia y comparación de vacantes docentes. Es un proyecto independiente: la publicación administrativa oficial prevalece.
 
-La pantalla **Mi posición** permite buscar y confirmar una ficha en la lista definitiva de 22 de julio de 2026. Muestra el ordinal de esa publicación, no el puesto actual entre disponibles. [Cobertura, pruebas y operación de la consulta](docs/personal-position.md).
+La pantalla **Mi posición** busca en listas y adjudicaciones oficiales incorporadas, incluidas funciones bilingües. Una lista ordenada muestra su puesto fechado; una adjudicación muestra el destino publicado y nunca se convierte en un puesto entre disponibles. [Cobertura, pruebas y operación de la consulta](docs/personal-position.md).
+
+El [inventario del curso](docs/source-coverage.md) recorre el RSS paginado, contrasta el mapa de publicaciones y consulta índices CARM. Conserva documentos pendientes, cambios de hash y fallos entre ejecuciones. La generación nominal reúne la lista de julio, sus correcciones revisadas y las 147 adjudicaciones del 24 de septiembre (42 funciones). Los nuevos documentos con el mismo formato estricto pueden incorporarse automáticamente; otros formatos y revisiones quedan pendientes de revisión. No se afirma cobertura total ni disponibilidad actual.
 
 ## Información que obtiene
 
