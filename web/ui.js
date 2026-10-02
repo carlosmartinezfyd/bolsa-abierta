@@ -65,15 +65,14 @@
     const saved = prefs.favorites.includes(r.id);
     return `<tr>
 <td class="favorite-cell"><button class="icon-button ${saved ? "saved" : ""}" data-action="favorite" data-id="${E(r.id)}" aria-label="${saved ? "Quitar de guardadas" : "Guardar plaza"}: ${E(r.center)}" aria-pressed="${saved}">${icon("bookmark")}</button></td>
-<td class="function-cell"><button class="row-link row-primary" data-action="detail" data-id="${E(r.id)}" aria-label="${E(BA.title(r.function))}: detalle de ${E(BA.title(r.center))}">${E(BA.title(r.function))}</button><div class="row-secondary mono">${E(r.function_code)}</div></td>
-<td class="municipality-cell"><div class="row-primary">${E(BA.title(r.municipality))}</div></td>
-<td class="center-cell"><div class="row-primary row-center">${E(BA.title(r.center))}</div><div class="row-secondary mono">${E(r.center_code)}</div></td>
-<td class="workload-cell"><span class="pill ${r.workload === "full" ? "full" : ""}">${r.workload === "full" ? "Completa" : E(r.hours) + " h · parcial"}</span></td>
-<td class="cupo-cell">${E(r.cupo)}</td><td class="quantity-cell">${r.quantity}<span class="quantity-label"> ${r.quantity === 1 ? "plaza" : "plazas"}</span></td>
+<td class="function-cell"><button class="row-link row-primary" data-action="detail" data-id="${E(r.id)}" aria-label="${E(BA.title(r.function))}: detalle de ${E(BA.title(r.center))}">${E(BA.title(r.function))}</button></td>
+<td class="destination-cell"><div class="row-primary">${E(BA.title(r.municipality))}</div><div class="row-secondary">${E(BA.title(r.center))}</div></td>
+<td class="workload-cell"><span class="workload-label">${r.workload === "full" ? "Completa" : E(r.hours) + " h · parcial"}</span></td>
+<td class="quantity-cell">${r.quantity}<span class="quantity-label"> ${r.quantity === 1 ? "plaza" : "plazas"}</span></td>
 <td class="detail-cell"><button class="icon-button" data-action="detail" data-id="${E(r.id)}" aria-label="Ver detalle de ${E(r.center)}">${icon("arrow")}</button></td></tr>`;
   }
   function table(rows, prefs) {
-    return `<div class="data-table-wrap"><table class="data-table"><caption class="sr-only">Registros de vacantes de esta publicación</caption><thead><tr><th scope="col" class="favorite-cell"><span class="sr-only">Guardar</span>${icon("bookmark")}</th><th scope="col" class="function-cell">Función</th><th scope="col" class="municipality-cell">Municipio</th><th scope="col" class="center-cell">Centro</th><th scope="col" class="workload-cell">Jornada</th><th scope="col" class="cupo-cell">Cupo</th><th scope="col" class="quantity-cell">Plazas</th><th scope="col" class="detail-cell"><span class="sr-only">Detalle</span></th></tr></thead><tbody>${rows.map((r) => rowMarkup(r, prefs)).join("")}</tbody></table></div>`;
+    return `<div class="data-table-wrap"><table class="data-table"><caption class="sr-only">Registros de vacantes de esta publicación</caption><thead><tr><th scope="col" class="favorite-cell"><span class="sr-only">Guardar</span>${icon("bookmark")}</th><th scope="col" class="function-cell">Función</th><th scope="col" class="destination-cell">Destino</th><th scope="col" class="workload-cell">Jornada</th><th scope="col" class="quantity-cell">Plazas</th><th scope="col" class="detail-cell"><span class="sr-only">Detalle</span></th></tr></thead><tbody>${rows.map((r) => rowMarkup(r, prefs)).join("")}</tbody></table></div>`;
   }
   function empty(title, description, action = "") {
     return `<div class="data-table-wrap"><div class="empty"><h3>${E(title)}</h3><p>${E(description)}</p>${action}</div></div>`;

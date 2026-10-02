@@ -4,7 +4,7 @@
   const E = BA.escape,
     U = BAUI;
   const sortOptions = [
-    ["original", "Documento original"],
+    ["original", "Original"],
     ["function", "Función"],
     ["municipality", "Municipio"],
     ["center", "Centro"],
@@ -44,7 +44,11 @@
   function refreshButton(m) {
     return U.button(
       "sync",
-      canCheck(m) ? "Comprobar fuentes" : "Actualizar copia",
+      m.refreshing
+        ? "Comprobando…"
+        : canCheck(m)
+          ? "Actualizar"
+          : "Recargar datos",
       "refresh",
       "primary",
       m.refreshing ? "disabled" : "",
@@ -86,60 +90,78 @@
       "neutral",
     );
   }
+  function refreshFeedback(m) {
+    if (!m.refreshing && !m.refreshFeedback) return "";
+    const feedback = m.refreshFeedback || {};
+    return `<div class="refresh-feedback ${E(feedback.kind || "neutral")}" role="status">${m.refreshing ? '<span class="spinner" aria-hidden="true"></span>' : U.icon("info")}<span id="refresh-status">${E(m.refreshing ? m.refreshMessage || "Comprobando fuentes…" : feedback.message)}</span>${m.refreshing ? "" : U.button("dismiss-refresh", "", "close", "icon-button", 'aria-label="Cerrar aviso"')}</div>`;
+  }
   function coverage(m) {
     const pending = m.state.catalog.notices.filter((n) =>
-        BA.isPendingNotice(n, m.state.documents, m.state.history_documents),
-      ),
-      f = m.state.freshness || {};
+      BA.isPendingNotice(n, m.state.documents, m.state.history_documents),
+    );
+    const f = m.state.freshness || {};
     const warning = pending.length || ["partial", "failed"].includes(f.status);
-    return `<div class="coverage ${warning ? "coverage-warning" : ""}"><div class="coverage-summary">${U.icon("info")}<span>Disponibilidad actual sin confirmar.</span><span class="check-summary">Fuentes: <strong>${E(statusName(f.status))}</strong> · ${E(BA.date(f.last_attempt_at, { hour: "2-digit", minute: "2-digit" }))}</span>${pending.length ? `<strong class="pending-summary">${U.count(pending.length, "publicación pendiente", "publicaciones pendientes")}</strong>` : ""}<button class="inline-link" data-view="sources">Ver fuentes ${U.icon("arrow")}</button></div></div>${m.refreshing ? `<div class="notice neutral" role="status"><span class="spinner" aria-hidden="true"></span><span id="refresh-status">${E(m.refreshMessage || "Buscando publicaciones…")}</span></div>` : ""}`;
+    const label = warning
+      ? `${f.status && f.status !== "never" ? "Comprobación " + statusName(f.status).toLocaleLowerCase("es") : "Fuentes sin comprobar"}${pending.length ? " · " + U.count(pending.length, "publicación pendiente", "publicaciones pendientes") : ""}`
+      : f.last_success_at
+        ? `Fuentes comprobadas: ${E(BA.date(f.last_success_at, { hour: "2-digit", minute: "2-digit" }))}`
+        : "Fuentes sin comprobar";
+    return `<div class="source-line ${warning ? "source-warning" : ""}"><span>Disponibilidad actual sin confirmar.</span><button class="inline-link" data-view="sources">${label}${U.icon("arrow")}</button></div>`;
   }
   function header(title, actions = "") {
     return `<div class="page-header"><h1>${E(title)}</h1>${actions ? `<div class="buttons">${actions}</div>` : ""}</div>`;
   }
   function vacancies(m) {
     const doc = current(m),
-      rows = m.onlySaved ? allRows(m) : doc?.rows || [],
-      approved = m.state.documents.filter((d) => d.status === "approved");
-    return (
-      header(
-        "Vacantes sin cubrir",
-        refreshButton(m) + U.button("export-csv", "Exportar CSV", "download"),
-      ) +
-      `<section class="publication-bar" aria-label="Publicación consultada"><label class="publication-select" for="copy-select"><span>${m.onlySaved ? "Publicaciones guardadas" : "Publicación"}</span><select id="copy-select" ${m.onlySaved ? "disabled" : ""} aria-label="Copia consultada">${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}${d.id === m.state.current_id ? " · más reciente" : ""}</option>`).join("")}</select></label>${m.onlySaved ? '<p class="muted">Guardadas por fecha de publicación.</p>' : `<div class="stats" aria-label="Totales de la copia"><button class="stat-jump" data-action="show-results" aria-label="${BA.places(rows)} plazas: ir a los resultados"><strong>${BA.places(rows)}</strong> plazas <span aria-hidden="true">↓</span></button><span><strong>${rows.length}</strong> registros</span><span><strong>${BA.unique(rows, "function_code").length}</strong> funciones</span><span><strong>${BA.unique(rows, "municipality").length}</strong> municipios</span></div>`}</section>` +
-      coverage(m) +
-      `
- <section class="filters" aria-label="Filtros de vacantes"><div class="search-row"><div class="search-input">${U.icon("search")}<input class="input" id="search" type="search" value="${E(m.filters.q || "")}" placeholder="Función, centro, municipio o código…" aria-label="Buscar vacantes"></div><div class="checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""}>Mis funciones <span class="muted">(${m.prefs.functions.length})</span></label></div>${U.button("clear-filters", "Limpiar", "", "text")}</div>
- <div class="filter-grid">${U.select("function_code", "Función", BA.unique(rows, "function_code", "function"), m.filters.function_code, "Todas las funciones")}${U.select("body_code", "Cuerpo", BA.unique(rows, "body_code", "body"), m.filters.body_code, "Todos")}${U.select("municipality", "Municipio", BA.unique(rows, "municipality"), m.filters.municipality, "Todos")}${U.select(
-   "workload",
-   "Jornada",
-   [
-     ["full", "Completa"],
-     ["partial", "Parcial"],
-   ],
-   m.filters.workload,
-   "Todas",
- )}${U.select("language", "Bilingüe", BA.unique(rows, "language"), m.filters.language, "Todas")}${U.select(
-   "cupo",
-   "Cupo",
-   [
-     ["VP", "VP"],
-     ["VS", "VS"],
-   ],
-   m.filters.cupo,
-   "Todos",
- )}${U.select(
-   "itinerant",
-   "Itinerancia",
-   [
-     ["S", "Sí"],
-     ["N", "No"],
-   ],
-   m.filters.itinerant,
-   "Todas",
- )}</div></section>
- <section id="results" class="results ${m.density === "comfortable" ? "comfortable" : "compact"}" aria-label="Resultados">${results(m)}</section><div class="footnote">${U.icon("info")}<p>Plazas: columna «Sin cubrir» del PDF. Registros: filas del documento, incluidas las repetidas.</p></div>`
-    );
+      rows = m.onlySaved ? allRows(m) : doc?.rows || [];
+    const approved = m.state.documents.filter((d) => d.status === "approved");
+    const extraCount =
+      ["body_code", "language", "cupo", "itinerant"].filter(
+        (key) => m.filters[key],
+      ).length +
+      Number(!!m.onlySaved) +
+      Number(!!m.onlyProfile);
+    return `<section class="workspace-toolbar" id="workspace-toolbar" aria-label="Consulta de vacantes">
+      <div class="workspace-heading"><h1>Vacantes sin cubrir</h1><div class="publication-actions"><label for="copy-select" class="copy-label">Publicación<select id="copy-select" aria-label="Publicación consultada" ${m.onlySaved ? "disabled" : ""}>${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}</option>`).join("")}</select></label>${refreshButton(m)}</div></div>
+      <div class="primary-filters" aria-label="Filtros de vacantes"><label class="search-input"><span class="sr-only">Buscar vacantes</span>${U.icon("search")}<input class="input" id="search" type="search" value="${E(m.filters.q || "")}" placeholder="Buscar centro o código…"></label>
+      ${U.select("function_code", "Función", BA.unique(rows, "function_code", "function"), m.filters.function_code, "Todas las funciones")}
+      ${U.select("municipality", "Municipio", BA.unique(rows, "municipality"), m.filters.municipality, "Todos")}
+      ${U.select(
+        "workload",
+        "Jornada",
+        [
+          ["full", "Completa"],
+          ["partial", "Parcial"],
+        ],
+        m.filters.workload,
+        "Todas",
+      )}
+      <details id="extra-filters" class="extra-filters" ${m.extraFiltersOpen ? "open" : ""}><summary>Más filtros<span id="extra-filter-count" ${extraCount ? "" : "hidden"}>${extraCount || ""}</span>${U.icon("arrow")}</summary><div class="extra-filter-panel"><div class="secondary-filters">
+      ${U.select("body_code", "Cuerpo", BA.unique(rows, "body_code", "body"), m.filters.body_code, "Todos")}
+      ${U.select("language", "Bilingüe", BA.unique(rows, "language"), m.filters.language, "Todas")}
+      ${U.select(
+        "cupo",
+        "Cupo",
+        [
+          ["VP", "VP"],
+          ["VS", "VS"],
+        ],
+        m.filters.cupo,
+        "Todos",
+      )}
+      ${U.select(
+        "itinerant",
+        "Itinerancia",
+        [
+          ["S", "Sí"],
+          ["N", "No"],
+        ],
+        m.filters.itinerant,
+        "Todas",
+      )}</div>
+      <div class="secondary-checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Solo guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""}>Mis funciones</label></div><div class="extra-filter-footer">${U.button("clear-filters", "Limpiar filtros", "", "text")}${U.button("close-filters", "Ver resultados", "", "primary")}</div></div></details></div>
+      ${coverage(m)}${refreshFeedback(m)}</section>
+      <section id="results" class="results comfortable" aria-label="Resultados">${results(m)}</section><div class="data-actions">${U.button("export-csv", "Exportar CSV", "download", "text")}</div>`;
   }
   function filterChips(m) {
     const labels = {
@@ -174,7 +196,7 @@
       : "";
   }
   function resultTools(m) {
-    return `<div class="result-tools"><label class="sort-label" for="sort-by">Ordenar<select id="sort-by">${sortOptions.map(([key, label]) => `<option value="${key}" ${(m.sortBy || "original") === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>${U.button("sort-direction", m.sortDirection === "desc" ? "Descendente" : "Ascendente", m.sortDirection === "desc" ? "sort-down" : "sort-up", "direction", `id="sort-direction" ${!m.sortBy || m.sortBy === "original" ? "disabled" : ""}`)}<div class="density-switch" role="group" aria-label="Densidad de filas">${U.button("density", "Compacta", "", "", `data-density="compact" aria-pressed="${m.density !== "comfortable"}"`)}${U.button("density", "Cómoda", "", "", `data-density="comfortable" aria-pressed="${m.density === "comfortable"}"`)}</div></div>`;
+    return `<div class="result-tools"><label class="sort-label" for="sort-by">Ordenar<select id="sort-by">${sortOptions.map(([key, label]) => `<option value="${key}" ${(m.sortBy || "original") === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>${m.sortBy && m.sortBy !== "original" ? U.button("sort-direction", m.sortDirection === "desc" ? "Descendente" : "Ascendente", m.sortDirection === "desc" ? "sort-down" : "sort-up", "direction", 'id="sort-direction"') : ""}</div>`;
   }
   function results(m) {
     const rows = displayed(m),
@@ -187,7 +209,7 @@
       visible = rows.slice(start, start + size);
     const summary = m.onlySaved
       ? `<strong>Registros guardados por copia · ${U.count(rows.length, "registro")}</strong><span class="result-caption">Agrupados por publicación</span>`
-      : `<strong>${U.count(BA.places(rows), "plaza")} <span class="muted">en ${U.count(rows.length, "registro")}</span></strong><span class="result-caption">${Object.values(m.filters).some(Boolean) || m.onlyProfile ? "Resultados filtrados" : "En esta publicación"}</span>`;
+      : `<strong>${U.count(BA.places(rows), "plaza")} <span class="muted">en ${U.count(rows.length, "registro")}</span></strong>`;
     const head =
       filterChips(m) +
       `<div class="results-head"><div id="result-count" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${summary}</div>${resultTools(m)}</div>`;
@@ -352,11 +374,12 @@
       );
     return (
       header("Fuentes", refreshButton(m)) +
+      refreshFeedback(m) +
       historyNotice(m) +
-      `<section class="panel section source-overview"><div class="act-top"><h2>Comprobaciones</h2></div>${freshness(m)}<p><strong>${U.count(pending.length, "publicación pendiente", "publicaciones pendientes")}.</strong> Los documentos sin validar no sustituyen al último listado válido.</p>${m.refreshing ? `<p id="refresh-status" role="status">${E(m.refreshMessage || "Buscando publicaciones…")}</p>` : ""}</section>` +
+      `<section class="panel section source-overview"><div class="act-top"><h2>Comprobaciones</h2></div>${freshness(m)}<p><strong>${U.count(pending.length, "publicación pendiente", "publicaciones pendientes")}.</strong> Los documentos sin validar no sustituyen al último listado válido.</p></section>` +
       U.notice(
         "Alcance: vacantes sin cubrir de Secundaria y otros cuerpos",
-        `${canCheck(m) ? "Consulta del RSS, índice y anuncios de RRHH." : "Actualizar copia carga los datos publicados; no ejecuta una nueva consulta a las fuentes."} Convocatorias, resultados e incidencias: cobertura incompleta.`,
+        `${canCheck(m) ? "Consulta del RSS, índice y anuncios de RRHH." : "Recargar datos consulta la última copia publicada. La comprobación a petición no está conectada."} Convocatorias, resultados e incidencias: cobertura incompleta.`,
         "neutral",
       ) +
       `<section class="section"><div class="section-head"><div><h2>Documentos y procedencia</h2></div><span class="count">${m.state.documents.length}</span></div><div class="document-grid">${m.state.documents.map((d) => `<article class="panel document-card"><div class="act-top"><h3>${E(BA.date(d.published_at))}</h3><span class="pill ${d.status === "pending" ? "pending" : "observed"}">${E({ approved: "Incorporada", pending: "En revisión", superseded: "Sustituida" }[d.status] || d.status)}</span></div><div class="document-counts"><strong>${E(d.places)} plazas</strong><span>${E(d.row_count)} registros</span></div><p>${E(U.provenance(d))}</p><div class="buttons mt13">${U.pdfLink(d)}${U.external(d.source_url, "Origen oficial")}</div><details class="technical-details"><summary>Huella del documento · SHA-256</summary><div class="hash">${E(d.sha256)}</div>${d.warnings.length ? `<p>${E(d.warnings.join(" "))}</p>` : ""}</details></article>`).join("")}</div></section>` +
@@ -391,7 +414,7 @@
       ["profile", "Mi seguimiento", "bookmark"],
       ["sources", "Fuentes", "shield"],
     ];
-    return `<div class="shell"><aside class="sidebar"><div class="brand"><span class="brand-symbol" aria-hidden="true">b.</span><div><div class="brand-name">Bolsa Abierta</div><div class="brand-subtitle">Información docente abierta</div></div></div><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><header class="topbar"><div class="breadcrumb"><strong><span class="desktop-only">Región de </span>Murcia</strong><span>/</span><span>Secundaria y otros cuerpos</span></div><button class="top-status" data-view="sources">${U.icon("shield")}${canCheck(m) ? "Comprobación disponible" : "Copia publicada"}</button></header><main id="main" class="main" tabindex="-1">${views[m.view](m)}</main></div></div>`;
+    return `<div class="shell"><aside class="sidebar" id="site-nav"><div class="brand"><span class="brand-symbol" aria-hidden="true">b.</span><div><div class="brand-name">Bolsa Abierta</div><div class="brand-subtitle">Región de Murcia</div></div></div><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${views[m.view](m)}</main></div></div>`;
   }
   window.BAV = { current, allRows, displayed, shell, results };
 })();

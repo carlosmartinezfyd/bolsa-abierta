@@ -17,7 +17,8 @@
     pageSize: 25,
     sortBy: "original",
     sortDirection: "asc",
-    density: "compact",
+    density: "comfortable",
+    extraFiltersOpen: false,
     changePage: 1,
     changeKind: "",
     onlySaved: false,
@@ -44,8 +45,34 @@
       return false;
     }
   }
+  let stickyObserver;
+  function measureToolbar() {
+    const root = document.documentElement;
+    if (!root) return;
+    const nav = document.getElementById("site-nav");
+    const toolbar = document.getElementById("workspace-toolbar");
+    root.style.setProperty(
+      "--nav-height",
+      (window.innerWidth <= 900
+        ? nav?.getBoundingClientRect().height || 0
+        : 0) + "px",
+    );
+    root.style.setProperty(
+      "--toolbar-height",
+      (toolbar?.getBoundingClientRect().height || 0) + "px",
+    );
+  }
   function render() {
     app.innerHTML = V.shell(model);
+    stickyObserver?.disconnect();
+    measureToolbar();
+    if (window.ResizeObserver) {
+      stickyObserver = new window.ResizeObserver(measureToolbar);
+      for (const id of ["site-nav", "workspace-toolbar"]) {
+        const element = document.getElementById(id);
+        if (element) stickyObserver.observe(element);
+      }
+    }
   }
   function renderResults() {
     const target = document.getElementById("results"),
@@ -89,6 +116,17 @@
         V.allRows(model).filter((r) => model.prefs.favorites.includes(r.id))
           .length +
         ")";
+    const extra = document.getElementById("extra-filter-count");
+    if (extra) {
+      const total =
+        ["body_code", "language", "cupo", "itinerant"].filter(
+          (key) => model.filters[key],
+        ).length +
+        Number(model.onlySaved) +
+        Number(model.onlyProfile);
+      extra.textContent = total || "";
+      extra.hidden = !total;
+    }
   }
   function navigate(view) {
     model.view = view;
@@ -98,6 +136,17 @@
     try {
       history.replaceState(null, "", "#" + view);
     } catch {}
+  }
+  function revealResults() {
+    const results = document.getElementById("results"),
+      toolbar = document.getElementById("workspace-toolbar");
+    if (
+      results &&
+      toolbar &&
+      results.getBoundingClientRect().top <
+        toolbar.getBoundingClientRect().bottom
+    )
+      results.scrollIntoView({ block: "start" });
   }
   function show(content) {
     if (!dialog.open) {
@@ -193,19 +242,24 @@
   }
   async function sync(button) {
     if (model.refreshing) return;
+    const before = model.state;
     model.refreshing = true;
-    model.refreshMessage = "Buscando…";
-    busy(button, "Buscando…");
+    model.refreshFeedback = null;
+    model.refreshMessage = "Conectando…";
+    busy(button, "Comprobando…");
     render();
     try {
+      const reconnect =
+        window.BA_CONFIG?.apiBase && model.state.mode !== "server";
+      if (reconnect) await reload();
       if (
         model.state.mode !== "server" ||
         model.state.capabilities?.source_check !== "available"
       ) {
-        await reload(true);
-        toast(
-          "Copia publicada consultada. No se han comprobado las fuentes oficiales.",
-        );
+        if (!reconnect) await reload(true);
+        model.refreshFeedback = BA.refreshFeedback(before, model.state, {
+          sourceCheck: false,
+        });
       } else {
         const result = await BA.refreshSource(
           fetch,
@@ -223,20 +277,20 @@
           },
         );
         await reload(false, true);
-        toast(
-          result.status === "failed"
-            ? "Comprobación fallida. Se conservan las copias válidas."
-            : result.status === "partial"
-              ? "Comprobación parcial. Revisa los intentos y documentos sin incorporar."
-              : "Comprobación completada dentro del alcance. Revisa las publicaciones detectadas.",
-        );
+        model.refreshFeedback = BA.refreshFeedback(before, model.state, {
+          sourceCheck: true,
+          status: result.status,
+        });
       }
     } catch (err) {
-      toast(err.message);
+      model.refreshFeedback = { kind: "error", message: err.message };
     } finally {
       model.refreshing = false;
       model.refreshMessage = "";
       render();
+      document
+        .querySelector?.('[data-action="sync"]')
+        ?.focus({ preventScroll: true });
     }
   }
   function about() {
@@ -251,8 +305,10 @@
     model.onlyProfile = false;
     model.onlySaved = false;
     model.page = 1;
+    model.extraFiltersOpen = false;
     render();
     document.getElementById("search")?.focus({ preventScroll: true });
+    revealResults();
   }
 
   document.addEventListener("click", (event) => {
@@ -264,7 +320,16 @@
     const button = event.target.closest("[data-action]");
     if (!button || button.disabled) return;
     const action = button.dataset.action;
-    if (action === "show-results") {
+    if (action === "dismiss-refresh") {
+      model.refreshFeedback = null;
+      render();
+      document
+        .querySelector?.('[data-action="sync"]')
+        ?.focus({ preventScroll: true });
+    } else if (action === "close-filters") {
+      closeFilters();
+      revealResults();
+    } else if (action === "show-results") {
       document.getElementById("results")?.scrollIntoView({ block: "start" });
       document.getElementById("result-count")?.focus({ preventScroll: true });
     } else if (action === "detail") detail(button.dataset.id);
@@ -276,6 +341,7 @@
       model.page = 1;
       render();
       document.getElementById("search")?.focus({ preventScroll: true });
+      revealResults();
     } else if (action === "sort-direction") {
       model.sortDirection = model.sortDirection === "asc" ? "desc" : "asc";
       model.page = 1;
@@ -372,12 +438,35 @@
     } else if (action === "about") about();
     else if (action === "sync") return sync(button);
   });
+  function closeFilters() {
+    model.extraFiltersOpen = false;
+    const panel = document.getElementById("extra-filters");
+    if (panel) {
+      panel.open = false;
+      panel.querySelector("summary")?.focus({ preventScroll: true });
+    }
+  }
+  document.addEventListener(
+    "toggle",
+    (event) => {
+      if (event.target.id === "extra-filters" && event.target.isConnected)
+        model.extraFiltersOpen = event.target.open;
+    },
+    true,
+  );
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !dialog.open && model.extraFiltersOpen) {
+      event.preventDefault();
+      closeFilters();
+    }
+  });
   document.addEventListener("input", (event) => {
     const el = event.target;
     if (el.id === "search") {
       model.filters.q = el.value;
       model.page = 1;
       renderResults();
+      revealResults();
     }
     if (el.id === "profile-search") {
       const words = BA.norm(el.value).split(/\s+/).filter(Boolean);
@@ -421,6 +510,7 @@
       model.filters[el.dataset.filter] = el.value;
       model.page = 1;
       renderResults();
+      revealResults();
     }
     if (el.id === "copy-select") {
       model.selectedDoc = el.value;
@@ -435,6 +525,7 @@
       if (before !== JSON.stringify(model.filters))
         toast("Se han quitado los filtros que no existen en esta copia.");
       document.getElementById("copy-select")?.focus();
+      revealResults();
     }
     if (el.id === "only-saved") {
       model.onlySaved = el.checked;
@@ -445,11 +536,13 @@
       );
       render();
       document.getElementById("only-saved")?.focus();
+      revealResults();
     }
     if (el.id === "only-profile") {
       model.onlyProfile = el.checked;
       model.page = 1;
       renderResults();
+      revealResults();
       if (el.checked && !model.prefs.functions.length)
         toast(
           "Todavía no has elegido funciones. Configúralas en Mi seguimiento.",

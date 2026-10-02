@@ -119,7 +119,7 @@ export function createGateway(dependencies = {}) {
   const newId = dependencies.newId || (() => crypto.randomUUID().replaceAll('-', ''));
 
   async function snapshot(env, timestamp) {
-    const response = await fetch(snapshotURL(env, timestamp).href, {cache:'no-store', redirect:'error',
+    const response = await fetch(snapshotURL(env, timestamp).href, {cache:'no-store', redirect:'manual',
       headers:{'Accept':'application/json','Cache-Control':'no-cache'}, signal:AbortSignal.timeout(12_000)});
     if (!response.ok) throw new Error('Snapshot unavailable');
     const state = JSON.parse(await boundedText(response, MAX_SNAPSHOT_BYTES));
@@ -184,7 +184,7 @@ export function createGateway(dependencies = {}) {
         const job = reservation.job;
         try {
           const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/refresh.yml/dispatches`,
-            {method:'POST', redirect:'error', headers:{'Accept':'application/vnd.github+json',
+            {method:'POST', redirect:'manual', headers:{'Accept':'application/vnd.github+json',
               'Authorization':`Bearer ${env.GITHUB_TOKEN}`, 'Content-Type':'application/json',
               'X-GitHub-Api-Version':'2022-11-28', 'User-Agent':'BolsaAbierta-Gateway'},
               body:JSON.stringify({ref:env.GITHUB_REF,inputs:{request_id:job.id}}), signal:AbortSignal.timeout(12_000)});

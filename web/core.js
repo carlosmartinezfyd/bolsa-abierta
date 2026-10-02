@@ -376,6 +376,39 @@
       }
     }
   }
+  function refreshFeedback(
+    before,
+    after,
+    { sourceCheck = false, status } = {},
+  ) {
+    if (sourceCheck && status === "failed")
+      return {
+        kind: "error",
+        message:
+          "No se han podido comprobar las fuentes. Se conserva el último listado válido.",
+      };
+    if (sourceCheck && status === "partial")
+      return {
+        kind: "warning",
+        message: "Comprobación incompleta. Consulta los errores en Fuentes.",
+      };
+    const latest = after.documents.find((d) => d.id === after.current_id);
+    if (latest && before.current_id !== after.current_id)
+      return {
+        kind: "success",
+        message: `Nuevo listado disponible: ${date(latest.published_at)}.`,
+      };
+    return sourceCheck
+      ? {
+          kind: "success",
+          message: `Fuentes comprobadas. El listado sigue siendo el del ${date(latest?.published_at)}.`,
+        }
+      : {
+          kind: "neutral",
+          message:
+            "No hay una copia publicada más reciente. Consulta directa a las fuentes no disponible.",
+        };
+  }
   const date = (s, options = {}) => {
     const d = new Date(
       typeof s === "string" && s.length === 10 ? s + "T12:00:00" : s,
@@ -419,6 +452,7 @@
     validateState,
     loadState,
     refreshSource,
+    refreshFeedback,
     date,
     title,
     unique,

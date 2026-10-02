@@ -1,7 +1,7 @@
 ---
 version: "alpha"
 name: "Bolsa Abierta"
-description: "Consulta documental legible y densa, con identidad tipográfica sobria y procedencia siempre accesible."
+description: "Consulta de vacantes tranquila y directa, con controles persistentes y detalle progresivo."
 colors:
   primary: "#09685d"
   secondary: "#546861"
@@ -88,7 +88,7 @@ components:
 
 ## Overview
 
-A practical reading desk for teachers: precise, calm and recognisable. The October 2026 interface revision prioritises visible results, everyday controls and readable source evidence. It supersedes the earlier instruction to preserve the prototype's appearance.
+A focused vacancy search for teachers. The user's October 2 revision prioritises a calm screen over maximum density. Daily controls remain available while scrolling; secondary filters and technical data are disclosed on demand. This replaces the previous all-filters-visible, full-width layout.
 
 ## Colors
 
@@ -100,7 +100,7 @@ Self-hosted IBM Plex Sans in Regular, Medium and SemiBold, with its original OFL
 
 ## Layout
 
-Desktop: 208px sidebar, 48px context bar, fluid main width with 24–32px margins. Avoid the centred narrow column on large displays. The publication selector and four inline counts share one compact strip; the publication caveat and check summary stay visible, with full provenance available in Sources. Search and all seven filters remain visible. Table data starts early in the first viewport. Compact rows are the default; a comfortable mode adds padding without changing text size. Page size is selectable (25, 50, 100). At 1250px filters wrap; at 900px navigation becomes a top grid and table rows become cards. Mobile controls use 16px text, 44px primary touch targets and no horizontal page overflow.
+Desktop: 208px sidebar and a centred working area capped at 1680px. One sticky toolbar contains title, publication date, refresh, search, function, municipality and workload. Secondary filters, saved-only and followed functions live under More filters, with an active count and removable chips. Remove decorative headline totals and redundant status bands. Keep the toolbar and table headings visible at all scroll positions; derive offsets from measured heights, including mobile navigation and refresh feedback. Rows show function, destination, workload and places. Codes, cupo and extraction metadata belong to the record detail. Use comfortable readable rows without a density toggle. At widths up to 900px or heights up to 600px, only navigation stays fixed; filters scroll with the page so they cannot occupy most of the results viewport. The secondary panel is positioned within the viewport and scrolls internally.
 
 ## Elevation & Depth
 
@@ -112,14 +112,14 @@ Buttons and fields have a 5px radius, panels 10px. Small, restrained pills carry
 
 ## Components
 
-Vacancies: publication context, search and visible filters, active filter chips, result summary and sort controls, table and pagination. Sort direction is explicitly labelled Ascendente/Descendente; original document order stays available. Function names open row details. Municipality, centre and codes are distinct table columns on desktop. Favorites remain grouped by source document, even after sorting.
+Vacancies: a persistent search toolbar, one result count, simple sorting and a four-column data table. Municipality and centre share Destination; technical codes remain in the detail. Sort direction is labelled Ascendente/Descendente when applicable. Favorites remain grouped by source document. Refresh feedback stays visible until dismissed and explicitly distinguishes an unchanged official check, a new list, a partial check, a failure and a snapshot-only reload. Never imply a source check happened when the gateway is unavailable.
 
 Changes: dates and process identifiers anchor the comparison; filter counts sit inside the category buttons. Acts separate incorporated copies from official announcements. Following leads with saved rows and selected functions; unavailable personal position is secondary. Page headings stand alone: no explanatory subtitle, marketing copy or repeated scope in the sidebar. Notices state only what affects the interpretation of the data. Sources lead with last attempt, last full success, missing publications and documents; technical logs and hashes are expandable. Archived PDF and official origin links are always distinct.
 
 ## Do's and Don'ts
 
 - Keep the publication date, limitation on current availability, partial/failure state and missing-document count visible.
-- Keep daily filters visible, labels short and sort direction explicit.
+- Keep search, function, municipality and workload visible; move secondary filters under More filters and expose their active count.
 - Preserve every original record, duplicate and source reference; display changes never change the source data.
 - Avoid totals that combine vacancies from different publications.
 - Do not claim a snapshot reload checks official sources.

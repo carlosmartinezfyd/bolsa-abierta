@@ -298,9 +298,49 @@ const model = () => ({
   page: 1,
   view: "sources",
 });
+
+test("refresh feedback distinguishes source checks from unchanged published data", () => {
+  const before = model().state;
+  const same = structuredClone(before);
+  assert.match(
+    BA.refreshFeedback(before, same, { sourceCheck: false }).message,
+    /No hay una copia publicada más reciente/,
+  );
+  assert.match(
+    BA.refreshFeedback(before, same, { sourceCheck: false }).message,
+    /Consulta directa.*no disponible/,
+  );
+  assert.match(
+    BA.refreshFeedback(before, same, { sourceCheck: true, status: "completed" })
+      .message,
+    /Fuentes comprobadas.*sigue siendo/,
+  );
+  assert.equal(
+    BA.refreshFeedback(before, same, { sourceCheck: true, status: "partial" })
+      .kind,
+    "warning",
+  );
+  assert.equal(
+    BA.refreshFeedback(before, same, { sourceCheck: true, status: "failed" })
+      .kind,
+    "error",
+  );
+  const next = {
+    ...same,
+    current_id: "new",
+    documents: [
+      { ...same.documents[0], id: "new", published_at: "2026-10-02" },
+    ],
+  };
+  assert.match(
+    BA.refreshFeedback(before, next, { sourceCheck: true, status: "completed" })
+      .message,
+    /Nuevo listado.*2 oct 2026/,
+  );
+});
 test("static sources only offers snapshot refresh and separates successful and attempted checks", () => {
   const html = context.window.BAV.shell(model());
-  assert.match(html, /Actualizar copia/);
+  assert.match(html, /Recargar datos/);
   assert.match(html, /Último intento/);
   assert.match(html, /Última comprobación completa/);
   assert.doesNotMatch(
@@ -319,7 +359,7 @@ test("saved search displays each document group without combining vacancy totals
   assert.match(html, /Registros guardados por copia/);
   assert.doesNotMatch(html, /plazas<\/strong> en/);
 });
-async function controller(fetcher) {
+async function controller(fetcher, config = {}) {
   const listeners = {},
     app = { innerHTML: "" },
     toast = { textContent: "", classList: { add() {}, remove() {} } },
@@ -343,7 +383,7 @@ async function controller(fetcher) {
     setTimeout: () => 1,
     clearTimeout() {},
     window: {
-      BA_CONFIG: {},
+      BA_CONFIG: config,
       BOOTSTRAP: { documents: [] },
       addEventListener() {},
       scrollTo() {},
@@ -388,7 +428,8 @@ test("controller loads static snapshot and reloads snapshot without origin POST"
     calls.map((c) => c[0]),
     ["api/state", "data/state.json", "data/state.json"],
   );
-  assert.match(c.toast.textContent, /no se han comprobado/i);
+  assert.match(c.app.innerHTML, /No hay una copia publicada más reciente/);
+  assert.match(c.app.innerHTML, /Consulta directa a las fuentes no disponible/);
 });
 test("controller keeps prior visible data after refresh transport failure", async () => {
   const state = {
@@ -402,8 +443,90 @@ test("controller keeps prior visible data after refresh transport failure", asyn
   });
   const before = c.app.innerHTML;
   await c.click();
-  assert.equal(c.app.innerHTML, before);
-  assert.match(c.toast.textContent, /Fallo de conexión/);
+  const rowsBefore = before.match(/data-id="[^"]+"/g);
+  assert.deepEqual(c.app.innerHTML.match(/data-id="[^"]+"/g), rowsBefore);
+  assert.match(c.app.innerHTML, /Fallo de conexión/);
+  assert.match(c.app.innerHTML, /refresh-feedback error/);
+});
+test("controller reconnects the configured gateway after an initial static fallback", async () => {
+  const calls = [];
+  let loads = 0;
+  const state = {
+    ...seed,
+    mode: "server",
+    capabilities: { source_check: "available" },
+  };
+  const c = await controller(
+    async (url, options) => {
+      calls.push([url, options?.method || "GET"]);
+      if (url === "https://gateway.example/api/state" && ++loads === 1)
+        return { ok: false, status: 503, json: async () => ({}) };
+      return {
+        ok: true,
+        json: async () =>
+          url.endsWith("api/refresh")
+            ? { id: "job", status: "completed" }
+            : url === "data/state.json"
+              ? seed
+              : state,
+      };
+    },
+    { apiBase: "https://gateway.example" },
+  );
+  assert.match(c.app.innerHTML, /Recargar datos/);
+  await c.click();
+  assert.deepEqual(calls, [
+    ["https://gateway.example/api/state", "GET"],
+    ["data/state.json", "GET"],
+    ["https://gateway.example/api/state", "GET"],
+    ["https://gateway.example/api/refresh", "POST"],
+    ["https://gateway.example/api/state", "GET"],
+  ]);
+  assert.match(c.app.innerHTML, /Fuentes comprobadas/);
+  assert.match(c.app.innerHTML, /Actualizar/);
+});
+test("controller still accepts a newer static copy while the configured gateway stays down", async () => {
+  let loads = 0;
+  const id = "d".repeat(64);
+  const updated = {
+    ...seed,
+    current_id: id,
+    documents: [
+      {
+        ...seed.documents[0],
+        id,
+        sha256: id,
+        published_at: "2026-10-02T12:00:00Z",
+        rows: [
+          {
+            ...seed.documents[0].rows[0],
+            id: id + ":1:1",
+            center: "NUEVO CENTRO ESTÁTICO",
+          },
+        ],
+      },
+      ...seed.documents,
+    ],
+  };
+  const c = await controller(
+    async (url) =>
+      url.startsWith("https://gateway.example/")
+        ? { ok: false, status: 503, json: async () => ({}) }
+        : { ok: true, json: async () => (++loads === 1 ? seed : updated) },
+    { apiBase: "https://gateway.example" },
+  );
+  await c.click();
+  assert.match(c.app.innerHTML, /Nuevo Centro Estático/);
+  assert.doesNotMatch(c.app.innerHTML, /refresh-feedback error/);
+  assert.match(c.app.innerHTML, /Recargar datos/);
+});
+test("sources has a single live progress message during a refresh", () => {
+  const m = model();
+  m.view = "sources";
+  m.refreshing = true;
+  m.refreshMessage = "Comprobación solicitada";
+  const html = context.window.BAV.shell(m);
+  assert.equal((html.match(/id="refresh-status"/g) || []).length, 1);
 });
 test("CSV preserves the document date, hash, origin and archived link", () => {
   const text = BA.csv([
