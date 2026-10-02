@@ -2,9 +2,9 @@
   "sha256": "cbe8220877138bcf0c6f20e53354f976549737c16d2dbe18c90ebe523f11058a",
   "published_at": "2026-07-22",
   "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=Resoluci%C3%B3n+Definitiva+listas+de+interinos+2026-2027.pdf&IDCONTENIDO=208095&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4491%2C72314%2C4500%2C4092%2C75599",
-  "row_count": 12895,
+  "row_count": 12898,
   "scope": "published_list",
-  "coverage": "baseline_only",
+  "coverage": "reviewed_amendments",
   "specialties": [
     {
       "code": "0590001",
@@ -40,7 +40,7 @@
       "code": "0590006",
       "name": "MATEMATICAS",
       "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
-      "count": 762
+      "count": 763
     },
     {
       "code": "0590007",
@@ -160,7 +160,7 @@
       "code": "0590108",
       "name": "INTERVENCION SOCIOCOMUNITARIA",
       "body": "CUERPO DE PROFESORES DE ENSEÑANZA SECUNDARIA",
-      "count": 126
+      "count": 127
     },
     {
       "code": "0590109",
@@ -904,7 +904,7 @@
       "code": "0594428",
       "name": "TROMPETA",
       "body": "CUERPO DE PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
-      "count": 23
+      "count": 24
     },
     {
       "code": "0594429",
@@ -1253,6 +1253,23 @@
       "name": "TALLER DE VIDRIO Y CERAMICA",
       "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P",
       "count": 4
+    }
+  ],
+  "baseline_row_count": 12895,
+  "amendments": [
+    {
+      "content_id": "208249",
+      "sha256": "e33daf270857c9e2bb5f7e5b01aedc872a978ae418253645b881f42d969c00c1",
+      "signed_at": "2026-07-28",
+      "pages": 2,
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599"
+    },
+    {
+      "content_id": "208379",
+      "sha256": "9cbfdb677da94b92294066fb71bd65dcc8fc378337727d78f165e6ec7c97640f",
+      "signed_at": "2026-08-04",
+      "pages": 1,
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599"
     }
   ]
 }
