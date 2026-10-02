@@ -5,12 +5,15 @@
     U = BAUI,
     V = BAV,
     KEY = "bolsa-abierta:v1:preferences";
+  const routes = ["home", "vacancies", "changes", "acts", "profile", "sources"];
+  const route = () =>
+    routes.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   const app = document.getElementById("app"),
     dialog = document.getElementById("detail-dialog");
   const model = {
     state: null,
     prefs: { favorites: [], functions: [], lastSeen: null },
-    view: "vacancies",
+    view: "home",
     filters: {},
     selectedDoc: null,
     page: 1,
@@ -134,7 +137,7 @@
     document.getElementById("main")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
     try {
-      history.replaceState(null, "", "#" + view);
+      if (location.hash !== "#" + view) history.pushState(null, "", "#" + view);
     } catch {}
   }
   function revealResults() {
@@ -312,8 +315,22 @@
   }
 
   document.addEventListener("click", (event) => {
+    if (event.target.closest(".skip")) {
+      event.preventDefault();
+      document.getElementById("main")?.focus();
+      return;
+    }
     const nav = event.target.closest("[data-view]");
     if (nav) {
+      if (
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        event.button > 0
+      )
+        return;
+      event.preventDefault();
       navigate(nav.dataset.view);
       return;
     }
@@ -595,12 +612,11 @@
     )?.focus({ preventScroll: true });
   });
   window.addEventListener("hashchange", () => {
-    const view = location.hash.slice(1);
-    if (["vacancies", "changes", "acts", "profile", "sources"].includes(view)) {
-      model.view = view;
-      render();
-      document.getElementById("main")?.focus({ preventScroll: true });
-    }
+    model.view = route();
+    if (!model.state) return;
+    render();
+    document.getElementById("main")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0 });
   });
   (async () => {
     try {
@@ -609,15 +625,7 @@
       } catch {
         model.storageAvailable = false;
       }
-      model.view = [
-        "vacancies",
-        "changes",
-        "acts",
-        "profile",
-        "sources",
-      ].includes(location.hash.slice(1))
-        ? location.hash.slice(1)
-        : "vacancies";
+      model.view = route();
       await reload();
       render();
     } catch (err) {

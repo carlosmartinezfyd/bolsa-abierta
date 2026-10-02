@@ -405,8 +405,34 @@
       }</ol></details>`
     );
   }
+  function home(m) {
+    const doc = m.state.documents.find(
+      (d) => d.id === m.state.current_id && d.status === "approved",
+    );
+    const seen = new Set();
+    const sample = (doc?.rows || [])
+      .filter((row) => {
+        if (seen.has(row.function_code)) return false;
+        seen.add(row.function_code);
+        return true;
+      })
+      .slice(0, 3);
+    const places = (doc?.rows || []).reduce(
+      (total, row) => total + row.quantity,
+      0,
+    );
+    return `<div class="landing">
+      <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#vacancies" data-view="vacancies">Ir a la consulta ${U.icon("arrow")}</a></nav></header>
+      <main id="main" class="landing-main" tabindex="-1">
+        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Secundaria y otros cuerpos</p><h1 id="landing-title">Consulta las vacantes docentes de Murcia.</h1><p class="landing-lead">Busca por especialidad, municipio o jornada. Compara los listados y guarda las plazas que te interesan.</p><a class="button primary landing-cta" href="#vacancies" data-view="vacancies">Consultar vacantes ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
+        <aside class="landing-publication" aria-label="Última publicación incorporada"><div class="landing-publication-head"><span>Último listado incorporado</span>${U.icon("calendar")}</div>${doc ? `<h2>${E(BA.date(doc.published_at))}</h2><p class="landing-scope">Vacantes sin cubrir</p><ul class="landing-sample">${sample.map((row) => `<li><strong>${E(BA.title(row.function))}</strong><span>${E(BA.title(row.municipality))} · ${row.workload === "full" ? "Jornada completa" : E(row.hours) + " h"}</span></li>`).join("")}</ul><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Ver ${U.count(places, "plaza", "plazas")}${U.icon("arrow")}</button><p class="landing-availability">La publicación no confirma la disponibilidad actual.</p>` : `<h2>Consulta de publicaciones</h2><p class="landing-scope">Todavía no hay un listado validado disponible.</p><a class="landing-publication-link" href="#sources" data-view="sources">Ver fuentes ${U.icon("arrow")}</a>`}</aside></section>
+        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Filtra las vacantes</h2><p>Filtra las plazas por tu especialidad, destino y tipo de jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, desaparecen o cambian entre publicaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Guarda tu selección</h2><p>Marca las plazas que te interesan y las funciones que sigues. Se guardan en este navegador.</p><a href="#profile" data-view="profile">Mi seguimiento ${U.icon("arrow")}</a></article></section>
+        <section class="landing-origin" aria-labelledby="landing-origin-title"><div><h2 id="landing-origin-title">El origen de los datos</h2><p>Los datos proceden de RRHH Educación y CARM. Puedes consultar la fecha de cada publicación y abrir su fuente.</p></div><a href="#sources" data-view="sources">Consultar fuentes ${U.icon("arrow")}</a></section>
+      </main><footer class="landing-footer"><p>Bolsa Abierta es un proyecto independiente de la CARM. Las solicitudes y adjudicaciones se tramitan por los canales oficiales.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
+  }
   const views = { vacancies, changes, acts, profile, sources };
   function shell(m) {
+    if (m.view === "home") return home(m);
     const nav = [
       ["vacancies", "Vacantes", "grid"],
       ["changes", "Cambios", "changes"],
@@ -414,7 +440,7 @@
       ["profile", "Mi seguimiento", "bookmark"],
       ["sources", "Fuentes", "shield"],
     ];
-    return `<div class="shell"><aside class="sidebar" id="site-nav"><div class="brand"><span class="brand-symbol" aria-hidden="true">b.</span><div><div class="brand-name">Bolsa Abierta</div><div class="brand-subtitle">Región de Murcia</div></div></div><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${views[m.view](m)}</main></div></div>`;
+    return `<div class="shell"><aside class="sidebar" id="site-nav"><a class="brand brand-home" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span><span class="brand-name">Bolsa Abierta</span><span class="brand-subtitle">Región de Murcia</span></span></a><nav class="nav" aria-label="Navegación principal">${nav.map(([id, name, ico]) => `<button class="nav-button ${m.view === id ? "active" : ""}" data-view="${id}" ${m.view === id ? 'aria-current="page"' : ""}>${U.icon(ico)}<span>${name}</span></button>`).join("")}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${views[m.view](m)}</main></div></div>`;
   }
   window.BAV = { current, allRows, displayed, shell, results };
 })();
