@@ -1,6 +1,6 @@
 # Consulta de posición publicada
 
-`#position` busca por nombre o número oficial de lista, con especialidad opcional y coincidencias mientras se escribe. Exige confirmar la ficha y recuerda únicamente su identificador en el navegador. El número destacado es el ordinal de la fila admitida en una publicación concreta, contando sus bloques en el orden del documento. No representa disponibilidad actual ni probabilidad de adjudicación.
+`#position` busca por nombre o número oficial de lista, con especialidad opcional y coincidencias mientras se escribe. Exige confirmar la ficha y recuerda únicamente su identificador en el navegador. Una lista ordenada muestra el ordinal de la fila admitida, contando sus bloques en el orden del documento. Una adjudicación muestra su fecha, destino y jornada, con `rank: null`. Ninguna representa disponibilidad actual ni probabilidad de adjudicación.
 
 ## Referencia incorporada
 
@@ -8,18 +8,20 @@ Resolución definitiva CARM de 22 de julio de 2026, curso 2026/2027, con las dos
 
 Los anexos de exclusiones y reclamaciones se excluyen, incluida la segunda página de la orden complementaria. Se conservan los números de siete cifras y se distinguen los números repetidos entre bloques. Cada incorporación conserva su documento y página propios; el enlace de la ficha conduce a esa evidencia. El puesto se recalcula respetando el orden de los bloques y el número dentro del bloque. La corrección de Trompeta exige además los dos números contiguos comprobados en la página 504 de la base.
 
-El manifiesto contiene solo metadatos y cantidades por especialidad. Los nombres se guardan en D1, sin DNI ni puntuaciones. No se añaden datos nominales o PDFs de estas listas al repositorio, a `data-state` ni a Pages. La API devuelve hasta 20 coincidencias por consulta, con filtro opcional de especialidad y exige al menos tres caracteres. Las consultas viajan en POST, no en la URL; respuestas sin caché y con `X-Robots-Tag: noindex`.
+La generación multifuente añade las 147 adjudicaciones definitivas del 24 de septiembre, de 42 funciones (33 registros bilingües). Son **13.045 registros y 215 códigos de agrupación** en total. El manifiesto adicional es `data/position-documents.json`: hash, fecha, proceso, páginas y conteos independientes por página y función. `assigned_function` conserva el código de la plaza; dos variantes revisadas se asocian a su cabecera documental mediante `assigned_function_groups`, sin inventar equivalencias nuevas. La columna de prioridad no se transforma en un puesto.
+
+Los manifiestos contienen solo metadatos y cantidades. Los nombres se guardan en D1, sin DNI, puntuaciones ni observaciones sobre terceros. No se añaden datos nominales o PDFs de estas listas al repositorio, a `data-state` ni a Pages. La API devuelve 20 coincidencias por página, con filtro opcional de especialidad y al menos tres caracteres. `next_offset` permite continuar; las páginas siguientes requieren el mismo `version_id`, y un cambio de generación devuelve 409 para repetir la búsqueda. Las consultas viajan en POST, no en la URL; respuestas sin caché y con `X-Robots-Tag: noindex`.
 
 ## Operación
 
 1. Aplicar `gateway/positions.sql` a la misma D1 del gateway.
 2. Desplegar el Worker que importa `gateway/positions.mjs`.
 3. Crear un secreto aleatorio de al menos 40 caracteres, específico para ingesta. Guardar `POSITION_INGEST_TOKEN` en Worker y GitHub Actions; nunca en vars, archivos versionados ni frontend. Es independiente de `GITHUB_TOKEN` (permiso de ejecutar comprobaciones).
-4. Ejecutar `python -m bolsa_abierta.position_sync` con `PUBLIC_API_BASE` y `POSITION_INGEST_TOKEN`. El workflow existente lo ejecuta también cada media hora. El runner no publica su directorio privado.
+4. Ejecutar `python -m bolsa_abierta.position_sync` con `PUBLIC_API_BASE` y `POSITION_INGEST_TOKEN`. En Actions, `--state saved-state/source-documents.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory` conserva documentos activados y procesa nuevos candidatos. El workflow existente lo ejecuta cada media hora. El runner no publica su directorio privado.
 
 Solo la descarga y verificación de **todos** los documentos incorporados actualiza la fecha de comprobación. La identidad de la versión incluye los hashes de la base, las órdenes y la versión del transformador. Un hash distinto requiere revisar publicación, formato y manifiesto: no se asigna automáticamente la fecha antigua a nuevos bytes. Las versiones pasan por staging, totales y rangos completos por especialidad; la activación es atómica. Un fallo mantiene la versión anterior. El workflow marca el fallo sin destruir el resto de las publicaciones. Para desplegar un formato nuevo: primero Worker compatible, después frontend, y por último activación de los datos. La compatibilidad se despliega en una entrega previa al cambio de manifiesto. La sincronización precede al snapshot que anuncia la finalización de una comprobación.
 
-El endpoint `/internal/positions` permite solo begin/rows/activate/checked autenticados con el secreto de ingesta. Cada lote admite 40 filas. Las versiones activadas no permiten cambios en sus filas. La lectura usa la sesión primaria de D1. Pruebas de integración usan SQLite real y el handler de producción.
+El endpoint `/internal/positions` permite solo begin/rows/activate/checked autenticados con el secreto de ingesta. Cada lote admite 40 filas; los mensajes se limitan a 1 MB. Una generación admite hasta 100 documentos adicionales y 100.000 registros; superar el límite rechaza la publicación conservando la anterior. Las versiones activadas no permiten cambios en sus filas. La tabla `position_entries` mantiene los registros multifuente, con rango nulo sólo para adjudicaciones; las generaciones anteriores siguen leyendo `position_rows`. La lectura usa la sesión primaria de D1. Pruebas de integración usan SQLite real y el handler de producción.
 
 ## Vigilancia de nuevas resoluciones
 
@@ -27,7 +29,9 @@ Los CAPTCHA de CARM y Educarm se completaron en el navegador con autorización d
 
 `python -m bolsa_abierta.position_updates` descubre los documentos del índice oficial del curso y conserva las descargas por SHA en `.runtime/position-updates`. `data/position-updates.json` exige la presencia de la lista base (208095), la corrección (208379) y la orden complementaria (208249). Sus hashes revisados proceden del manifiesto. Si falta una, el índice falla, cambian sus bytes o aparece otra resolución, la auditoría no se da por completa. Las correcciones provisionales no se aplican a la lista definitiva.
 
-El workflow ejecuta esta auditoría independientemente de la publicación de vacantes y deja su resultado en el resumen de Actions. Los PDFs y el informe completo permanecen en el runner efímero: no se suben a Git, Pages ni artifacts. Solo se imprimen estados y cantidades. Esta etapa **descubre y comprueba documentos; no modifica posiciones**. La consolidación corresponde a `position_amendments` y `position_sync`, con transformaciones explícitas para cada resolución revisada. Su éxito tampoco acredita ceses, disponibilidad o una posición actual. Una incorporación futura deberá añadir la transformación revisada y sus pruebas, no solo un hash.
+La auditoría específica anterior sigue disponible como comando de diagnóstico. El workflow la sustituye por el [inventario general y persistente del curso](source-coverage.md): RSS paginado, mapa e índices CARM. Sus metadatos quedan en `data-state/source-inventory.json`; las referencias activadas, en `source-documents.json`. Los originales permanecen en el runner efímero. Sólo se imprimen estados y cantidades.
+
+El inventario **descubre y comprueba documentos; no modifica posiciones**. `position_sync` escanea nuevas adjudicaciones definitivas con el adaptador estricto, verifica su estructura completa y conserva su manifiesto tras activar la generación. Las revisiones de documentos incorporados o nuevos formatos requieren revisión. Las admisiones y correcciones requieren transformaciones específicas; reconocer su título no basta. Su éxito tampoco acredita ceses, disponibilidad o una posición actual.
 
 ## Disponibilidad actual: pendiente
 
@@ -43,8 +47,16 @@ Se obtuvo también el [resultado definitivo del acto del 24 de septiembre](https
 
 La compatibilidad se publicó primero en el Worker y Pages (PR 7, ejecución `37058070271`). El manifiesto se activó después (PR 8). La ejecución `37058410313` publicó Pages, pero la ingesta automática encontró `access_challenge` al descargar una orden y conservó la referencia anterior. El índice oficial también quedó sin comprobación completa.
 
-La consolidación se publicó administrativamente en D1 a partir de los originales descargados en el navegador: se volvieron a extraer los tres PDFs, se validaron las filas con el handler de producción, se cargó una versión inactiva y se comprobaron remotamente los 208 totales y rangos antes de activarla. La generación activa es `a573ef5d5e01c1b202b9672320283c45e56fb136100758566d5ea45595f92262`. Su fecha de comprobación conserva la más antigua de las descargas utilizadas (`2026-10-02T17:19:32.306403Z`), sin fingir una consulta nueva al origen.
+La consolidación se publicó administrativamente en D1 a partir de los originales descargados en el navegador: se volvieron a extraer los tres PDFs, se validaron las filas con el handler de producción, se cargó una versión inactiva y se comprobaron remotamente los 208 totales y rangos antes de activarla. Esa generación inicial fue `a573ef5d5e01c1b202b9672320283c45e56fb136100758566d5ea45595f92262`. Su fecha de comprobación conserva la más antigua de las descargas utilizadas (`2026-10-02T17:19:32.306403Z`), sin fingir una consulta nueva al origen.
 
 La API pública confirmó las tres altas, su documento y página, y un identificador anterior cuyo puesto se desplazó. La ficha se comprobó también en la web publicada. Las revisiones automáticas posteriores deben seguir descargando y verificando todos los documentos; si reaparece el desafío, no adelantan la fecha ni desactivan la generación verificada.
 
 Si no está configurado el secreto GITHUB_TOKEN, el control de la ficha dice “Volver a consultar”; vuelve a leer D1 y no afirma consultar las fuentes. Con el permiso configurado, solicita la comprobación mediante el gateway y vuelve a leer la ficha al terminar. La fecha de la publicación permanece siempre visible.
+
+## Publicación multifuente verificada
+
+PR 10 (`db5878b8d28d11b0754dae408a15ad0a5653277d`): 124 pruebas Python y 81 Node aprobadas, revisión independiente y prueba móvil. Worker desplegado como `dd14ca60-61f1-48d8-8019-6c90ef801030`. La ejecución `37068849620` publicó Pages y persistió un inventario de 30 documentos: 22 no disponibles y 8 provisionales no aplicables. La comprobación de la lista recibió `access_challenge`; el workflow terminó con fallo explícito, aunque el despliegue de Pages se completó.
+
+La nueva generación `482d3e30394d5934abb3b21f85da0773a87268adead5e241a62ad800dd4b563a` se activó administrativamente con los originales ya verificados, sin avanzar su fecha conservadora. Se repitió la extracción de la base, correcciones y PDF completo de adjudicaciones; los 13.045 registros pasaron el handler de producción sobre SQLite. En D1 se comprobó la coincidencia del manifiesto anterior antes de copiar sus filas intactas a staging, se añadieron las 147 adjudicaciones validadas y se verificaron remotamente todos los conteos por función y fuente antes de activar. La importación masiva por archivo no estaba autorizada por el endpoint de Cloudflare; las consultas D1 normales funcionaron con los permisos existentes, sin ampliarlos.
+
+La API y la web pública confirmaron una coincidencia bilingüe con su documento, fecha y página, separada de otra persona de nombre parecido. La búsqueda conserva los identificadores anteriores y permite continuar más allá de veinte coincidencias. Los metadatos activados se guardaron en `data-state/source-documents.json`, commit `7f00b7641d63daa22a2a99d8a541f7619019856d`; no se publicaron los registros nominales ni los PDF.
