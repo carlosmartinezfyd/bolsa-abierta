@@ -20,6 +20,9 @@ class Application:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='official-refresh')
         self.web_files = {f'/web/{p.name}': p for p in (self.source / 'web').iterdir()
                           if p.is_file() and p.suffix in ('.js', '.css')}
+        for weight in ('Regular', 'Medium', 'SemiBold'):
+            name = f'IBMPlexSans-{weight}.woff2'
+            self.web_files[f'/web/fonts/{name}'] = self.source / 'web' / 'fonts' / name
 
     def close(self):
         self.executor.shutdown(wait=True)
@@ -97,6 +100,8 @@ class Application:
             if method == 'GET':
                 file = self.source / 'index.html' if path in ('/', '/index.html') else self.web_files.get(path)
                 if file and file.is_file():
+                    if file.suffix == '.woff2':
+                        return respond(200, file.read_bytes(), 'font/woff2')
                     kind = mimetypes.guess_type(file.name)[0] or 'application/octet-stream'
                     return respond(200, file.read_bytes(), kind + '; charset=utf-8')
             return respond(404, {'error': 'Not found'})

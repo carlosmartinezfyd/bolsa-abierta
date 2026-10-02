@@ -73,6 +73,15 @@ class ServerTests(unittest.TestCase):
         digest = self.store.archive(b'%PDF-unpublished')
         self.assertEqual(self.request('/api/documents/' + digest + '.pdf')['status'], 404)
 
+    def test_serves_bundled_fonts_with_binary_mime_without_exposing_other_files(self):
+        for weight in ('Regular', 'Medium', 'SemiBold'):
+            response = self.request(f'/web/fonts/IBMPlexSans-{weight}.woff2')
+            self.assertEqual(response['status'], 200)
+            self.assertEqual(response['headers']['Content-Type'], 'font/woff2')
+            self.assertTrue(response['body'].startswith(b'wOF2'))
+        for path in ('/web/fonts/README.md', '/web/fonts/other.woff2', '/web/fonts/../../.git/config'):
+            self.assertEqual(self.request(path)['status'], 404)
+
     def test_worker_failure_is_terminal(self):
         self.app.close()
         def fail(store):

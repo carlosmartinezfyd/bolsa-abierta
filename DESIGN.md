@@ -1,64 +1,126 @@
 ---
 version: "alpha"
 name: "Bolsa Abierta"
-description: "Consulta documental compacta con la apariencia conservada del prototipo existente."
+description: "Consulta documental legible y densa, con identidad tipográfica sobria y procedencia siempre accesible."
 colors:
-  primary: "#08796d"
-  secondary: "#61747b"
-  accent: "#08796d"
-  background: "#f5f7f8"
+  primary: "#09685d"
+  secondary: "#546861"
+  accent: "#09685d"
+  background: "#f4f6f3"
   surface: "#ffffff"
-  text: "#17292f"
-  muted: "#61747b"
-  border: "#dde5e8"
+  text: "#20332d"
+  muted: "#5c6e66"
+  border: "#d9e1db"
 typography:
-  h1: {fontFamily: "Segoe UI, Arial, sans-serif", fontSize: "29px", fontWeight: "700", lineHeight: "1.2", letterSpacing: "-1px"}
-  h2: {fontFamily: "Segoe UI, Arial, sans-serif", fontSize: "19px", fontWeight: "700", lineHeight: "1.3", letterSpacing: "-0.35px"}
-  body: {fontFamily: "Segoe UI, Arial, sans-serif", fontSize: "15px", fontWeight: "400", lineHeight: "1.5", letterSpacing: "0px"}
-  label: {fontFamily: "Segoe UI, Arial, sans-serif", fontSize: "12px", fontWeight: "400", lineHeight: "1.5", letterSpacing: "0px"}
-rounded: {sm: "7px", md: "9px", lg: "12px"}
-spacing: {xs: "6px", sm: "12px", md: "19px", lg: "24px", xl: "38px"}
+  h1:
+    {
+      fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+      fontSize: "28px",
+      fontWeight: "600",
+      lineHeight: "1.2",
+      letterSpacing: "-0.7px",
+    }
+  h2:
+    {
+      fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+      fontSize: "19px",
+      fontWeight: "600",
+      lineHeight: "1.3",
+      letterSpacing: "-0.2px",
+    }
+  body:
+    {
+      fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+      fontSize: "14px",
+      fontWeight: "400",
+      lineHeight: "1.5",
+      letterSpacing: "0px",
+    }
+  label:
+    {
+      fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+      fontSize: "12px",
+      fontWeight: "500",
+      lineHeight: "1.4",
+      letterSpacing: "0px",
+    }
+rounded: { sm: "5px", md: "8px", lg: "10px" }
+spacing: { xs: "4px", sm: "8px", md: "16px", lg: "24px", xl: "32px" }
 components:
-  button-primary: {backgroundColor: "{colors.primary}", textColor: "{colors.surface}", rounded: "{rounded.sm}", padding: "9px 13px"}
-  button-secondary: {backgroundColor: "{colors.surface}", textColor: "{colors.text}", rounded: "{rounded.sm}", padding: "9px 13px"}
-  button-accent: {backgroundColor: "{colors.accent}", textColor: "{colors.surface}", rounded: "{rounded.sm}", padding: "9px 13px"}
-  card: {backgroundColor: "{colors.surface}", textColor: "{colors.text}", rounded: "{rounded.lg}", padding: "{spacing.md}"}
-  input: {backgroundColor: "{colors.surface}", textColor: "{colors.text}", rounded: "{rounded.sm}", padding: "9px 11px"}
-  divider: {backgroundColor: "{colors.border}", height: "1px"}
-  caption: {textColor: "{colors.muted}", typography: "{typography.label}"}
+  button-primary:
+    {
+      backgroundColor: "{colors.primary}",
+      textColor: "{colors.surface}",
+      rounded: "{rounded.sm}",
+      padding: "8px 12px",
+    }
+  button-secondary:
+    {
+      backgroundColor: "{colors.surface}",
+      textColor: "{colors.text}",
+      rounded: "{rounded.sm}",
+      padding: "8px 12px",
+    }
+  button-accent:
+    {
+      backgroundColor: "{colors.accent}",
+      textColor: "{colors.surface}",
+      rounded: "{rounded.sm}",
+      padding: "8px 12px",
+    }
+  card:
+    {
+      backgroundColor: "{colors.surface}",
+      textColor: "{colors.text}",
+      rounded: "{rounded.lg}",
+      padding: "{spacing.md}",
+    }
+  input:
+    {
+      backgroundColor: "{colors.surface}",
+      textColor: "{colors.text}",
+      rounded: "{rounded.sm}",
+      padding: "7px 10px",
+    }
+  divider: { backgroundColor: "{colors.border}", height: "1px" }
+  caption: { textColor: "{colors.muted}", typography: "{typography.label}" }
 ---
 
 ## Overview
 
-Values documented from the restored `web/styles.css`, preserving the approved existing interface. The task changes source evidence and refresh behavior without a visual redesign.
+A practical reading desk for teachers: precise, calm and recognisable. The October 2026 interface revision prioritises visible results, everyday controls and readable source evidence. It supersedes the earlier instruction to preserve the prototype's appearance.
 
 ## Colors
 
-Green identifies primary actions and saved rows. Warnings reuse background `#fff7e8`, border `#ecd7a9` and text `#765523`; neutral notices reuse `#eef3f7`. Focus outlines are `3px solid #097dca`.
+Deep green for actions and active navigation; warm grey-green background and white working surfaces. Text and metadata must meet WCAG AA contrast. Amber identifies limitations or failed/partial checks; a green status never certifies current vacancy availability. Focus uses a clearly visible 3px blue outline.
 
 ## Typography
 
-The existing font stack starts with `ui-sans-serif`, system UI and Segoe UI. Table rows use 12px text; metadata uses 10–12px. Preserve readable wrapping for source titles and provenance.
+Self-hosted IBM Plex Sans in Regular, Medium and SemiBold, with its original OFL license. No external font requests. Body and row labels are 14px, secondary text and field labels at least 12px. Headings use weight 600. Codes use a system monospace; numbers use tabular figures. At very wide viewports increase the scale, not the gaps. Text wraps instead of being permanently truncated.
 
 ## Layout
 
-Desktop uses a 220px sidebar, a 75px header and a main area up to 1550px wide with 31px by 38px padding. Existing breakpoints are 1180px, 760px and 370px. At 760px navigation becomes a horizontal grid and table rows become compact cards. Filters remain directly accessible.
+Desktop: 208px sidebar, 48px context bar, fluid main width with 24–32px margins. Avoid the centred narrow column on large displays. The publication selector and four inline counts share one compact strip; the publication caveat and check summary stay visible, with full provenance available in Sources. Search and all seven filters remain visible. Table data starts early in the first viewport. Compact rows are the default; a comfortable mode adds padding without changing text size. Page size is selectable (25, 50, 100). At 1250px filters wrap; at 900px navigation becomes a top grid and table rows become cards. Mobile controls use 16px text, 44px primary touch targets and no horizontal page overflow.
 
 ## Elevation & Depth
 
-Separation primarily uses thin borders. Reuse existing dialogs, notices and panels; no new shadow or elevation system.
+Use borders and pale surface changes for hierarchy. Shadows belong to modal dialogs and toasts. Table headings stay visible while scrolling desktop results. Respect reduced motion and keyboard focus; preserve focus when results are replaced.
 
 ## Shapes
 
-Cards use the 12px radius token, buttons and inputs 7px and notices 9px. Status pills retain their existing styling.
+Buttons and fields have a 5px radius, panels 10px. Small, restrained pills carry semantic labels. No decorative gradients, glass effects or large metric cards.
 
 ## Components
 
-Refresh uses the existing primary button and spinner. Source attempt and success times are displayed separately. Favorite rows are grouped by document and retain dates; counts across documents do not imply current vacancies. Navigation returns keyboard focus to the main content. Links distinguish archived bytes from the official origin.
+Vacancies: publication context, search and visible filters, active filter chips, result summary and sort controls, table and pagination. Sort direction is explicitly labelled Ascendente/Descendente; original document order stays available. Function names open row details. Municipality, centre and codes are distinct table columns on desktop. Favorites remain grouped by source document, even after sorting.
+
+Changes: dates and process identifiers anchor the comparison; filter counts sit inside the category buttons. Acts separate incorporated copies from official announcements. Following leads with saved rows and selected functions; unavailable personal position is secondary. Page headings stand alone: no explanatory subtitle, marketing copy or repeated scope in the sidebar. Notices state only what affects the interpretation of the data. Sources lead with last attempt, last full success, missing publications and documents; technical logs and hashes are expandable. Archived PDF and official origin links are always distinct.
 
 ## Do's and Don'ts
 
-- Preserve the existing CSS and responsive table behavior.
-- Reuse notices for partial checks, failures and static snapshot limits.
-- Keep original PDF provenance visible, including missing archived copies.
-- Do not introduce a new visual direction or imply that a static reload checked official sources.
+- Keep the publication date, limitation on current availability, partial/failure state and missing-document count visible.
+- Keep daily filters visible, labels short and sort direction explicit.
+- Preserve every original record, duplicate and source reference; display changes never change the source data.
+- Avoid totals that combine vacancies from different publications.
+- Do not claim a snapshot reload checks official sources.
+- Do not use tiny text to gain density, or add analytics, remote assets or paid dependencies.
