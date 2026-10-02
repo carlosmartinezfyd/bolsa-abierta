@@ -40,6 +40,38 @@ function setup(){
   return {db,call,ingest};
 }
 
+test('name-first search works across specialties, preserves ambiguity and counts repeated surnames',async()=>{
+  const f=setup();try{
+    const v={...version,row_count:4,specialties:[...version.specialties,{code:'0590009',name:'DIBUJO',body:'SECUNDARIA',count:2}]};
+    await f.ingest({action:'begin',version:v});
+    await f.ingest({action:'rows',id:v.id,rows:[row(1,'MARTÍNEZ MARTÍNEZ, CARLOS'),row(2,'MARTÍNEZ LÓPEZ, CARLOS'),
+      {...row(1,'MARTÍNEZ MARTÍNEZ, CARLOS'),id:'3'.repeat(32),specialty:'0590009'},
+      {...row(2,'OTRA, PERSONA'),id:'4'.repeat(32),specialty:'0590009'}]});
+    await f.ingest({action:'activate',id:v.id});
+    const response=await f.call('/api/positions/search',{query:'Carlos Martínez Martínez'});
+    assert.equal(response.status,200);
+    const data=await response.json();
+    assert.deepEqual(data.results.map(r=>r.specialty),['0590001','0590009']);
+    const scoped=await (await f.call('/api/positions/search',{query:'Martinez Martinez Carlos',specialty:'0590009'})).json();
+    assert.equal(scoped.results.length,1);
+    const numeric=await (await f.call('/api/positions/search',{query:'25000010',specialty:''})).json();
+    assert.equal(numeric.results.length,2);
+    assert.equal((await f.call('/api/positions/search',{query:'ca'})).status,400);
+    assert.equal((await f.call('/api/positions/search',{query:'Carlos',specialty:123})).status,400);
+  }finally{f.db.close();}
+});
+
+test('global search remains bounded when many specialties match',async()=>{
+  const f=setup();try{
+    const v={...version,row_count:22,specialties:[{...version.specialties[0],count:22}]};
+    await f.ingest({action:'begin',version:v});
+    await f.ingest({action:'rows',id:v.id,rows:Array.from({length:22},(_,i)=>({...row(i+1),list_number:String(25000000+i)}))});
+    await f.ingest({action:'activate',id:v.id});
+    const result=await (await f.call('/api/positions/search',{query:'prueba'})).json();
+    assert.equal(result.results.length,20);assert.equal(result.more,true);
+  }finally{f.db.close();}
+});
+
 test('staged or incomplete generations never replace the active ranking',async()=>{
   const f=setup();try{
     assert.equal((await f.ingest({action:'begin',version})).status,200);

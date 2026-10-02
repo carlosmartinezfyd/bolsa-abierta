@@ -28,6 +28,40 @@ test('one matching person still requires confirmation before saving or showing a
   await model.confirm();assert.equal(model.state.person.rank,7);assert.equal(saved.size,1);
   const html=P.render(model.state);assert.match(html,/7/);assert.match(html,/lista publicada/);assert.doesNotMatch(html,/disponibles: 7/);
 });
+
+test('a name can be searched without choosing a specialty and each match identifies its specialty',async()=>{
+  const f=setup();await f.model.init();await f.model.search('','Prueba Ana');
+  assert.equal(f.model.state.results.length,1);assert.equal(f.model.state.error,'');
+  assert.equal(f.saved.size,0);
+  const html=P.render(f.model.state);
+  assert.match(html,/Todas las especialidades/);assert.match(html,/Filosofia/);
+  assert.doesNotMatch(html,/<select[^>]+required/);
+});
+
+test('editing a name invalidates a pending result before the next search is sent',async()=>{
+  let resolve;const pending=new Promise(r=>resolve=r);
+  const model=P.createModel({request:async(path)=>path.endsWith('/search')?pending:catalog});
+  await model.init();const search=model.search('','old');model.editQuery('new');
+  resolve({version,results:[person],more:false});await search;
+  assert.equal(model.state.query,'new');assert.equal(model.state.results.length,0);assert.equal(model.state.busy,false);
+  assert.equal(model.state.searched,false);
+});
+
+test('specialty picker is searchable without accents and distinguishes teaching bodies',()=>{
+  const options=[{code:'0590009',name:'DIBUJO',body:'SECUNDARIA'},{code:'0595508',name:'DIBUJO TÉCNICO',body:'ARTES PLÁSTICAS'}];
+  assert.deepEqual(P.filterSpecialties(options,'dibujo plasticas').map(s=>s.code),['0595508']);
+  assert.deepEqual(P.filterSpecialties(options,'0590009').map(s=>s.code),['0590009']);
+});
+
+test('empty results offer recovery and never claim that the person is excluded',async()=>{
+  const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version,results:[],more:false}:catalog});
+  await model.init();await model.search('0590001','Prueba');
+  assert.match(P.render(model.state),/Buscar en todas las especialidades/);
+  await model.search('','Prueba');
+  assert.match(P.render(model.state),/No hay coincidencias en esta publicación/);
+  assert.match(P.render(model.state),/Consultar en Educarm/);
+  assert.doesNotMatch(P.render(model.state),/excluid[oa]/i);
+});
 test('failed reload retains the dated result with an error, but a missing row hides its old rank',async()=>{
   const f=setup();await f.model.init();await f.model.search('0590001','PRUEBA');f.model.choose(person.id);await f.model.confirm();
   f.setFail();await f.model.refresh();assert.equal(f.model.state.person.rank,7);assert.ok(f.model.state.error);
@@ -68,4 +102,13 @@ test('only a personal-list check made after the requested job can confirm that j
     await model.init();model.state.person=person;model.state.version=version;await model.refresh();
     assert.equal(Boolean(model.state.error),checked==='2026-10-02T12:10:00Z');
   }
+});
+
+
+test('result dates come from the returned generation when it changes after loading the catalog',async()=>{
+  const fresh={...version,id:'f'.repeat(64),published_at:'2026-08-04',coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'c'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
+  const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version:fresh,results:[person],more:false}:catalog});
+  await model.init();await model.search('','Prueba');
+  assert.match(P.render(model.state),/Lista del 4 ago 2026 · con correcciones/);
+  assert.doesNotMatch(P.render(model.state),/Lista del 22 jul 2026/);
 });
