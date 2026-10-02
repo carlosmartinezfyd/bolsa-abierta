@@ -359,14 +359,17 @@ test("saved search displays each document group without combining vacancy totals
   assert.match(html, /Registros guardados por copia/);
   assert.doesNotMatch(html, /plazas<\/strong> en/);
 });
-async function controller(fetcher, config = {}) {
+async function controller(fetcher, config = {}, hash = "#vacancies") {
   const listeners = {},
+    windowListeners = {},
+    historyEntries = [],
+    main = { focused: false, focus() { this.focused = true; } },
     app = { innerHTML: "" },
     toast = { textContent: "", classList: { add() {}, remove() {} } },
     dialog = { addEventListener() {}, close() {}, open: false };
   const document = {
     getElementById: (id) =>
-      ({ app, toast, "detail-dialog": dialog })[id] || null,
+      ({ app, toast, main, "detail-dialog": dialog })[id] || null,
     addEventListener: (kind, handler) => {
       listeners[kind] = handler;
     },
@@ -378,14 +381,21 @@ async function controller(fetcher, config = {}) {
     document,
     fetch: fetcher,
     localStorage: { getItem: () => null, setItem() {} },
-    location: { hash: "" },
-    history: { replaceState() {} },
+    location: { hash },
+    history: {
+      pushState(_state, _title, url) {
+        historyEntries.push(url);
+        sandbox.location.hash = url;
+      },
+    },
     setTimeout: () => 1,
     clearTimeout() {},
     window: {
       BA_CONFIG: config,
       BOOTSTRAP: { documents: [] },
-      addEventListener() {},
+      addEventListener(kind, handler) {
+        windowListeners[kind] = handler;
+      },
       scrollTo() {},
     },
   };
@@ -399,6 +409,25 @@ async function controller(fetcher, config = {}) {
     app,
     toast,
     listeners,
+    historyEntries,
+    main,
+    skip: () => listeners.click({
+      target: { closest: selector => selector === ".skip" ? {} : null },
+      preventDefault() {},
+    }),
+    navigate: (view, modifiers = {}) =>
+      listeners.click({
+        target: {
+          closest: (selector) =>
+            selector === "[data-view]" ? { dataset: { view } } : null,
+        },
+        preventDefault() {},
+        ...modifiers,
+      }),
+    changeHash: (hash) => {
+      sandbox.location.hash = hash;
+      windowListeners.hashchange();
+    },
     click: async () => {
       const button = {
         disabled: false,
@@ -414,6 +443,61 @@ async function controller(fetcher, config = {}) {
     },
   };
 }
+test("root entry introduces the project while direct links keep opening the requested workspace", async () => {
+  const fetcher = async () => ({ ok: true, json: async () => seed });
+  const home = await controller(fetcher, {}, "");
+  assert.match(home.app.innerHTML, /Consulta las vacantes docentes de Murcia/);
+  assert.doesNotMatch(home.app.innerHTML, /id="workspace-toolbar"/);
+  const direct = await controller(fetcher, {}, "#vacancies");
+  assert.match(direct.app.innerHTML, /id="workspace-toolbar"/);
+  assert.doesNotMatch(direct.app.innerHTML, /class="landing-hero"/);
+});
+test("home links create history and returning to the root restores the introduction", async () => {
+  const c = await controller(
+    async () => ({ ok: true, json: async () => seed }),
+    {},
+    "",
+  );
+  c.navigate("vacancies", { ctrlKey: true });
+  assert.deepEqual(c.historyEntries, []);
+  c.navigate("vacancies");
+  assert.deepEqual(c.historyEntries, ["#vacancies"]);
+  assert.match(c.app.innerHTML, /id="workspace-toolbar"/);
+  c.changeHash("");
+  assert.match(c.app.innerHTML, /class="landing-hero"/);
+  c.navigate("sources");
+  assert.match(c.app.innerHTML, /Documentos y procedencia/);
+  c.navigate("home");
+  assert.match(c.app.innerHTML, /class="landing-hero"/);
+});
+test("skip link focuses the workspace without routing back to the introduction", async () => {
+  for (const hash of ["#vacancies", "#sources"]) {
+    const c = await controller(async () => ({ ok: true, json: async () => seed }), {}, hash);
+    const before = c.app.innerHTML;
+    c.skip();
+    assert.equal(c.main.focused, true);
+    assert.deepEqual(c.historyEntries, []);
+    assert.equal(c.app.innerHTML, before);
+    assert.doesNotMatch(c.app.innerHTML, /class="landing-hero"/);
+  }
+});
+test("home preview stays tied to the latest approved publication, not a selected historical copy", () => {
+  const m = model();
+  m.view = "home";
+  const latest = m.state.documents.find((d) => d.id === m.state.current_id);
+  m.selectedDoc = m.state.documents.find((d) => d.id !== latest.id).id;
+  const html = context.window.BAV.shell(m);
+  assert.match(
+    html,
+    new RegExp('data-action="open-copy" data-id="' + latest.id + '"'),
+  );
+  assert.match(html, new RegExp(BA.escape(BA.date(latest.published_at))));
+  assert.match(html, /no confirma la disponibilidad actual/);
+  latest.status = "pending";
+  const empty = context.window.BAV.shell(m);
+  assert.match(empty, /Todavía no hay un listado validado/);
+  assert.doesNotMatch(empty, /data-action="open-copy"/);
+});
 test("controller loads static snapshot and reloads snapshot without origin POST", async () => {
   const calls = [];
   const c = await controller(async (url, options) => {
