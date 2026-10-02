@@ -4,6 +4,14 @@ from bolsa_abierta import position_sync
 
 
 class SyncTests(unittest.TestCase):
+    def test_amended_version_identity_changes_with_reviewed_evidence(self):
+        source={'sha256':'a'*64,'amendments':[{'content_id':'208249','sha256':'b'*64}]}
+        one=position_sync.build_version(source,'2026-10-02T12:00:00Z')
+        two=position_sync.build_version({**source,'amendments':[{'content_id':'208249','sha256':'c'*64}]},'2026-10-02T13:00:00Z')
+        self.assertNotEqual(one['id'],two['id'])
+        self.assertNotEqual(one['id'],source['sha256'])
+        self.assertEqual(one['id'],position_sync.build_version(source,'2026-10-03T12:00:00Z')['id'])
+        self.assertEqual(position_sync.build_version({'sha256':'a'*64},'2026-10-02T12:00:00Z')['id'],'a'*64)
     def test_unchanged_verified_pdf_updates_check_without_rewriting_rows(self):
         self.assertTrue(callable(getattr(position_sync, 'publish', None)), 'Missing controlled publication')
         calls=[]

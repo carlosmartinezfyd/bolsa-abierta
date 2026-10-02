@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 import requests
 
 from .positions import parse_pdf
+from .position_amendments import read_amendment, apply_insertions
 from .sources import OfficialClient
 
 
@@ -33,6 +34,15 @@ def publish(version, read_rows, send):
     return 'published'
 
 
+def build_version(source, checked_at):
+    identity = source['sha256']
+    if source.get('amendments'):
+        evidence = {'baseline': source['sha256'], 'amendments': source['amendments'],
+                    'parser': 'reviewed-insertions-v1'}
+        identity = hashlib.sha256(json.dumps(evidence, sort_keys=True, ensure_ascii=True).encode()).hexdigest()
+    return {**source, 'id': identity, 'checked_at': checked_at}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', default='data/position-source.json')
@@ -50,7 +60,14 @@ def main():
     private.mkdir(parents=True, exist_ok=True)
     artifact = private / f'{digest}.pdf'
     artifact.write_bytes(downloaded.body)
-    version = {**source, 'id': digest, 'checked_at': datetime.now(timezone.utc).isoformat()}
+    amendments = []
+    for amendment in source.get('amendments', []):
+        downloaded = OfficialClient().fetch(amendment['source_url'], kind='pdf')
+        amendment_digest = verify_source(downloaded.body, amendment)
+        path = private / f'{amendment_digest}.pdf'
+        path.write_bytes(downloaded.body)
+        amendments.append((path, amendment))
+    version = build_version(source, datetime.now(timezone.utc).isoformat())
     session = requests.Session()
     session.trust_env = False
 
@@ -65,6 +82,11 @@ def main():
 
     def read_rows():
         rows = parse_pdf(artifact)
+        if amendments:
+            if len(rows) != source['baseline_row_count']:
+                raise ValueError('Baseline count changed before amendment consolidation')
+            changes = [row for path, amendment in amendments for row in read_amendment(path, amendment)]
+            rows = apply_insertions(rows, changes)
         counts = {s['code']: s['count'] for s in source['specialties']}
         actual = {}
         for row in rows:

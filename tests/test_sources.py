@@ -77,6 +77,13 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'forbidden_url')
         self.assertEqual(session.get.call_count, 1)
 
+    def test_carm_security_redirect_is_reported_without_following_it(self):
+        client, session = self.client([response(status=302, headers={'Location': 'https://validate.perfdrive.com/?challenge=opaque'})])
+        with self.assertRaises(SourceError) as caught:
+            client.fetch(PDF_URL, kind='pdf')
+        self.assertEqual(caught.exception.code, 'access_challenge')
+        self.assertEqual(session.get.call_count, 1)
+
     def test_all_dns_answers_must_be_public_and_redirect_revalidates_dns(self):
         client, session = self.client([response(status=302, headers={'Location': PDF_URL})])
         client.resolver = Mock(side_effect=[public_dns('', 443), [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('10.0.0.1', 443))]])

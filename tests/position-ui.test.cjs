@@ -3,6 +3,16 @@ const P=require('../web/position.js');
 const version={id:'a'.repeat(64),sha256:'a'.repeat(64),scope:'published_list',coverage:'baseline_only',published_at:'2026-07-22',checked_at:'2026-10-02T12:00:00Z',source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208095'};
 const person={id:'1'.repeat(32),name:'PRUEBA, ANA',specialty:'0590001',specialty_name:'FILOSOFIA',body_name:'SECUNDARIA',block:'68',block_name:'Bloque 1',list_number:'25000010',rank:7,page:2};
 const catalog={version,specialties:[{code:'0590001',name:'FILOSOFIA',body:'SECUNDARIA',count:10}],refresh_available:false};
+test('amended position points to its actual PDF and explains consolidated coverage only in detail',()=>{
+  const corrected={...version,id:'b'.repeat(64),coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'c'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
+  const p={...person,page:1,source_id:'208249'};
+  assert.doesNotThrow(()=>P.validateResponse({version:corrected,person:p}));
+  const html=P.render({catalog:{...catalog,version:corrected},version:corrected,person:p,results:[],busy:false});
+  assert.match(html,/IDCONTENIDO=208249.*#page=1/);
+  assert.doesNotMatch(html,/correcciones posteriores.*no están incorporados/);
+  assert.match(html,/No es la posición actual entre disponibles/);
+  assert.throws(()=>P.validateResponse({version:corrected,person:{...p,source_id:'999999'}}));
+});
 function setup(){
   assert.equal(typeof P.createModel,'function','Missing personal-position controller');
   const saved=new Map(),calls=[];let fail=false,missing=false;

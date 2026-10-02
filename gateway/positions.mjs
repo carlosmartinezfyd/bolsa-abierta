@@ -16,12 +16,24 @@ async function jsonBody(request,limit){
 }
 
 function validateVersion(v){
-  if(!v || !HASH.test(v.id) || v.id!==v.sha256 || !/^\d{4}-\d{2}-\d{2}$/.test(v.published_at) ||
+  if(!v || !HASH.test(v.id) || !HASH.test(v.sha256) || !/^\d{4}-\d{2}-\d{2}$/.test(v.published_at) ||
     !Number.isFinite(Date.parse(v.checked_at)) || !Number.isInteger(v.row_count) || v.row_count<1 || v.row_count>100000 ||
-    v.scope!=='published_list' || v.coverage!=='baseline_only' || !Array.isArray(v.specialties) ||
+    v.scope!=='published_list' || !['baseline_only','reviewed_amendments'].includes(v.coverage) || !Array.isArray(v.specialties) ||
     !v.specialties.length || v.specialties.length>300) invalid();
   let url;try{url=new URL(v.source_url);}catch{invalid();}
   if(url.protocol!=='https:' || url.hostname!=='www.carm.es' || url.port || url.username || url.password || url.pathname!=='/web/descarga')invalid();
+  const amendments=[];
+  if(v.coverage==='baseline_only'){if(v.id!==v.sha256 || v.amendments?.length)invalid();}
+  else{
+    if(!Array.isArray(v.amendments) || !v.amendments.length || v.amendments.length>10 || v.id===v.sha256)invalid();
+    for(const a of v.amendments){
+      let u;try{u=new URL(a.source_url);}catch{invalid();}
+      if(!/^\d{1,10}$/.test(a.content_id)||a.content_id==='208095'||amendments.some(x=>x.content_id===a.content_id)||!HASH.test(a.sha256)||
+        !/^\d{4}-\d{2}-\d{2}$/.test(a.signed_at)||!Number.isInteger(a.pages)||a.pages<1||a.pages>1200||
+        u.protocol!=='https:'||u.hostname!=='www.carm.es'||u.port||u.username||u.password||u.pathname!=='/web/descarga'||u.searchParams.get('IDCONTENIDO')!==a.content_id)invalid();
+      amendments.push({content_id:a.content_id,sha256:a.sha256,signed_at:a.signed_at,pages:a.pages,source_url:u.href});
+    }
+  }
   const seen=new Set();let total=0;
   for(const s of v.specialties){
     if(!/^\d{7}$/.test(s.code) || seen.has(s.code) || !validText(s.name) || !validText(s.body) || !Number.isInteger(s.count) || s.count<1)invalid();
@@ -29,17 +41,19 @@ function validateVersion(v){
   }
   if(total!==v.row_count)invalid();
   return {id:v.id,sha256:v.sha256,published_at:v.published_at,checked_at:v.checked_at,source_url:url.href,
-    row_count:v.row_count,scope:v.scope,coverage:v.coverage,specialties:v.specialties.map(s=>({code:s.code,name:s.name,body:s.body,count:s.count}))};
+    row_count:v.row_count,scope:v.scope,coverage:v.coverage,...(amendments.length?{amendments}:{}),specialties:v.specialties.map(s=>({code:s.code,name:s.name,body:s.body,count:s.count}))};
 }
 
 function validateRow(r,v){
   const specialty=v.specialties.find(s=>s.code===r?.specialty);
+  const sourceId=r?.source_id||'208095', amendment=v.amendments?.find(a=>a.content_id===sourceId);
+  if(sourceId!=='208095'&&!amendment)invalid();
   if(!r || !ID.test(r.id) || !specialty || !/^\d{7,8}$/.test(r.list_number) || !/^\d{1,3}$/.test(r.block) ||
     !validText(r.name) || !validText(r.block_name) || !Number.isInteger(r.rank) || r.rank<1 || r.rank>specialty.count ||
-    !Number.isInteger(r.page) || r.page<2 || r.page>1200)invalid();
+    !Number.isInteger(r.page) || r.page<(amendment?1:2) || r.page>(amendment?amendment.pages:1200))invalid();
   // Whitelist fields: never accept masked DNI, scores or exclusion reasons.
   return {id:r.id,specialty:r.specialty,specialty_name:specialty.name,body_name:specialty.body,
-    block:r.block,block_name:r.block_name,list_number:r.list_number,name:r.name,rank:r.rank,page:r.page};
+    block:r.block,block_name:r.block_name,list_number:r.list_number,name:r.name,rank:r.rank,page:r.page,source_id:sourceId};
 }
 
 async function authorized(request,env){

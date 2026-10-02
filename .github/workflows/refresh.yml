@@ -84,6 +84,22 @@ jobs:
           path: site
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Audit official roster amendments
+        id: position_updates
+        continue-on-error: true
+        # This inventory cannot change personal positions. Nominal documents and
+        # the full report stay on the ephemeral runner, outside site/data-state.
+        run: python -m bolsa_abierta.position_updates
+      - name: Record roster audit outcome
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.position_updates.outcome }}
+        run: |
+          if [ "$AUDIT_OUTCOME" = "success" ]; then
+            echo 'Roster document audit: all required documents match reviewed hashes.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Roster document audit: incomplete or pending review. No amendments have been applied by this audit; published positions retain their stated coverage.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Signal complete collector failure after publishing diagnostic state
         if: steps.collect.outcome == 'failure' || steps.positions.outcome == 'failure'
         run: exit 1
