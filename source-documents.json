@@ -1,0 +1,329 @@
+{
+  "active_version": "482d3e30394d5934abb3b21f85da0773a87268adead5e241a62ad800dd4b563a",
+  "checked_at": "2026-10-02T17:19:32.306403+00:00",
+  "documents": [
+    {
+      "kind": "award",
+      "content_id": "209126",
+      "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJCONPLAZASECUNDARIA-210732.pdf&IDCONTENIDO=209126&RASTRO=c77%24m22725%2C22759%2C4254",
+      "sha256": "1b06bc4d1e55b615cfdb64acd12c28392385d0b13f941e83409608081e6aa2c1",
+      "published_at": "2026-09-24",
+      "process_id": "3125",
+      "pages": 25,
+      "row_count": 147,
+      "page_row_counts": [
+        5,
+        6,
+        6,
+        7,
+        8,
+        4,
+        9,
+        6,
+        8,
+        6,
+        7,
+        6,
+        8,
+        7,
+        7,
+        8,
+        7,
+        7,
+        5,
+        4,
+        5,
+        4,
+        4,
+        3,
+        0
+      ],
+      "specialties": [
+        {
+          "code": "0590001",
+          "name": "FILOSOFIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590003",
+          "name": "LATIN",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590004",
+          "name": "LENGUA CASTELLANA Y LITERATURA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 12
+        },
+        {
+          "code": "0590005",
+          "name": "GEOGRAFIA E HISTORIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590006",
+          "name": "MATEMATICAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 10
+        },
+        {
+          "code": "0590007",
+          "name": "FISICA Y QUIMICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590008",
+          "name": "BIOLOGIA Y GEOLOGIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590009",
+          "name": "DIBUJO",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 6
+        },
+        {
+          "code": "0590010",
+          "name": "FRANCES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590011",
+          "name": "INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 15
+        },
+        {
+          "code": "0590016",
+          "name": "MUSICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590017",
+          "name": "EDUCACION FISICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 11
+        },
+        {
+          "code": "0590018",
+          "name": "ORIENTACION EDUCATIVA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590019",
+          "name": "TECNOLOGIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 9
+        },
+        {
+          "code": "0590061",
+          "name": "ECONOMIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590101",
+          "name": "ADMINISTRACION DE EMPRESAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590104",
+          "name": "CONSTRUCCIONES CIVILES Y EDIFICACION",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590105",
+          "name": "FORMACION Y ORIENTACION LABORAL",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590108",
+          "name": "INTERVENCION SOCIOCOMUNITARIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590110",
+          "name": "ORGANIZACION Y GESTION COMERCIAL",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590113",
+          "name": "ORGANIZACION Y PROYECTOS DE SISTEMAS ENERGETICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590125",
+          "name": "SISTEMAS ELECTROTECNICOS Y AUTOMATICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590220",
+          "name": "PROCEDIMIENTOS SANITARIOS Y ASISTENCIALES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590221",
+          "name": "PROCESOS COMERCIALES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590222",
+          "name": "PROCESOS DE GESTION ADMINISTRATIVA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590225",
+          "name": "SERVICIOS A LA COMUNIDAD",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590229",
+          "name": "TECNICAS Y PROCEDIMIENTOS DE IMAGEN Y SONIDO",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590231",
+          "name": "EQUIPOS ELECTRONICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590A07",
+          "name": "FISICA Y QUIMICA / ALEMAN",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590I05",
+          "name": "GEOGRAFIA E HISTORIA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590I09",
+          "name": "DIBUJO / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 7
+        },
+        {
+          "code": "0590I16",
+          "name": "MUSICA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590I17",
+          "name": "EDUCACION FISICA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 7
+        },
+        {
+          "code": "0590I19",
+          "name": "TECNOLOGIA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 12
+        },
+        {
+          "code": "0590J21",
+          "name": "PROCESOS COMERCIALES/INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0592006",
+          "name": "ESPAÑOL",
+          "body": "PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+          "count": 1
+        },
+        {
+          "code": "0593006",
+          "name": "CANTO",
+          "body": "CATEDRÁTICOS DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594410",
+          "name": "FLAUTA TRAVESERA",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594418",
+          "name": "INSTRUMENTOS DE PUA",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594441",
+          "name": "CANTO APLICADO AL ARTE DRAMATICO",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0595512",
+          "name": "DISEÑO GRAFICO",
+          "body": "PROFESORES DE ARTES PLÁSTICAS Y DISEÑO",
+          "count": 1
+        },
+        {
+          "code": "0598004",
+          "name": "MANTENIMIENTO DE VEHICULOS",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 1
+        }
+      ],
+      "assigned_function_groups": {
+        "059006S": "0590006",
+        "0590Y8L": "0590018"
+      },
+      "incorporated": true
+    }
+  ],
+  "references": [
+    {
+      "content_id": "208095",
+      "kind": "baseline",
+      "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=Resoluci%C3%B3n+Definitiva+listas+de+interinos+2026-2027.pdf&IDCONTENIDO=208095&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4491%2C72314%2C4500%2C4092%2C75599",
+      "sha256": "cbe8220877138bcf0c6f20e53354f976549737c16d2dbe18c90ebe523f11058a",
+      "incorporated": true
+    },
+    {
+      "content_id": "208249",
+      "sha256": "e33daf270857c9e2bb5f7e5b01aedc872a978ae418253645b881f42d969c00c1",
+      "signed_at": "2026-07-28",
+      "pages": 2,
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599",
+      "kind": "supplement",
+      "incorporated": true
+    },
+    {
+      "content_id": "208379",
+      "sha256": "9cbfdb677da94b92294066fb71bd65dcc8fc378337727d78f165e6ec7c97640f",
+      "signed_at": "2026-08-04",
+      "pages": 1,
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599",
+      "kind": "correction",
+      "incorporated": true
+    }
+  ]
+}
