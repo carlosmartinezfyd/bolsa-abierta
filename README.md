@@ -1,6 +1,8 @@
 # Bolsa Abierta
 
-Consulta y comparación de publicaciones de vacantes docentes de Murcia, con fuentes, fecha del documento, fecha de comprobación y evidencia descargable. Es un proyecto independiente: la publicación administrativa oficial prevalece.
+Consulta de tu puesto en una lista publicada de interinos de Murcia y comparación de vacantes docentes. Es un proyecto independiente: la publicación administrativa oficial prevalece.
+
+La pantalla **Mi posición** permite buscar y confirmar una ficha en la lista definitiva de 22 de julio de 2026. Muestra el ordinal de esa publicación, no el puesto actual entre disponibles. [Cobertura, pruebas y operación de la consulta](docs/personal-position.md).
 
 ## Información que obtiene
 
@@ -18,7 +20,7 @@ La copia inicial del 30/09/2026 contiene **77 filas y 85 plazas**, proceso 3133.
 - La fecha de emisión, descarga e intento de comprobación son distintas. «Comprobación completada» se refiere a las fuentes cubiertas en esa ejecución; no acredita que cada plaza siga disponible en tiempo real.
 - La firma electrónica **no se autentica criptográficamente**. No hay OCR; los PDF escaneados, otros diseños o estructuras no revisadas requieren ampliar el corpus y el parser.
 - La comparación describe diferencias entre publicaciones de procesos distintos. Una desaparición no demuestra adjudicación, retirada ni resultado administrativo. Se guardan también revisiones del mismo proceso.
-- No se consultan cuentas de Educarm ni listas nominales. Favoritos y preferencias permanecen en el navegador, sin analítica.
+- No se consultan cuentas de Educarm. La búsqueda nominal de la lista publicada utiliza una base privada D1, sin DNI ni motivos de exclusión. Favoritos y selección personal permanecen en el navegador, sin analítica.
 - La descarga de datos para el navegador se limita a 8 MiB: conserva siempre las dos copias comparadas y omite primero las filas más antiguas, avisando en la interfaz. El historial íntegro permanece en SQLite y los PDF en el archivo; las omisiones no eliminan los favoritos guardados. Se publican hasta 300 avisos recientes. La pasarela acepta hasta 16 MiB para dejar margen al transporte.
 
 ## Publicación gratuita

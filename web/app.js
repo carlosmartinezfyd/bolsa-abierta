@@ -5,7 +5,7 @@
     U = BAUI,
     V = BAV,
     KEY = "bolsa-abierta:v1:preferences";
-  const routes = ["home", "vacancies", "changes", "acts", "profile", "sources"];
+  const routes = ["home", "position", "vacancies", "changes", "acts", "profile", "sources"];
   const route = () =>
     routes.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   const app = document.getElementById("app"),
@@ -67,6 +67,7 @@
   }
   function render() {
     app.innerHTML = V.shell(model);
+    if (model.view === "position") window.BAPosition?.mount();
     stickyObserver?.disconnect();
     measureToolbar();
     if (window.ResizeObserver) {
@@ -300,7 +301,7 @@
     activeDetail = null;
     show(
       dialogHeader("Bolsa Abierta") +
-        `<div class="dialog-body"><h3>Vacantes docentes de la Región de Murcia</h3><p>Listados de Secundaria y otros cuerpos. Las fechas y documentos originales están en Fuentes.</p><h3 class="mt18">Privacidad</h3><p>Las preferencias se guardan en este navegador. Sin cuentas, analítica ni cookies de seguimiento.</p><h3 class="mt18">Licencia</h3><p>Código bajo GNU AGPLv3. Los documentos oficiales conservan su propia procedencia y condiciones de uso.</p></div><div class="dialog-footer"><div class="buttons">${U.external("https://github.com/carlosmartinezfyd/bolsa-abierta", "Código fuente")}${U.external("https://www.gnu.org/licenses/agpl-3.0.html", "AGPLv3")}</div>${U.button("close-dialog", "Cerrar")}</div>`,
+        `<div class="dialog-body"><h3>Listas y vacantes docentes de Murcia</h3><p>Consulta tu puesto en una lista publicada y las vacantes de Secundaria y otros cuerpos.</p><h3 class="mt18">Privacidad</h3><p>Las preferencias se guardan en este navegador. Sin cuentas, analítica ni cookies de seguimiento.</p><h3 class="mt18">Licencia</h3><p>Código bajo GNU AGPLv3. Los documentos oficiales conservan su propia procedencia y condiciones de uso.</p></div><div class="dialog-footer"><div class="buttons">${U.external("https://github.com/carlosmartinezfyd/bolsa-abierta", "Código fuente")}${U.external("https://www.gnu.org/licenses/agpl-3.0.html", "AGPLv3")}</div>${U.button("close-dialog", "Cerrar")}</div>`,
     );
   }
   function clearFilters() {
@@ -613,7 +614,7 @@
   });
   window.addEventListener("hashchange", () => {
     model.view = route();
-    if (!model.state) return;
+    if (!model.state && !["position", "home"].includes(model.view)) return;
     render();
     document.getElementById("main")?.focus({ preventScroll: true });
     window.scrollTo({ top: 0 });
@@ -626,9 +627,11 @@
         model.storageAvailable = false;
       }
       model.view = route();
+      if (["position", "home"].includes(model.view)) render();
       await reload();
-      render();
+      if (model.view !== "position") render();
     } catch (err) {
+      if (["position", "home"].includes(model.view)) return;
       app.innerHTML = `<div class="loading"><span class="brand-symbol">b.</span><h1>No se pudo cargar la consulta</h1><p>${E(err.message)}</p><p>No se ha podido leer el servicio ni la copia publicada. Vuelve a cargar la página cuando esté disponible la conexión.</p></div>`;
     }
   })();

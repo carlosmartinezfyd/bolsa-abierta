@@ -446,11 +446,16 @@ async function controller(fetcher, config = {}, hash = "#vacancies") {
 test("root entry introduces the project while direct links keep opening the requested workspace", async () => {
   const fetcher = async () => ({ ok: true, json: async () => seed });
   const home = await controller(fetcher, {}, "");
-  assert.match(home.app.innerHTML, /Consulta las vacantes docentes de Murcia/);
+  assert.match(home.app.innerHTML, /Consulta tu puesto en las listas docentes de Murcia/);
   assert.doesNotMatch(home.app.innerHTML, /id="workspace-toolbar"/);
   const direct = await controller(fetcher, {}, "#vacancies");
   assert.match(direct.app.innerHTML, /id="workspace-toolbar"/);
   assert.doesNotMatch(direct.app.innerHTML, /class="landing-hero"/);
+});
+test("personal position opens directly even when the vacancy snapshot fails", async () => {
+  const c = await controller(async () => { throw Error('vacancy service offline'); }, {}, '#position');
+  assert.match(c.app.innerHTML, /id="position-root"/);
+  assert.doesNotMatch(c.app.innerHTML, /No se pudo cargar la consulta/);
 });
 test("home links create history and returning to the root restores the introduction", async () => {
   const c = await controller(
