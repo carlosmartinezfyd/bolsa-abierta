@@ -20,3 +20,20 @@ CREATE TABLE IF NOT EXISTS gateway_jobs (
     completed_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS gateway_jobs_created_at ON gateway_jobs(created_at);
+
+-- Probe lease is separate; all actual dispatches use gateway_gate unchanged.
+CREATE TABLE IF NOT EXISTS gateway_probe(
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1),lease_until INTEGER NOT NULL DEFAULT 0,validator TEXT,source_id TEXT
+);
+INSERT OR IGNORE INTO gateway_probe(singleton) VALUES(1);
+CREATE TABLE IF NOT EXISTS gateway_pilot_metrics(
+ id TEXT PRIMARY KEY,scheduled_at INTEGER NOT NULL,started_at INTEGER NOT NULL,ended_at INTEGER,
+ source_id TEXT,request_id TEXT,generation_id TEXT,phase TEXT NOT NULL,status TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gateway_pilot_started ON gateway_pilot_metrics(started_at);
+
+-- Observation remains pending until a correlated newer check has completed.
+CREATE TABLE IF NOT EXISTS gateway_probe_pending(
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1),validator TEXT NOT NULL,source_id TEXT NOT NULL,
+ observed_at INTEGER NOT NULL,request_id TEXT
+);

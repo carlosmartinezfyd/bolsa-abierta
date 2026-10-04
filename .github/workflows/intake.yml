@@ -1,0 +1,130 @@
+name: Administrative original intake
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'Official HTTPS www.carm.es/web/descarga URL with IDCONTENIDO'
+        required: true
+        type: string
+      content_id:
+        description: 'Official IDCONTENIDO (must match URL)'
+        required: true
+        type: string
+      sha256:
+        description: 'Expected original SHA256: 64 lowercase hex characters'
+        required: true
+        type: string
+      published_at:
+        description: 'Administrative publication date YYYY-MM-DD (not receipt time)'
+        required: true
+        type: string
+      kind:
+        description: 'Pinned adapter; unknown originals remain quarantined'
+        required: true
+        type: choice
+        options: [award, optan_observation, maestros_roster, maestros_correction]
+      human_seconds:
+        description: 'Responsible administrator processing time in seconds (0..86400)'
+        required: true
+        default: '0'
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: official-source-publication
+  cancel-in-progress: false
+jobs:
+  receive:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: administrative-intake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test]'
+      - name: Verify intake and authenticated recovery
+        run: python -m unittest discover -s tests -p 'test_admin_documents.py' && python -m unittest discover -s tests -p 'test_private_archive.py'
+      - name: Restore durable receipt and encrypted original state
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin data-state; then
+            git fetch origin data-state
+            git worktree add --detach saved-state FETCH_HEAD
+          else
+            git worktree add --detach saved-state HEAD
+            git -C saved-state switch --orphan data-state
+            git -C saved-state rm -rf --ignore-unmatch .
+          fi
+      - name: Recover encrypted originals when configured
+        env:
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from bolsa_abierta.private_archive import restore_bundle, MAX_FILES, MAX_TOTAL_BYTES
+          if os.environ.get('PRIVATE_ARCHIVE_KEY'):
+              try:
+                  bundles = sorted(Path('saved-state/private-originals').glob('*.baenc'))
+                  if len(bundles) > 100:
+                      raise ValueError('Archive recovery exceeds bundle budget')
+                  target = Path('.runtime/admin-originals')
+                  for bundle in bundles:
+                      restore_bundle(bundle, target)
+                      files = list(target.glob('*.pdf'))
+                      if len(files) > MAX_FILES or sum(p.stat().st_size for p in files) > MAX_TOTAL_BYTES:
+                          raise ValueError('Archive recovery exceeds original budget')
+                  print('Encrypted originals recovered for local validation; no fresh source check recorded.')
+              except Exception:
+                  print('Encrypted recovery failed; existing durable originals remain unchanged.')
+                  raise SystemExit(1)
+          else:
+              print('Private original cache unconfigured; raw originals remain on this runner only.')
+          PY
+      - name: Receive official original and record safe receipt
+        env:
+          INTAKE_URL: ${{ inputs.source_url }}
+          INTAKE_ID: ${{ inputs.content_id }}
+          INTAKE_SHA256: ${{ inputs.sha256 }}
+          INTAKE_PUBLISHED_AT: ${{ inputs.published_at }}
+          INTAKE_KIND: ${{ inputs.kind }}
+          INTAKE_HUMAN_SECONDS: ${{ inputs.human_seconds }}
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+        run: |
+          python -m bolsa_abierta.admin_documents \
+            --url "$INTAKE_URL" --content-id "$INTAKE_ID" --sha256 "$INTAKE_SHA256" \
+            --published-at "$INTAKE_PUBLISHED_AT" --kind "$INTAKE_KIND" \
+            --human-seconds "$INTAKE_HUMAN_SECONDS" \
+            --state saved-state/admin-intake.json --private-dir .runtime/admin-originals \
+            --archive-dir saved-state/private-originals
+      - name: Persist only receipts and authenticated encrypted originals
+        run: |
+          git -C saved-state config user.name 'github-actions[bot]'
+          git -C saved-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C saved-state add -- admin-intake.json
+          if [ -d saved-state/private-originals ]; then
+            git -C saved-state add -- 'private-originals/*.baenc'
+          fi
+          if ! git -C saved-state diff --cached --quiet; then
+            git -C saved-state commit -m 'Record administrative original receipt'
+            git -C saved-state push origin HEAD:refs/heads/data-state
+          fi
+      - name: Report non-nominal operational metrics
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          state = json.loads(Path('saved-state/admin-intake.json').read_text())
+          last = max(state['documents'], key=lambda d: d['last_received_at'])
+          safe = {k: last[k] for k in ('content_id', 'status', 'reason', 'cache_status', 'activated')}
+          safe.update(pending_documents=state['pending_documents'], human_seconds_total=state['human_seconds_total'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('Administrative receipt: ' + json.dumps(safe, sort_keys=True) + '\n')
+              summary.write('Receipt validation never activates a generation. Restored originals are not a fresh official source check.\n')
+          PY
+      - name: Remove runner-only originals
+        if: always()
+        run: rm -rf -- .runtime/admin-originals

@@ -71,7 +71,7 @@ test('a name can be searched without choosing a specialty and each match identif
   assert.equal(f.model.state.results.length,1);assert.equal(f.model.state.error,'');
   assert.equal(f.saved.size,0);
   const html=P.render(f.model.state);
-  assert.match(html,/Todas las especialidades/);assert.match(html,/Filosofia/);
+  assert.match(html,/Todas las listas y funciones/);assert.match(html,/Filosofia/);
   assert.doesNotMatch(html,/<select[^>]+required/);
 });
 
@@ -93,7 +93,7 @@ test('specialty picker is searchable without accents and distinguishes teaching 
 test('empty results offer recovery and never claim that the person is excluded',async()=>{
   const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version,results:[],more:false}:catalog});
   await model.init();await model.search('0590001','Prueba');
-  assert.match(P.render(model.state),/Buscar en todas las especialidades/);
+  assert.match(P.render(model.state),/Buscar en todas las listas y funciones/);
   await model.search('','Prueba');
   assert.match(P.render(model.state),/No hay coincidencias en esta publicación/);
   assert.match(P.render(model.state),/Consultar en Educarm/);
@@ -144,8 +144,89 @@ test('only a personal-list check made after the requested job can confirm that j
 
 test('result dates come from the returned generation when it changes after loading the catalog',async()=>{
   const fresh={...version,id:'f'.repeat(64),published_at:'2026-08-04',coverage:'reviewed_amendments',amendments:[{content_id:'208249',sha256:'c'.repeat(64),signed_at:'2026-07-28',pages:2,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208249'}]};
-  const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version:fresh,results:[person],more:false}:catalog});
+  let catalogs=0;const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version:fresh,results:[person],more:false}:++catalogs===1?catalog:{...catalog,version:fresh}});
   await model.init();await model.search('','Prueba');
   assert.match(P.render(model.state),/Lista del 4 ago 2026 · con correcciones/);
   assert.doesNotMatch(P.render(model.state),/Lista del 22 jul 2026/);
+});
+
+test('Maestros ordinal belongs to its unique list and correction has its own evidence',()=>{
+  const correction={content_id:'208782',sha256:'c'.repeat(64),signed_at:'2026-08-18',pages:3,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208782'};
+  const d={content_id:'208253',kind:'maestros_roster',rank_scope:'maestros_unique_list',sha256:'d'.repeat(64),published_at:'2026-07-28',pages:80,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208253',amendments:[correction]};
+  const v={...version,coverage:'multi_source',documents:[d]};
+  const p={...person,record_type:'list',specialty:'0597',specialty_name:'Lista única de Maestros',body_name:'CUERPO DE MAESTROS',rank_scope:'maestros_unique_list',roster_id:'208253',source_id:'208782',page:2,habilitations:[{code:'031',name:'EDUCACIÓN INFANTIL'}]};
+  assert.doesNotThrow(()=>P.validateResponse({version:v,person:p}));
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,rank_scope:'specialty'}}));
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,page:4}}));
+  const html=P.render({catalog:{...catalog,version:v},version:v,person:p,results:[],busy:false});
+  assert.match(html,/Ordinal en la lista única de Maestros/);assert.match(html,/Educación Infantil/);assert.match(html,/031/);
+  assert.match(html,/IDCONTENIDO=208782.*#page=2/);assert.match(html,/28 jul 2026/);assert.match(html,/18 ago 2026/);
+  assert.doesNotMatch(html,/antes en esta especialidad|puesto actual|especialidad oficial/);
+});
+test('provisional award reservation and incorporation remain separate dated facts',()=>{
+  const d={content_id:'209126',kind:'award',sha256:'d'.repeat(64),published_at:'2026-09-24',pages:25,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=209126',title:'Adjudicación definitiva'};
+  const v={...version,coverage:'multi_source',documents:[d]},p={...person,record_type:'award',source_id:'209126',rank:null,destination:'IES PRUEBA · MURCIA',workload:'Completa',appointment_status:'provisional',incorporation_at:'2026-09-28'};
+  const html=P.render({catalog:{...catalog,version:v},version:v,person:p,results:[],busy:false});
+  assert.match(html,/Reserva provisional/);assert.match(html,/Incorporación.*28 sept 2026/);assert.match(html,/24 sept 2026/);assert.doesNotMatch(html,/puesto.*no.*disponible|médic/i);
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,appointment_status:'final'}}));
+  assert.throws(()=>P.validateResponse({version:v,person:{...p,incorporation_at:'2026-13-32'}}));
+});
+test('explicit confirmation explains browser storage and selected ficha offers deletion',async()=>{
+  const f=setup();await f.model.init();await f.model.search('','Prueba');f.model.choose(person.id);
+  assert.match(P.render(f.model.state),/Al confirmar.*este navegador/);assert.match(P.render(f.model.state),/Confirmar y recordar/);
+  await f.model.confirm();assert.match(P.render(f.model.state),/Borrar ficha guardada/);f.model.clear();assert.equal(f.saved.size,0);
+});
+
+test('source coverage counts records instead of unique people and escapes verified habilitation labels',()=>{
+  const html=P.render({catalog:{...catalog,version:{...version,row_count:13045}},query:'',results:[],busy:false});
+  assert.match(html,/13\.045 registros incorporados/);assert.match(html,/una persona puede tener varios registros/);assert.match(html,/códigos del filtro incluyen listas y funciones/);
+  const d={content_id:'208253',kind:'maestros_roster',rank_scope:'maestros_unique_list',sha256:'d'.repeat(64),published_at:'2026-07-28',pages:80,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208253'};
+  const v={...version,coverage:'multi_source',documents:[d]},p={...person,specialty:'0597',rank_scope:'maestros_unique_list',roster_id:'208253',source_id:'208253',habilitations:[{code:'031',name:'<img src=x onerror=alert(1)>'}]};
+  const shown=P.render({catalog:{...catalog,version:v},version:v,person:p,busy:false});assert.doesNotMatch(shown,/<img src=x/);assert.match(shown,/&lt;img/i);
+});
+test('unknown award appointment status is never inferred from definitive publication metadata',()=>{
+  const d={content_id:'209126',kind:'award',sha256:'d'.repeat(64),published_at:'2026-09-24',pages:25,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=209126',title:'Adjudicación definitiva'},v={...version,coverage:'multi_source',documents:[d]},p={...person,record_type:'award',source_id:'209126',rank:null,destination:'IES PRUEBA · MURCIA',workload:'Completa'};
+  const html=P.render({catalog:{...catalog,version:v},version:v,person:p,busy:false});assert.match(html,/no acredita aquí el carácter definitivo o provisional/);assert.doesNotMatch(html,/Nombramiento definitivo acreditado|Reserva provisional|Incorporación:/);
+});
+
+test('pending search index guides complete numeric lookup without retrying names or masking other failures',async()=>{
+  assert.equal(typeof P.readResponse,'function');let calls=0;
+  const model=P.createModel({request:async(path,body)=>{
+    if(!path.endsWith('/search'))return catalog;calls++;
+    if(body.query==='25000010')return {version,results:[person],more:false};
+    return P.readResponse({ok:false,status:503,json:async()=>({index_pending:true,error:'<img src=x onerror=alert(1)>'})});
+  }});
+  await model.init();await model.search('','Prueba');assert.equal(calls,1);assert.match(model.state.error,/índice de búsqueda se está preparando/);assert.match(P.render(model.state),/número completo de lista/);assert.doesNotMatch(P.render(model.state),/<img src=x/);assert.equal(model.state.searched,false);
+  await model.search('','25000010');assert.equal(calls,2);assert.equal(model.state.error,'');assert.equal(model.state.results.length,1);
+  const other=P.createModel({request:async(path)=>path.endsWith('/search')?P.readResponse({ok:false,status:503,json:async()=>({error:'offline'})}):catalog});await other.init();await other.search('','Prueba');assert.doesNotMatch(other.state.error,/índice|número completo/);assert.match(other.state.error,/No se ha podido consultar/);
+});
+
+test('a null conservative origin-check date preserves published evidence without inventing freshness',()=>{
+  const v={...version,checked_at:null};assert.doesNotThrow(()=>P.validateResponse({version:v,person}));
+  const html=P.render({catalog:{...catalog,version:v},version:v,person,busy:false});assert.match(html,/Última comprobación de la generación.*Sin fecha acreditada/s);assert.match(html,/22 jul 2026/);assert.doesNotMatch(html,/1970|4 oct 2026/);
+  assert.throws(()=>P.validateResponse({version:{...v,checked_at:'invalid'},person}));
+});
+
+function maestroGeneration(){
+  const d={content_id:'208253',kind:'maestros_roster',rank_scope:'maestros_unique_list',sha256:'d'.repeat(64),published_at:'2026-07-28',pages:80,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208253'};
+  const fresh={...version,id:'b'.repeat(64),coverage:'multi_source',documents:[d]};
+  const row={...person,record_type:'list',specialty:'0597',specialty_name:'Lista única de Maestros',body_name:'CUERPO DE MAESTROS',rank_scope:'maestros_unique_list',roster_id:'208253',source_id:'208253',habilitations:[{code:'031',name:'EDUCACIÓN INFANTIL'}]};
+  const fullCatalog={...catalog,version:fresh,specialties:[...catalog.specialties,{code:'0597',name:'Lista única de Maestros',body:'CUERPO DE MAESTROS',count:10},{code:'0595508',name:'DIBUJO TÉCNICO',body:'ARTES PLÁSTICAS',count:4}]};
+  return {fresh,row,fullCatalog};
+}
+test('a new Maestros generation refreshes the full catalog before accepting a newly added scope',async()=>{
+  const {fresh,row,fullCatalog}=maestroGeneration();let catalogs=0;
+  const model=P.createModel({request:async path=>path.endsWith('/search')?{version:fresh,results:[row],more:false}:++catalogs===1?catalog:fullCatalog});
+  await model.init();await model.search('','Prueba');assert.equal(model.state.error,'');assert.equal(catalogs,2);assert.equal(model.state.results[0].specialty,'0597');assert.equal(model.state.catalog.version.id,fresh.id);assert.equal(model.state.searchVersion.id,fresh.id);assert.equal(model.state.catalog.specialties.length,3);assert.match(P.render(model.state),/Dibujo Técnico|Dibujo TÉcnico/);
+});
+test('editing a query during generation catalog refresh cancels both the results and catalog application',async()=>{
+  const {fresh,row,fullCatalog}=maestroGeneration();let catalogs=0,finish,started;const refreshing=new Promise(resolve=>started=resolve);
+  const model=P.createModel({request:async path=>path.endsWith('/search')?{version:fresh,results:[row],more:false}:++catalogs===1?catalog:new Promise(resolve=>{finish=resolve;started();})});
+  await model.init();const pending=model.search('','Prueba');await refreshing;model.editQuery('Otra');finish(fullCatalog);await pending;
+  assert.equal(model.state.query,'Otra');assert.equal(model.state.catalog.version.id,version.id);assert.deepEqual(model.state.results,[]);assert.equal(model.state.searched,false);assert.equal(model.state.busy,false);assert.equal(model.state.error,'');
+});
+test('a catalog from a different generation cannot be applied to a valid search response',async()=>{
+  const {fresh,row,fullCatalog}=maestroGeneration();let catalogs=0;
+  const model=P.createModel({request:async path=>path.endsWith('/search')?{version:fresh,results:[row],more:false}:++catalogs===1?catalog:{...fullCatalog,version:{...fresh,id:'c'.repeat(64)}}});
+  await model.init();await model.search('','Prueba');assert.match(model.state.error,/publicaciones han cambiado.*Buscar/);assert.equal(model.state.catalog.version.id,version.id);assert.deepEqual(model.state.results,[]);assert.equal(model.state.searched,false);
 });

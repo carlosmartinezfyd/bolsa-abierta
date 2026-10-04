@@ -137,6 +137,102 @@ class PositionDocumentTests(unittest.TestCase):
             pages,metadata=fixture();metadata[field]=value
             with self.subTest(field=field), self.assertRaises(ValueError): self.module().parse_award_pages(pages,metadata)
 
+    def test_signed_final_page_can_contain_awards(self):
+        pages,metadata=fixture()
+        pages[2]=Page(3,[('26300040','PRUEBA','CUATRO','LUNA')])
+        pages[2].text=pages[2].text.replace('Página 3 de 3',
+            'Murcia, a 24 de septiembre de 2026\nEL CONSEJERO DE EDUCACIÓN Y FORMACIÓN PROFESIONAL\nPágina 3 de 3')
+        metadata.update(row_count=4,page_row_counts=[1,2,1])
+        metadata['specialties'][0]['count']=4
+        records=self.module().parse_award_pages(pages,metadata)
+        self.assertEqual([r['page'] for r in records],[1,2,2,3])
+        pages[2].text=pages[2].text.replace('EL CONSEJERO','FALTA FIRMA')
+        with self.assertRaises(ValueError): self.module().parse_award_pages(pages,metadata)
+
+    def test_incorporation_header_and_explicit_override_preserve_only_safe_facts(self):
+        pages,metadata=fixture()
+        pages[0].words += [word('Sustituye',749,173),word('***9876**',790,173),
+                           word('OBSERVACIONES:',38,185),
+                           word('INCORPORACIÓN AL CENTRO ADJUDICADO EL 28/09/26',125,185)]
+        records=self.module().parse_award_pages(pages,metadata)
+        self.assertEqual([r['incorporation_at'] for r in records],
+                         ['2026-09-28','2026-09-25','2026-09-25'])
+        self.assertTrue(all('observations' not in r and '9876' not in str(r) for r in records))
+        self.assertTrue(all('appointment_status' not in r for r in records))
+
+    def test_only_explicit_appointment_note_sets_status(self):
+        pages,metadata=fixture()
+        pages[0].words += [word('OBSERVACIONES:',38,175),
+                           word('Nombramiento provisional con efectos hasta la resolución definitiva del '
+                                'procedimiento de urgencia (art. 40.1 Orden 29 de junio de 2026), '
+                                'BORM nº 149 de 01/07/2026',125,175)]
+        records=self.module().parse_award_pages(pages,metadata)
+        self.assertEqual(records[0]['appointment_status'],'provisional')
+        self.assertNotIn('appointment_status',records[1])
+        self.assertNotIn('observations',records[0])
+
+    def test_explicit_definitive_appointment_is_separate_from_document_title(self):
+        pages,metadata=fixture()
+        pages[0].words += [word('OBSERVACIONES:',38,175),word('Nombramiento definitivo',125,175)]
+        self.assertEqual(self.module().parse_award_pages(pages,metadata)[0]['appointment_status'],'definitive')
+
+    def test_negated_requested_or_uncertain_appointment_mentions_remain_unknown(self):
+        notes=['No procede nombramiento definitivo; pendiente de resolución.',
+               'Solicitud de nombramiento provisional no aprobada.',
+               'Nombramiento definitivo pendiente de resolución.',
+               'Nombramiento provisional no aprobado.',
+               'Se estudia el nombramiento provisional.',
+               'Posible nombramiento definitivo.',
+               'Nombramiento provisional con efectos hasta la resolución definitiva, si se aprueba.',
+               'Nombramiento definitivo. Pendiente de aprobación.']
+        for note in notes:
+            pages,metadata=fixture()
+            pages[0].words += [word('OBSERVACIONES:',38,175),word(note,125,175)]
+            with self.subTest(note=note):
+                record=self.module().parse_award_pages(pages,metadata)[0]
+                self.assertNotIn('appointment_status',record)
+                self.assertEqual(record['incorporation_at'],'2026-09-25')
+
+    def test_appointment_phrase_outside_observation_is_not_evidence(self):
+        pages,metadata=fixture()
+        pages[0].words += [word('Nombramiento definitivo',749,178)]
+        self.assertNotIn('appointment_status',self.module().parse_award_pages(pages,metadata)[0])
+
+    def test_unrelated_note_dates_and_private_reasons_are_not_retained(self):
+        pages,metadata=fixture()
+        pages[0].words += [word('OBSERVACIONES:',38,175),
+                           word('Motivo privado de ejemplo. BORM 01/07/2026. Finaliza el 30/10/2026.',125,175)]
+        record=self.module().parse_award_pages(pages,metadata)[0]
+        self.assertEqual(record['incorporation_at'],'2026-09-25')
+        self.assertNotIn('appointment_status',record)
+        self.assertNotIn('privado',str(record))
+        self.assertNotIn('01/07',str(record))
+        self.assertNotIn('30/10',str(record))
+
+    def test_ambiguous_or_malformed_administrative_notes_fail_closed(self):
+        notes=['INCORPORACIÓN AL CENTRO ADJUDICADO EL 31/09/26',
+               'INCORPORACIÓN AL CENTRO ADJUDICADO EL',
+               'INCORPORACIÓN AL CENTRO ADJUDICADO EL: fecha pendiente',
+               'INCORPORACIÓN AL CENTRO ADJUDICADO EL fecha pendiente',
+               'INCORPORACIÓN AL CENTRO ADJUDICADO EL 28/09/26. INCORPORACIÓN AL CENTRO ADJUDICADO EL 30/09/26',
+               'Nombramiento provisional. Nombramiento definitivo']
+        for note in notes:
+            pages,metadata=fixture()
+            pages[0].words += [word('OBSERVACIONES:',38,175),word(note,125,175)]
+            with self.subTest(note=note), self.assertRaises(ValueError):
+                self.module().parse_award_pages(pages,metadata)
+
+    def test_bad_general_incorporation_date_fails_closed(self):
+        pages,metadata=fixture()
+        for page in pages: page.text=page.text.replace('25-SEP-26','31-SEP-26')
+        with self.assertRaises(ValueError): self.module().parse_award_pages(pages,metadata)
+
+    def test_page_counts_require_nonnegative_integers(self):
+        for counts in ([1,2,-1],[1,2,False],[1,2,'0']):
+            pages,metadata=fixture();metadata['page_row_counts']=counts
+            with self.subTest(counts=counts),self.assertRaises(ValueError):
+                self.module().parse_award_pages(pages,metadata)
+
     def test_hash_gate_rejects_challenge_or_changed_bytes_before_pdf_extraction(self):
         with TemporaryDirectory() as directory:
             path=Path(directory)/'source.pdf'
@@ -157,6 +253,8 @@ class PositionDocumentTests(unittest.TestCase):
                 result=module.scan_document(path,'https://www.carm.es/web/descarga?IDCONTENIDO=209126',
                                             '2026-10-02T20:06:59Z')
         self.assertEqual(result['metadata']['row_count'],3)
+        self.assertEqual(result['metadata']['parser_revision'],module.AWARD_PARSER_REVISION)
+        self.assertEqual(result['metadata']['checked_at'],'2026-10-02T20:06:59Z')
         self.assertEqual(result['metadata']['page_row_counts'],[1,2,0])
         self.assertEqual(result['metadata']['specialties'],expected['specialties'])
         self.assertEqual(result['metadata']['published_at'],'2026-09-24')

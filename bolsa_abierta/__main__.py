@@ -17,6 +17,9 @@ def main():
     refresh.add_argument('--request-id', default='')
     export = subs.add_parser('export')
     export.add_argument('--output', type=Path, required=True)
+    export.add_argument('--inventory-state', type=Path)
+    export.add_argument('--position-status', type=Path)
+    export.add_argument('--operations-state', type=Path)
     server = subs.add_parser('serve')
     server.add_argument('--host', default='127.0.0.1')
     server.add_argument('--port', type=int, default=8000)
@@ -48,7 +51,12 @@ def main():
         # Partial collection is published honestly and must not discard the previous snapshot.
         return 0 if job['status'] in ('completed', 'partial') else 1
     if args.command == 'export':
-        state = build_site(store, args.output, root)
+        summaries = {}
+        for key, path in (('inventory', args.inventory_state), ('positions', args.position_status),
+                          ('operations', args.operations_state)):
+            if path and path.exists():
+                summaries[key] = json.loads(path.read_text(encoding='utf-8'))
+        state = build_site(store, args.output, root, **summaries)
         print(json.dumps({'current_id': state['current_id'], 'freshness': state['freshness']}))
     elif args.command == 'serve':
         from .server import serve

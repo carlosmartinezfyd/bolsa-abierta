@@ -899,3 +899,58 @@ test('closing About opened from the mobile menu restores focus to its visible su
   assert.equal(menu.open,false);assert.equal(c.dialog.open,true);
   focused=null;c.dialog.close();assert.equal(focused,summary);
 });
+
+test('coverage is scoped by source family and course and never turns a completed traversal into complete history',()=>{
+  const m=model();m.view='sources';m.state.source_inventory={document_count:4,status_counts:{verified:2,skipped:2},coverage:{sources:[{source_id:'maestros',family:'maestros',body:'0597',course:'2026/2027',status:'skipped',scope_complete:true,history_complete:false,pending_pages:0,pending_details:2,checked_at:'2026-10-01T09:00:00Z'}],families:[{family:'maestros',body:'0597',course:'2026/2027',scope_complete:true,history_complete:false}]}};
+  const html=context.window.BAV.shell(m);assert.match(html,/4 documentos inventariados/);assert.match(html,/0597.*2026\/2027/);assert.match(html,/Cobertura del ámbito: completa/);assert.match(html,/Historial incompleto/);assert.match(html,/2 detalles pendientes/);assert.match(html,/Omitido por presupuesto/);assert.match(html,/no hubo un nuevo intento de descarga/);assert.doesNotMatch(html,/>Corpus completo<|>Cobertura completa</i);
+});
+test('deferred checks retain separate previous evidence dates and do not invent a new attempt',()=>{
+  const m=model();m.view='sources';m.state.catalog.sources=[{id:'test',name:'Referencia',url:'https://www.carm.es/web/pagina?IDCONTENIDO=1'}];m.state.catalog.checks=[{id:'test',status:'read',work_status:'skipped',checked_at:'2026-10-01T09:00:00Z',downloaded_at:'2026-09-30T12:00:00Z',queued_at:'2026-10-02T10:00:00Z',success:true}];
+  const html=context.window.BAV.shell(m);assert.match(html,/Comprobación anterior/);assert.match(html,/Última descarga/);assert.match(html,/En cola desde/);assert.match(html,/no hubo un nuevo intento/);assert.doesNotMatch(html,/Último intento:.*2 oct/);
+});
+test('inventory labels and metadata are escaped',()=>{
+  const m=model();m.view='sources';m.state.source_inventory={document_count:4,status_counts:{'<img src=x>':2},coverage:{sources:[{source_id:'<script>x</script>',family:'<img src=x>',course:'<x>',status:'skipped',pending_pages:0,pending_details:1}]}};
+  const html=context.window.BAV.shell(m);assert.doesNotMatch(html,/<script>|<img src=x>/);assert.match(html,/&lt;script&gt;/);assert.match(html,/&lt;img src=x&gt;/);
+});
+test('About explains public query access, bounded reuse and correction channel without invented contacts',async()=>{
+  const c=await controller(async()=>({ok:true,json:async()=>seed}));const button={dataset:{action:'about'}};
+  c.listeners.click({target:{closest:selector=>selector==='[data-action]'?button:null}});
+  assert.match(c.dialog.innerHTML,/pública y no requiere autenticación/);assert.match(c.dialog.innerHTML,/no acredita una licencia/);assert.match(c.dialog.innerHTML,/canal privado.*aún no está publicado/);assert.match(c.dialog.innerHTML,/No envíes nombres/);assert.doesNotMatch(c.dialog.innerHTML,/mailto:|D1.*privad/i);
+});
+
+test('personal-list checks expose budget pauses or failures while retaining the earlier successful generation',()=>{
+  for(const status of ['pending_budget','failed']){
+    const m=model();m.view='sources';m.state.position_status={status,attempted_at:'2026-10-04T10:00:00Z',checked_at:'2026-10-02T09:00:00Z',active_version:'a'.repeat(64),staged_version:'b'.repeat(64),resume_after:status==='pending_budget'?'2026-10-05T00:00:00Z':null,record_count:13045,pending_documents:2,verified_documents:4,error_code:status==='pending_budget'?'daily_write_budget':'download_failed'};
+    const html=context.window.BAV.shell(m);const section=html.match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];
+    assert.ok(section,'personal-list check summary is visible');assert.match(section,status==='pending_budget'?/Pausada por presupuesto/:/Comprobación fallida/);
+    assert.match(section,/Último intento.*4 oct 2026/s);assert.match(section,/Última comprobación satisfactoria.*2 oct 2026/s);
+    assert.match(section,/Se conserva la generación activa/);assert.match(section,/Generación preparada, pendiente de activar/);assert.match(section,/13\.045 registros/);assert.match(section,/2 documentos pendientes/);
+    assert.match(section,new RegExp('Generación activa</dt><dd[^>]*>'+m.state.position_status.active_version));assert.doesNotMatch(section,new RegExp('Generación activa</dt><dd[^>]*>'+m.state.position_status.staged_version));
+    if(status==='pending_budget')assert.match(section,/Reanudar a partir de.*5 oct 2026/s);
+  }
+});
+
+test('completed traversal stays separate from failed downloads and unreviewed document evidence',()=>{
+  const m=model();m.view='sources';const scope={source_id:'maestros',family:'maestros',body:'0597',course:'2026/2027',scope_complete:false,traversal_complete:true,downloads_complete:false,verification_complete:false,history_complete:false,document_count:5,pending_documents:3,failed_documents:1,skipped_documents:1,unreviewed_documents:1,pending_pages:0,pending_details:0};
+  m.state.source_inventory={document_count:5,coverage:{sources:[scope],families:[scope]}};
+  const html=context.window.BAV.shell(m);assert.match(html,/Recorrido observado: completado/);assert.match(html,/Descargas: pendientes/);assert.match(html,/Evidencia revisada: pendiente/);assert.match(html,/Cobertura del ámbito: parcial/);assert.match(html,/3 documentos pendientes/);assert.match(html,/1 documento con error/);assert.match(html,/1 documento omitido por presupuesto/);assert.match(html,/1 documento sin revisar/);assert.match(html,/Historial incompleto/);assert.doesNotMatch(html,/Evidencia revisada: completada|Cobertura del ámbito: completa/);
+  delete scope.traversal_complete;delete scope.downloads_complete;delete scope.verification_complete;delete scope.pending_documents;delete scope.failed_documents;delete scope.skipped_documents;delete scope.unreviewed_documents;
+  const old=context.window.BAV.shell(m);assert.match(old,/Recorrido observado: no consignado/);assert.match(old,/Descargas: no consignadas/);assert.match(old,/Evidencia revisada: no consignada/);assert.match(old,/Documentos pendientes: no consignados/);assert.doesNotMatch(old,/0 documentos pendientes|0 documentos con error/);
+});
+
+test('cached reviewed evidence is served with explicit incomplete official check and conservative dates',()=>{
+  for(const checked_at of ['2026-10-02T09:00:00Z',null]){
+    const m=model();m.view='sources';m.state.position_status={status:'degraded',attempted_at:'2026-10-04T10:00:00Z',checked_at,active_version:'a'.repeat(64),origin_check_complete:false,origin_verified_documents:2,origin_failed_documents:1,cached_documents:1,cache_status:'ready',error_code:'origin_unavailable_cached_evidence'};
+    const section=context.window.BAV.shell(m).match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];
+    assert.match(section,/Evidencia revisada conservada/);assert.match(section,/última comprobación oficial fue parcial/);assert.match(section,/generación activa puede incorporar evidencia revisada conservada/);assert.match(section,/2 documentos comprobados en origen/);assert.match(section,/1 documento con fallo de origen/);assert.match(section,/1 documento servido desde evidencia conservada/);assert.match(section,/Último intento.*4 oct 2026/s);
+    if(checked_at)assert.match(section,/Última comprobación satisfactoria.*2 oct 2026/s);else assert.match(section,/Última comprobación satisfactoria.*Sin fecha acreditada/s);
+    assert.doesNotMatch(section,/Comprobación verificada|comprobado hoy|comprobación satisfactoria.*4 oct 2026|1970/i);
+    m.state.position_status.origin_verified_documents=0;const failed=context.window.BAV.shell(m).match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];assert.match(failed,/última comprobación oficial falló/);assert.doesNotMatch(failed,/Comprobación verificada|comprobado hoy/i);
+  }
+});
+
+test('source coverage preserves past courses and labels checked unknown and missing course metadata',()=>{
+  const m=model();m.view='sources';const scopes=[{source_id:'past',family:'ordinary',status:'checked',course:'2024/2025'},{source_id:'unknown',family:'urgent',status:'checked',course:'unknown'},{source_id:'missing',family:'open',status:'checked',course:null}];
+  m.state.source_inventory={status_counts:{checked:3},coverage:{sources:scopes,families:scopes}};
+  const html=context.window.BAV.shell(m);assert.match(html,/>Comprobado</);assert.equal((html.match(/2024\/2025/g)||[]).length,2);assert.equal((html.match(/Curso desconocido/g)||[]).length,2);assert.equal((html.match(/Sin curso/g)||[]).length,2);assert.doesNotMatch(html,/>checked<| · unknown|2026-2027/);
+});

@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "validation_date": "2026-10-04",
+  "scope": "local_complete_original_extraction_and_api_contract",
+  "remote_activation_confirmed": false,
+  "origin_check_performed": false,
+  "regression_tests": {
+    "python_passed": 250,
+    "javascript_passed": 123,
+    "javascript_runtimes": ["22.23.3", "24.19.0"],
+    "failed": 0,
+    "python_compileall_passed": true,
+    "git_diff_check_passed": true,
+    "scope": "final_integrated_tree_before_publication"
+  },
+  "collection": {
+    "generation_id": "65c33ad61b3f5c73771e20fc2ec73b9f1841dae8f05f9e3965d6a918391a54a3",
+    "origin_check_performed": false,
+    "record_count": 22393,
+    "query_scope_count": 218,
+    "ranked_records": 22109,
+    "award_records": 284,
+    "maestros_records": 9211,
+    "explicit_provisional_awards": 24,
+    "required_originals": 7,
+    "rows_digest": "d6d62bd6e7cf80074e000c821271b88502144d6b4230462e62153c51580071fa",
+    "seconds": 111.6
+  },
+  "sources": [
+    {
+      "content_id": "208095",
+      "sha256": "cbe8220877138bcf0c6f20e53354f976549737c16d2dbe18c90ebe523f11058a",
+      "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=Resoluci%C3%B3n+Definitiva+listas+de+interinos+2026-2027.pdf&IDCONTENIDO=208095&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4491%2C72314%2C4500%2C4092%2C75599",
+      "row_count": 12895,
+      "parser_revision": "secondary-lists-v2-scoped-memberships",
+      "pages": 728,
+      "kind": "baseline",
+      "consolidated_row_count": 12898
+    },
+    {
+      "content_id": "208249",
+      "sha256": "e33daf270857c9e2bb5f7e5b01aedc872a978ae418253645b881f42d969c00c1",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599",
+      "pages": 2
+    },
+    {
+      "content_id": "208379",
+      "sha256": "9cbfdb677da94b92294066fb71bd65dcc8fc378337727d78f165e6ec7c97640f",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599",
+      "pages": 1
+    },
+    {
+      "content_id": "208253",
+      "kind": "maestros_roster",
+      "sha256": "632acd0c5f5520ed4cc163978937eda158c185cfe2c81ee618f60a9f5601de6e",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=1_res_anexos_int_def.pdf&ALIAS=ARCH&IDCONTENIDO=208253&IDTIPO=60&RASTRO=c$m3977,75239,75501",
+      "pages": 651,
+      "row_count": 9207,
+      "parser_revision": "maestros-unique-list-v1",
+      "consolidated_row_count": 9211
+    },
+    {
+      "content_id": "208782",
+      "kind": "maestros_correction",
+      "sha256": "dcf8c6ec03409d6685d4bb92a57b698b973bee1fe55141f0ea6b2f47acad9f10",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=C.%20errores%20Definitiva%20cambio%20n%20lista%20%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208782&IDTIPO=60&RASTRO=c$m3977,75239,75501",
+      "pages": 4
+    },
+    {
+      "content_id": "209126",
+      "kind": "award",
+      "sha256": "1b06bc4d1e55b615cfdb64acd12c28392385d0b13f941e83409608081e6aa2c1",
+      "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJCONPLAZASECUNDARIA-210732.pdf&IDCONTENIDO=209126&RASTRO=c77%24m22725%2C22759%2C4254",
+      "pages": 25,
+      "row_count": 147,
+      "parser_revision": "award-v3-affirmative-administrative-facts"
+    },
+    {
+      "content_id": "209314",
+      "kind": "award",
+      "sha256": "cd130841878cb2caa0443f34a9cf52ef0d3ddd79865100172b81c078cfc29067",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJCONPLAZASECUNDARIA-216302.pdf&ALIAS=ARCH&IDCONTENIDO=209314&RASTRO=c798$m3911,4036,24219",
+      "pages": 24,
+      "row_count": 137,
+      "parser_revision": "award-v3-affirmative-administrative-facts"
+    }
+  ],
+  "observations_separate": {
+    "content_id": "209124",
+    "pages": 1,
+    "row_count": 1,
+    "sha256": "08bdf29cc81cd3df8e0f47816c94af00bb207ff50aefc1125189a8cc7d7c20c2",
+    "semantic_status": "unconfirmed",
+    "searchable_person_rows": 0
+  },
+  "award_evidence": [
+    {
+      "content_id": "209126",
+      "pages": 25,
+      "records": 147,
+      "incorporation_date_overrides": 35,
+      "explicit_provisional_records": 0
+    },
+    {
+      "content_id": "209314",
+      "pages": 24,
+      "records": 137,
+      "last_page_records": 1,
+      "incorporation_date_overrides": 43,
+      "explicit_provisional_records": 24
+    }
+  ],
+  "maestros": {
+    "baseline_memberships": 9207,
+    "correction_inclusions": 4,
+    "correction_habilitation_additions": 2,
+    "consolidated_memberships": 9211,
+    "published_habilitations": 18616,
+    "memberships_without_stated_habilitations": 6,
+    "block_I_memberships": 5357,
+    "block_II_memberships": 3854,
+    "rank_scope": "maestros_unique_list",
+    "body": "0597"
+  },
+  "limitations": [
+    "Counts are records and scoped memberships, not unique people.",
+    "This report does not establish current availability or a position among available candidates.",
+    "Revalidating archived exact bytes is not a fresh check of the official origin.",
+    "Local SQLite write measurements do not establish production D1 billing or Worker CPU.",
+    "Fourteen days of operational observation must elapse before a fourteen-day reliability claim."
+  ],
+  "reproduce": "python -m bolsa_abierta.position_sync --validate-only --local-evidence /private/hash-addressed-originals --validation-report /private/validation.json",
+  "api_contract": {
+    "validated_records": 22393,
+    "accepted_manifest": true,
+    "unique_ids": 22393,
+    "fields_whitelisted": true,
+    "network_calls": 0,
+    "maestros": 9211,
+    "explicit_provisional": 24
+  },
+  "legacy_manifest_reproducibility": {
+    "base_commit": "69c7fae8ad921473dead21c127c29e0dccef32e3",
+    "generation_id": "482d3e30394d5934abb3b21f85da0773a87268adead5e241a62ad800dd4b563a",
+    "records": 13045,
+    "matches_previous_generation": true
+  }
+}

@@ -1,12 +1,36 @@
 name: Official source refresh
 run-name: 'Official refresh ${{ inputs.request_id || github.event_name }}'
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'bolsa_abierta/**'
+      - 'web/**'
+      - 'index.html'
+      - 'pyproject.toml'
+      - '.github/workflows/refresh.yml'
   schedule:
     - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
       request_id:
         description: 'Optional public gateway request ID (32 lowercase hex characters)'
+        required: false
+        default: ''
+      scheduled_time:
+        description: 'Actual Worker scheduledTime as ISO UTC; leave empty for native Actions'
+        required: false
+        default: ''
+      clock_received_at:
+        description: 'Actual Worker clock entry as ISO UTC'
+        required: false
+        default: ''
+      dispatch_at:
+        description: 'Actual Worker dispatch time as ISO UTC'
+        required: false
+        default: ''
+      trigger:
+        description: 'worker_cron only when dispatched by the configured Worker'
         required: false
         default: ''
 permissions:
@@ -18,12 +42,18 @@ concurrency:
   cancel-in-progress: false
 jobs:
   refresh:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.WORKER_CRON_ENABLED != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 18
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      REQUEST_ID: ${{ inputs.request_id }}
+      SCHEDULED_TIME: ${{ inputs.scheduled_time }}
+      CLOCK_RECEIVED_AT: ${{ inputs.clock_received_at }}
+      DISPATCH_AT: ${{ inputs.dispatch_at }}
+      OPERATIONS_TRIGGER: ${{ inputs.trigger == 'worker_cron' && 'worker_cron' || github.event_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,6 +68,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_*.py'
           node --test tests/*.test.cjs tests/*.test.mjs
       - name: Restore durable publication state
+        id: restore
         shell: bash
         run: |
           if git ls-remote --exit-code --heads origin data-state; then
@@ -47,64 +78,118 @@ jobs:
             git worktree add --detach saved-state HEAD
             git -C saved-state switch --orphan data-state
           fi
-      - name: Discover the course sources and retain pending documents
+      - name: Start metadata-only run evidence
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json start
+      - name: Discover course sources and retain pending documents
         id: inventory
         continue-on-error: true
-        run: python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
-      - name: Verify the published personal-position reference
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
+      - name: Verify published personal-position reference
         id: positions
         continue-on-error: true
         env:
           PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
           POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
-        # Nominal data stays on this ephemeral runner and in private D1. Never add
-        # this directory to data-state or upload it as a public artifact.
-        run: python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory
-      - name: Collect and validate official sources
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+        # Command output is suppressed by the wrapper. Original PDFs and rows are
+        # ephemeral/private and must never enter data-state or public artifacts.
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
+      - name: Collect and validate official vacancies
         id: collect
         continue-on-error: true
-        env:
-          REQUEST_ID: ${{ inputs.request_id }}
-        run: python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
-      - name: Build a snapshot with explicit check status
+        run: |
+          python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
+          python - <<'PY'
+          import json,os
+          run_id=os.environ['GITHUB_RUN_ID']+':'+os.environ.get('GITHUB_RUN_ATTEMPT','1')
+          state=json.load(open('saved-state/operations.json'))
+          phase=next((run.get('phases',{}).get('vacancies',{}) for run in state.get('runs',[]) if run.get('run_id')==run_id),{})
+          status=phase.get('status')
+          status=status if status in ('success','partial','failed') else 'failed'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output: output.write('phase_status='+status+'\n')
+          PY
+      - name: Build snapshot with explicit check status
+        id: build
+        continue-on-error: true
         env:
           PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
         run: |
-          python -m bolsa_abierta --data-dir saved-state/runtime export --output site
+          python -m bolsa_abierta.operations --state saved-state/operations.json run --phase build -- python -m bolsa_abierta --data-dir saved-state/runtime export --output site --inventory-state saved-state/source-inventory.json --position-status saved-state/position-status.json --operations-state saved-state/operations.json
           python -c "import json,os,pathlib,urllib.parse; base=os.environ.get('PUBLIC_API_BASE',''); assert not base or urllib.parse.urlsplit(base).scheme=='https'; pathlib.Path('site/web/config.js').write_text('window.BA_CONFIG = '+json.dumps({'apiBase':base})+';\n',encoding='utf-8')"
+      - name: Finalize run evidence and refresh public aggregates
+        if: always() && steps.restore.outcome == 'success'
+        env:
+          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          INVENTORY_OUTCOME: ${{ steps.inventory.outcome }}
+          POSITION_OUTCOME: ${{ steps.positions.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          COLLECT_STATUS: ${{ steps.collect.outputs.phase_status }}
+        run: |
+          status=success
+          if [ "$BUILD_OUTCOME" != success ]; then status=failed
+          elif [ "$INVENTORY_OUTCOME" != success ] || [ "$POSITION_OUTCOME" != success ] || [ "$COLLECT_OUTCOME" != success ] || [ "$COLLECT_STATUS" != success ]; then status=partial
+          fi
+          python -m bolsa_abierta.operations --state saved-state/operations.json finish --status "$status"
+          if [ "$BUILD_OUTCOME" = success ]; then
+            python -m bolsa_abierta --data-dir saved-state/runtime export --output site --inventory-state saved-state/source-inventory.json --position-status saved-state/position-status.json --operations-state saved-state/operations.json
+            python -c "import json,os,pathlib,urllib.parse; base=os.environ.get('PUBLIC_API_BASE',''); assert not base or urllib.parse.urlsplit(base).scheme=='https'; pathlib.Path('site/web/config.js').write_text('window.BA_CONFIG = '+json.dumps({'apiBase':base})+';\n',encoding='utf-8')"
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          from bolsa_abierta.operations import gateway_status
+          status=gateway_status(json.loads(Path('site/data/state.json').read_text()),json.loads(Path('saved-state/operations.json').read_text()))
+          Path('site/data/gateway-status.json').write_text(json.dumps(status,separators=(',',':'))+'\n')
+          PY
+          fi
       - name: Save evidence and metadata durably
+        id: persist
+        env:
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+        if: always() && steps.restore.outcome == 'success'
         shell: bash
         run: |
           git -C saved-state config user.name 'github-actions[bot]'
           git -C saved-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git -C saved-state add runtime
-          for path in source-inventory.json source-documents.json; do
+          # Explicit publication allowlist: rejected/private originals must
+          # never enter data-state, including after an archive migration.
+          if [ -f saved-state/runtime/state.sqlite3 ]; then git -C saved-state add runtime/state.sqlite3; fi
+          if [ -d saved-state/runtime/artifacts ]; then git -C saved-state add runtime/artifacts; fi
+          if [ -d saved-state/runtime/artifacts ] || [ -n "$(git -C saved-state ls-files -- runtime/artifacts)" ]; then
+            git -C saved-state add -u -- runtime/artifacts
+          fi
+          for path in source-inventory.json source-documents.json position-status.json operations.json; do
             if [ -f "saved-state/$path" ]; then git -C saved-state add "$path"; fi
           done
+          python - <<'PY'
+          import os,subprocess
+          from pathlib import Path
+          from bolsa_abierta.operations import validated_archive_paths
+          if os.environ.get('PRIVATE_ARCHIVE_KEY'):
+              try:
+                  paths=validated_archive_paths(Path('saved-state/private-originals'))
+                  for path in paths:
+                      subprocess.run(['git','-C','saved-state','add','--',str(path.relative_to('saved-state'))],check=True,capture_output=True)
+              except Exception:
+                  with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('archive_status=failed\n')
+                  with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('Encrypted archive persistence pending: authentication/completeness/budget validation failed. No new bundle staged; source diagnostics still persisted.\n')
+          PY
           if ! git -C saved-state diff --cached --quiet; then
-            git -C saved-state commit -m 'Record official source check'
+            git -C saved-state commit -m 'Record official source check and operation metadata'
             git -C saved-state push origin HEAD:refs/heads/data-state
           fi
       - uses: actions/configure-pages@v5
+        if: steps.build.outcome == 'success'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.build.outcome == 'success'
         with:
           path: site
       - uses: actions/deploy-pages@v4
+        if: steps.build.outcome == 'success'
         id: deployment
-      - name: Record roster audit outcome
-        if: always()
-        env:
-          AUDIT_OUTCOME: ${{ steps.positions.outcome }}
-          INVENTORY_OUTCOME: ${{ steps.inventory.outcome }}
-        run: |
-          if [ "$AUDIT_OUTCOME" = "success" ]; then
-            echo 'Position publication: required document bytes verified and generation activated.' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'Position publication incomplete: previous generation and check date retained.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f saved-state/source-inventory.json ]; then
-            python -c "import json,os; r=json.load(open('saved-state/source-inventory.json')); f=open(os.environ['GITHUB_STEP_SUMMARY'],'a'); f.write('\nCourse source coverage: '+json.dumps({k:r[k] for k in ('index_complete','downloads_complete','review_complete','status_counts')})+'\n')"
-          fi
-      - name: Signal complete collector failure after publishing diagnostic state
-        if: steps.collect.outcome == 'failure' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure'
+      - name: Record aggregate operational evidence
+        if: always() && steps.restore.outcome == 'success'
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json summary >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail incomplete check after persisting and publishing diagnostics
+        if: always() && (steps.persist.outputs.archive_status == 'failed' || steps.collect.outcome == 'failure' || steps.collect.outputs.phase_status == 'partial' || steps.collect.outputs.phase_status == 'failed' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure' || steps.build.outcome == 'failure')
         run: exit 1

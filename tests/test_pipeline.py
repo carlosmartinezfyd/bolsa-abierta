@@ -79,8 +79,27 @@ class PipelineTests(unittest.TestCase):
         notice = self.store.state()['catalog']['notices'][0]
         self.assertEqual(notice['failed_document_id'], digest)
         self.assertEqual(notice['status'], 'extraction_failed')
-        self.assertEqual(self.store.verified_artifact(digest).read_bytes(), b'%PDF-one')
+        self.assertFalse(self.store.artifact(digest).exists())
+        self.assertEqual(self.store.private_artifact(digest).read_bytes(), b'%PDF-one')
         self.assertNotIn(digest, [d['id'] for d in self.store.state()['documents']])
+
+    def test_reopening_moves_old_unapproved_bytes_out_of_the_public_archive(self):
+        digest = self.store.archive(b'%PDF-unapproved-legacy')
+        self.assertTrue(self.store.artifact(digest).exists())
+        reopened = Store(self.store.root, SEED)
+        self.assertFalse(reopened.artifact(digest).exists())
+        self.assertEqual(reopened.private_artifact(digest).read_bytes(), b'%PDF-unapproved-legacy')
+
+    def test_parser_output_cannot_leak_names_into_public_diagnostics(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        from bolsa_abierta.pipeline import isolated_parse
+        with patch('bolsa_abierta.pipeline.subprocess.run', return_value=SimpleNamespace(
+                returncode=1, stderr=b'Invalid row: PRIVATE PERSON ***1234**')):
+            with self.assertRaises(ValueError) as caught:
+                isolated_parse(b'%PDF-test', URL, '2026-10-04T12:00:00Z')
+        self.assertNotIn('PRIVATE', str(caught.exception))
+        self.assertNotIn('1234', str(caught.exception))
 
     def test_same_url_new_bytes_retains_both_revisions(self):
         self.run_it()

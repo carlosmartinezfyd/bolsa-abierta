@@ -1,0 +1,254 @@
+name: Prepare or deploy existing Cloudflare gateway
+on:
+  push:
+    branches: [main]
+    paths: ['gateway/**', '.github/workflows/deploy-gateway.yml']
+  schedule:
+    - cron: '13 7 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Prepare/backfill then promote if ready, or retry promotion after completed backfill'
+        type: choice
+        options: [prepare, promote]
+        default: prepare
+permissions:
+  contents: write
+concurrency:
+  group: official-source-publication
+  cancel-in-progress: false
+jobs:
+  gateway:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
+      D1_DATABASE_ID: ${{ vars.CLOUDFLARE_D1_DATABASE_ID }}
+      # Conservative 70% application allowance; an operator can lower it for
+      # other account consumers. DB-UTC reservations enforce remaining usage.
+      MIGRATION_MAX_INDEX_WRITES: ${{ vars.CLOUDFLARE_MIGRATION_MAX_INDEX_WRITES || '70000' }}
+      DEPLOY_MODE: ${{ inputs.mode || 'prepare' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore durable release progress
+        id: restore
+        run: |
+          if git ls-remote --exit-code --heads origin data-state; then
+            git fetch origin data-state
+            git worktree add --detach saved-state FETCH_HEAD
+          else
+            git worktree add --detach saved-state HEAD
+            git -C saved-state switch --orphan data-state
+          fi
+      - name: Skip release already deployed at this exact SHA
+        id: release
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          path=Path('saved-state/gateway-deployment.json')
+          try: state=json.loads(path.read_text()) if path.exists() else {}
+          except (OSError,ValueError): state={}
+          done=state.get('status')=='completed' and state.get('code_sha')==os.environ['GITHUB_SHA']
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('done='+str(done).lower()+'\n')
+          if done:
+              with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('Gateway release already deployed at this exact SHA; daily resumption has no work.\n')
+          PY
+      - uses: actions/setup-node@v4
+        if: steps.release.outputs.done != 'true'
+        with:
+          node-version: '22'
+      - name: Check existing resource configuration without exposing credentials
+        if: steps.release.outputs.done != 'true'
+        id: config
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os,re
+          ready=bool(os.environ.get('CLOUDFLARE_API_TOKEN')) and bool(re.fullmatch(r'[a-fA-F0-9]{32}',os.environ.get('CLOUDFLARE_ACCOUNT_ID',''))) and bool(re.fullmatch(r'[a-fA-F0-9-]{36}',os.environ.get('D1_DATABASE_ID','')))
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('ready='+str(ready).lower()+'\n')
+          if not ready:
+              with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('Gateway deployment: pending configuration. Existing Worker and D1 unchanged. Configure CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_D1_DATABASE_ID.\n')
+          if ready:
+              from pathlib import Path
+              source=Path('gateway/wrangler.example.toml').read_text()
+              source=source.replace('REPLACE_WITH_D1_DATABASE_ID',os.environ['D1_DATABASE_ID'])
+              Path('gateway/wrangler.toml').write_text(source)
+          PY
+      - name: Validate gateway before deployment
+        if: steps.config.outputs.ready == 'true'
+        run: node --test tests/gateway.test.mjs tests/positions-api.test.mjs
+      - name: Install official Wrangler CLI
+        if: steps.config.outputs.ready == 'true'
+        run: npm install --no-save --package-lock=false wrangler@4
+      - name: Dry-run candidate against explicitly configured existing Worker
+        if: steps.config.outputs.ready == 'true'
+        run: npx wrangler deploy --dry-run --config gateway/wrangler.toml
+      - name: Bootstrap small budget control tables
+        if: steps.config.outputs.ready == 'true' && env.DEPLOY_MODE == 'prepare'
+        run: npx wrangler d1 execute bolsa-abierta-gateway --remote --config gateway/wrangler.toml --file gateway/migrations/budget-bootstrap.sql
+      - name: Resume migration one reserved populated index at a time
+        id: migration
+        if: steps.config.outputs.ready == 'true' && env.DEPLOY_MODE == 'prepare'
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          from bolsa_abierta.operations import prepare_gateway_migration
+          def execute(sql):
+              result=subprocess.run(['npx','wrangler','d1','execute','bolsa-abierta-gateway','--remote','--config','gateway/wrangler.toml','--command',sql,'--json'],capture_output=True,text=True,timeout=60)
+              if result.returncode: raise ValueError('d1_operation_failed')
+              report=json.loads(result.stdout)
+              if not isinstance(report,list) or any(item.get('success') is False for item in report): raise ValueError('d1_result_failed')
+              return report
+          rid='ddl:'+os.environ['GITHUB_RUN_ID']+':'+os.environ.get('GITHUB_RUN_ATTEMPT','1')
+          try:
+              source=Path('gateway/schema.sql').read_text()+'\n'+Path('gateway/migrations/0001-search-and-evidence.sql').read_text()
+              result=prepare_gateway_migration(execute,source,rid,limit=int(os.environ['MIGRATION_MAX_INDEX_WRITES']),max_seconds=240)
+          except Exception:
+              result={'status':'pending','reason':'migration_operation_failed','created_indexes':0,'remaining_indexes':None}
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('ready='+str(result['status']=='ready').lower()+'\nstatus='+result['status']+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('Bounded migration: '+json.dumps(result,sort_keys=True)+'. Missing indexes resume on the next daily run; historical generations retained.\n')
+          PY
+      - name: Upload candidate without changing active deployment
+        id: candidate
+        continue-on-error: true
+        if: steps.migration.outputs.ready == 'true'
+        run: |
+          # Listing must succeed for the named existing Worker before upload.
+          npx wrangler versions list --config gateway/wrangler.toml --json > .runtime-worker-versions.json
+          npx wrangler versions upload --config gateway/wrangler.toml --preview-alias reliability --message "$GITHUB_SHA" > .runtime-candidate.txt 2>&1
+          python - <<'PY'
+          import os,re
+          from pathlib import Path
+          output=Path('.runtime-candidate.txt').read_text()
+          expected='https://reliability-bolsa-abierta-gateway.cmartinezmtez.workers.dev'
+          urls=re.findall(r'https://[a-z0-9.-]+',output)
+          ready=expected in urls
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('ready='+str(ready).lower()+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('Candidate uploaded without production promotion. '+('Verified version alias: '+expected if ready else 'Pending: Wrangler did not return the expected named Worker preview host; no administrative token will be sent.')+'\n')
+          PY
+      - name: Resume bounded authenticated active-generation backfill
+        id: backfill
+        if: steps.candidate.outputs.ready == 'true'
+        run: |
+          npx wrangler d1 execute bolsa-abierta-gateway --remote --config gateway/wrangler.toml --command 'SELECT version_id FROM position_active WHERE singleton=1' --json > .runtime-active-version.json
+          python - <<'PY'
+          import json,os,re,time,urllib.error,urllib.request
+          summary=open(os.environ['GITHUB_STEP_SUMMARY'],'a')
+          def mark_ready():
+              with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('ready=true\n')
+          token=os.environ.get('POSITION_INGEST_TOKEN','')
+          report=json.load(open('.runtime-active-version.json'))
+          ids=[row.get('version_id') for item in report for row in item.get('results',[])]
+          if len(ids)>1 or any(not isinstance(v,str) or not re.fullmatch('[a-f0-9]{64}',v) for v in ids):
+              summary.write('Backfill pending: invalid active-generation metadata. Production Worker unchanged.\n')
+              raise SystemExit(0)
+          if not ids:
+              summary.write('No active generation to backfill. Eligibility will be checked before promotion.\n')
+              mark_ready()
+              raise SystemExit(0)
+          if len(token)<40 or len(token)>240:
+              summary.write('Backfill pending: POSITION_INGEST_TOKEN is missing or invalid. Production Worker unchanged.\n')
+              raise SystemExit(0)
+          # Host was returned by successful Wrangler upload and must equal this
+          # account's named Worker alias. Never accept an arbitrary target URL.
+          target='https://reliability-bolsa-abierta-gateway.cmartinezmtez.workers.dev/internal/positions'
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          opener=urllib.request.build_opener(NoRedirect)
+          deadline=time.monotonic()+240
+          indexed=0
+          for batch in range(80):
+              if time.monotonic()>=deadline: break
+              request=urllib.request.Request(target,data=json.dumps({'action':'index','id':ids[0]}).encode(),headers={'Content-Type':'application/json','Authorization':'Bearer '+token},method='POST')
+              try:
+                  with opener.open(request,timeout=15) as response:
+                      payload=json.loads(response.read(16384))
+              except urllib.error.HTTPError as error:
+                  if error.code==429:
+                      summary.write('Backfill pending_budget: HTTP 429. Resume from the shared D1 checkpoint after the UTC daily allowance resets; candidate remains unpromoted.\n')
+                  else:
+                      summary.write('Backfill pending: candidate HTTP '+str(error.code)+'. Check preview access and administrative secret; production Worker unchanged.\n')
+                  raise SystemExit(0)
+              except (OSError,ValueError):
+                  summary.write('Backfill pending: candidate could not be validated. Production Worker unchanged.\n')
+                  raise SystemExit(0)
+              count=payload.get('indexed')
+              indexed+=count if type(count) is int and 0<=count<=40 else 0
+              if payload.get('index_ready') is True:
+                  summary.write('Active-generation index ready after '+str(indexed)+' rows in this bounded run. Eligibility will be checked before promotion.\n')
+                  mark_ready()
+                  raise SystemExit(0)
+          summary.write('Backfill pending: bounded run processed '+str(indexed)+' rows; rerun prepare to resume the persisted D1 cursor. Candidate remains unpromoted.\n')
+          PY
+      - name: Record failed candidate preparation as pending
+        if: always() && steps.candidate.outcome == 'failure'
+        run: |
+          echo 'Candidate preparation pending: Wrangler upload or existing-Worker validation failed. No production promotion attempted; inspect token permissions and preview support.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Check active-generation index before promotion
+        id: readiness
+        if: steps.config.outputs.ready == 'true' && (env.DEPLOY_MODE == 'promote' || steps.backfill.outputs.ready == 'true')
+        shell: bash
+        run: |
+          npx wrangler d1 execute bolsa-abierta-gateway --remote --config gateway/wrangler.toml --command "SELECT name FROM sqlite_schema WHERE name IN ('position_write_reservations','position_write_reservation_leases','position_write_reservation_lease','position_write_allocations','position_staging_revisions','position_write_usage','position_write_reservations_pending','position_write_allocations_day','position_rows_revision_insert','position_rows_revision_delete','position_entries_revision_insert','position_entries_revision_delete','gateway_probe_pending')" --json > .runtime-d1-schema.json
+          npx wrangler d1 execute bolsa-abierta-gateway --remote --config gateway/wrangler.toml --command 'SELECT a.version_id, COALESCE(s.ready,0) AS search_ready FROM position_active a LEFT JOIN position_search_status s ON s.version_id=a.version_id WHERE a.singleton=1' --json > .runtime-d1-readiness.json
+          python - <<'PY'
+          import json,os
+          report=json.load(open('.runtime-d1-readiness.json'))
+          rows=[row for item in report for row in item.get('results',[])]
+          schema=json.load(open('.runtime-d1-schema.json'))
+          names={row.get('name') for item in schema for row in item.get('results',[])}
+          required={'position_write_reservations','position_write_reservation_leases','position_write_reservation_lease','position_write_allocations','position_staging_revisions','position_write_usage','position_write_reservations_pending','position_write_allocations_day','position_rows_revision_insert','position_rows_revision_delete','position_entries_revision_insert','position_entries_revision_delete','gateway_probe_pending'}
+          ready=required<=names and all(row.get('search_ready')==1 for row in rows)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('ready='+str(ready).lower()+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('Gateway promotion: '+('active generation indexed; eligible for deployment.' if ready else 'pending active-generation backfill or required budget/revision/cron schema; production Worker unchanged.')+'\n')
+          PY
+      - name: Deploy tested gateway after index readiness
+        id: deployment
+        if: steps.config.outputs.ready == 'true' && steps.readiness.outputs.ready == 'true'
+        run: |
+          npx wrangler deploy --config gateway/wrangler.toml
+          echo "Gateway deployed from $GITHUB_SHA. Cron remains opt-in and disabled in the repository template." >> "$GITHUB_STEP_SUMMARY"
+      - name: Persist aggregate pending or completed release progress
+        if: always() && steps.restore.outcome == 'success' && steps.release.outputs.done != 'true'
+        env:
+          CONFIG_READY: ${{ steps.config.outputs.ready }}
+          MIGRATION_STATUS: ${{ steps.migration.outputs.status }}
+          CANDIDATE_READY: ${{ steps.candidate.outputs.ready }}
+          BACKFILL_READY: ${{ steps.backfill.outputs.ready }}
+          READINESS: ${{ steps.readiness.outputs.ready }}
+          DEPLOYMENT_OUTCOME: ${{ steps.deployment.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from datetime import datetime,timezone
+          from pathlib import Path
+          deployed=os.environ.get('DEPLOYMENT_OUTCOME')=='success'
+          reason='completed' if deployed else 'validation_or_preparation_pending'
+          if not deployed:
+              if os.environ.get('CONFIG_READY')!='true': reason='missing_configuration'
+              elif os.environ.get('MIGRATION_STATUS')=='pending_budget': reason='migration_pending_budget'
+              elif os.environ.get('MIGRATION_STATUS')=='pending': reason='migration_pending'
+              elif os.environ.get('DEPLOYMENT_OUTCOME')=='failure': reason='deployment_failed'
+              elif os.environ.get('BACKFILL_READY')!='true' and os.environ.get('DEPLOY_MODE')!='promote': reason='candidate_or_backfill_pending'
+              elif os.environ.get('READINESS')!='true': reason='active_index_or_schema_pending'
+          state={'version':1,'worker':'bolsa-abierta-gateway','code_sha':os.environ['GITHUB_SHA'],
+                 'status':'completed' if deployed else 'pending','reason':reason,
+                 'updated_at':datetime.now(timezone.utc).isoformat(), 'daily_resumption':not deployed}
+          Path('saved-state/gateway-deployment.json').write_text(json.dumps(state,sort_keys=True,indent=2)+'\n')
+          PY
+          git -C saved-state config user.name 'github-actions[bot]'
+          git -C saved-state config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C saved-state add -- gateway-deployment.json
+          if ! git -C saved-state diff --cached --quiet; then
+            git -C saved-state commit -m 'Record bounded gateway release progress'
+            git -C saved-state push origin HEAD:refs/heads/data-state
+          fi

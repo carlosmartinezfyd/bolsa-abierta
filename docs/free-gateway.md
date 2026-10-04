@@ -10,6 +10,12 @@ La lectura de `state.json` tiene un límite de protección de 16 MiB. El exporta
 
 Worker: `https://bolsa-abierta-gateway.cmartinezmtez.workers.dev`. Base D1: `bolsa-abierta-gateway`, creada en la jurisdicción UE. La web se conecta mediante `PUBLIC_API_BASE`; el acceso de GitHub se configura exclusivamente como secreto `GITHUB_TOKEN`. La API indica `snapshot_only` hasta que exista ese secreto. No se necesita contratar un plan de pago.
 
+La actualización del 4 de octubre incorpora una migración aditiva y una versión candidata sin promocionar. El workflow comprueba y completa el índice de la generación activa antes de promocionar el código; si se agota el presupuesto, conserva el servicio anterior y deja la operación pendiente. Sigue el procedimiento actual en [Operación y recuperación](operations.md). Los comandos de inicialización que aparecen abajo son para una instalación nueva; no deben usarse para reconstruir masivamente una base existente.
+
+La búsqueda nominal utiliza índices numéricos y FTS trigram, con un máximo de 5.000 candidatos por consulta. Un término excesivamente amplio solicita precisar la búsqueda. Mientras se reconstruye un índice, la API señala `index_pending` y siguen disponibles las consultas por número de lista. El backfill, las cargas y la recuperación se reparten en lotes limitados bajo un presupuesto propio de 70.000 unidades de escritura al día; el coste real de la cuenta debe medirse y conserva prioridad sobre esa estimación.
+
+El sondeo de cambios mediante HEAD está desactivado por defecto. Solo debe activarse con una URL oficial revisada que aporte un validador útil, configuración de Cloudflare y correlación real con el trabajo que comprueba las fuentes. Comparte el control de solicitudes con los visitantes y conserva los cambios pendientes hasta su comprobación. La ejecución de pruebas no acredita catorce días de fiabilidad ni el uso de CPU en producción.
+
 ## Alcance y límites
 
 El plan Workers Free admite 100.000 peticiones diarias por cuenta, con límite de CPU por petición; D1 Free incluye 5 millones de filas leídas y 100.000 escritas al día y 5 GB totales. Son límites de plataforma que deben revisarse antes de activar el servicio y vigilarse en el panel; al agotarse el plan gratuito puede dejar de responder. Fuentes: [límites de Workers](https://developers.cloudflare.com/workers/platform/limits/) y [precios y límites de D1](https://developers.cloudflare.com/d1/platform/pricing/).

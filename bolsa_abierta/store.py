@@ -97,6 +97,34 @@ class Store:
                 seed['catalog'].setdefault('notices', [])
                 seed['catalog']['coverage'] = 'Avisos públicos de RRHH: vacantes sin cubrir de Secundaria y otros cuerpos. Sin cobertura completa de adjudicaciones o listas personales.'
                 db.execute('INSERT OR IGNORE INTO state VALUES (1, ?)', (json.dumps(seed, ensure_ascii=False),))
+        self.segregate_unpublished()
+
+    def private_artifact(self, digest):
+        if not re.fullmatch(r'[0-9a-f]{64}', digest):
+            raise ValueError('Invalid private artifact hash')
+        return self.root / 'private-artifacts' / (digest + '.pdf')
+
+    def quarantine(self, data):
+        digest = hashlib.sha256(data).hexdigest()
+        path = self.private_artifact(digest)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        atomic_write(path, data)
+        path.chmod(0o600)
+        return digest
+
+    def segregate_unpublished(self):
+        """Unreviewed bytes must not enter the public durable vacancy archive."""
+        with self.connect() as db:
+            state = json.loads(db.execute('SELECT payload FROM state WHERE id=1').fetchone()[0])
+        approved = {d['id'] for d in state['documents']
+                    if d.get('status') == 'approved' and d.get('evidence_status') == 'archived'}
+        for path in (self.root / 'artifacts').glob('*.pdf'):
+            if path.stem not in approved:
+                body = path.read_bytes()
+                if hashlib.sha256(body).hexdigest() != path.stem:
+                    raise ValueError('Unreviewed legacy evidence hash mismatch')
+                self.quarantine(body)
+                path.unlink()
 
     @contextmanager
     def connect(self):
@@ -211,9 +239,17 @@ def public_state(state, byte_budget=8 * 1024 * 1024):
     return state
 
 
-def export_static(store, output_dir):
+def export_static(store, output_dir, *, inventory=None, positions=None, operations=None):
     output = Path(output_dir)
     state = store.state(mode='static')
+    from .coverage import inventory_summary, position_summary
+    if inventory is not None:
+        state['source_inventory'] = inventory_summary(inventory)
+    if positions is not None:
+        state['position_status'] = position_summary(positions)
+    if operations is not None:
+        from .operations import public_summary
+        state['operations'] = public_summary(operations)
     # Publish immutable evidence first; the single state pointer is replaced last.
     for doc in state['documents']:
         if 'artifact_url' in doc:
@@ -224,10 +260,10 @@ def export_static(store, output_dir):
     return state
 
 
-def build_site(store, output_dir, source_dir):
+def build_site(store, output_dir, source_dir, **summaries):
     output, source = Path(output_dir), Path(source_dir)
     output.mkdir(parents=True, exist_ok=True)
     for name in ('index.html', 'LICENSE', 'NOTICE', '.nojekyll'):
         shutil.copyfile(source / name, output / name)
     shutil.copytree(source / 'web', output / 'web', dirs_exist_ok=True)
-    return export_static(store, output)
+    return export_static(store, output, **summaries)
