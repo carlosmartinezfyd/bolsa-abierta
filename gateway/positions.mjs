@@ -321,9 +321,11 @@ export async function positionRoute(request,env,reply){
       // Materialize a bounded candidate set BEFORE short/repeated-token filtering.
       // A 16-hex generation prefix intersects postings without evaluating a 64-character phrase.
       // The exact SQL version_id predicate always distinguishes prefix collisions.
+      // CROSS JOIN keeps FTS as the outer loop across SQLite versions; NOT INDEXED
+      // prevents a generation index from replacing the candidate's rowid lookup.
       const match='version_id : "'+version.id.slice(0,16)+'" AND '+longTokens.map(t=>'search_name : "'+t+'"').join(' AND ');
       const candidateSQL=numeric?`SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND list_number=? LIMIT ${cap+1}`:
-        `SELECT p.* FROM ${fts} JOIN ${table} p ON p.rowid=${fts}.rowid WHERE ${fts} MATCH ? AND p.version_id=? ${scoped?'AND p.specialty=?':''} LIMIT ${cap+1}`;
+        `SELECT p.* FROM ${fts} CROSS JOIN ${table} p NOT INDEXED ON p.rowid=${fts}.rowid WHERE ${fts} MATCH ? AND p.version_id=? ${scoped?'AND p.specialty=?':''} LIMIT ${cap+1}`;
       const candidateArgs=numeric?[version.id,...(scoped?[body.specialty]:[]),query]:[match,version.id,...(scoped?[body.specialty]:[])];
       const keyCondition=after?`AND (${order}) > (${after.k.map(()=>'?').join(',')})`:'';
       const sql=`WITH candidates AS MATERIALIZED (${candidateSQL}), bounded AS (SELECT COUNT(*) AS n FROM candidates)

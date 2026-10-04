@@ -7,6 +7,7 @@
   "regression_tests": {
     "python_passed": 250,
     "javascript_passed": 123,
+    "javascript_runtimes": ["22.23.3", "24.19.0"],
     "failed": 0,
     "python_compileall_passed": true,
     "git_diff_check_passed": true,

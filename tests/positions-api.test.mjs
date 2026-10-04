@@ -285,21 +285,32 @@ test('40-row ingest stays below 50 statements and daily cap preserves active gen
 });
 
 test('FTS and numeric plans use indexes on 12000 synthetic rows and migration reruns are idempotent',async()=>{
+ for(const table of ['position_rows','position_entries']){
  const f=setup();try{
-  f.db.prepare('INSERT INTO position_versions(id,metadata,ready) VALUES(?,?,1)').run(version.id,JSON.stringify(version));
-  const insert=f.db.prepare('INSERT INTO position_rows(version_id,id,specialty,list_number,search_name,rank,payload) VALUES(?,?,?,?,?,?,?)');
+  const v=table==='position_rows'?version:{...version,coverage:'multi_source'};
+  f.db.prepare('INSERT INTO position_versions(id,metadata,ready) VALUES(?,?,1)').run(v.id,JSON.stringify(v));
+  const insert=f.db.prepare(`INSERT INTO ${table}(version_id,id,specialty,list_number,search_name,rank,payload) VALUES(?,?,?,?,?,?,?)`);
   f.db.exec('BEGIN');for(let i=1;i<=12000;i++)insert.run(version.id,String(i).padStart(32,'0'),'0590001',String(25000000+i),i===8123?'MARTINEZ MARTINEZ CARLOS':'SYNTHETIC PERSON '+i,i,'{}');f.db.exec('COMMIT');
-  const namePlan=f.db.prepare('EXPLAIN QUERY PLAN SELECT p.id FROM position_rows_fts JOIN position_rows p ON p.rowid=position_rows_fts.rowid WHERE position_rows_fts MATCH ? AND p.version_id=? LIMIT 5001').all('version_id : "'+version.id.slice(0,16)+'" AND search_name : "ARTINEZ"',version.id).map(r=>r.detail).join('\n');
-  const numberPlan=f.db.prepare('EXPLAIN QUERY PLAN SELECT payload FROM position_rows WHERE version_id=? AND list_number=? LIMIT 21').all(version.id,'25008123').map(r=>r.detail).join('\n');
+  const numberPlan=f.db.prepare(`EXPLAIN QUERY PLAN SELECT payload FROM ${table} WHERE version_id=? AND list_number=? LIMIT 21`).all(version.id,'25008123').map(r=>r.detail).join('\n');
   f.db.prepare('INSERT INTO position_active(singleton,version_id) VALUES(1,?)').run(version.id);
   f.db.prepare('INSERT INTO position_search_status(version_id,ready) VALUES(?,1)').run(version.id);
   assert.equal((await f.call('/api/positions/search',{query:'synthetic'})).status,422);
-  const partial=await(await f.call('/api/positions/search',{query:'artinez'})).json();assert.equal(partial.results.length,1);
-  assert.match(namePlan,/VIRTUAL TABLE INDEX.*M/);assert.match(namePlan,/INTEGER PRIMARY KEY/);assert.match(numberPlan,/position_rows_number/);
-  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM position_rows_fts WHERE position_rows_fts MATCH ?').get('search_name : "ARTINEZ"').n,1);
+  for(const scoped of [false,true]){
+   const partial=await(await f.call('/api/positions/search',{query:'artinez',...(scoped?{specialty:'0590001'}:{})})).json();assert.equal(partial.results.length,1);
+   const actualSQL=f.statements.findLast(sql=>sql.startsWith('WITH candidates AS MATERIALIZED'));
+   const plan=f.db.prepare('EXPLAIN QUERY PLAN '+actualSQL).all('version_id : "'+version.id.slice(0,16)+'" AND search_name : "ARTINEZ"',version.id,...(scoped?['0590001']:[]),'%ARTINEZ%',0).map(r=>r.detail);
+   const ftsIndex=plan.findIndex(detail=>detail.includes(table+'_fts')&&/VIRTUAL TABLE INDEX.*M/.test(detail));
+   const rowLookup=plan.findIndex(detail=>/SEARCH p USING INTEGER PRIMARY KEY \(rowid=\?\)/.test(detail));
+   assert.ok(ftsIndex>=0,plan.join('\n'));assert.ok(rowLookup>ftsIndex,plan.join('\n'));
+   assert.equal(plan.filter(detail=>/\b(?:SEARCH|SCAN) p\b/.test(detail)).length,1,plan.join('\n'));
+   assert.match(actualSQL,/p\.version_id=\?/);assert.equal(actualSQL.includes('AND p.specialty=?'),scoped);assert.match(actualSQL,/LIMIT 5001/);
+  }
+  assert.ok(numberPlan.includes(table+'_number'),numberPlan);
+  assert.equal(f.db.prepare(`SELECT COUNT(*) AS n FROM ${table}_fts WHERE ${table}_fts MATCH ?`).get('search_name : "ARTINEZ"').n,1);
   const migration=readFileSync(new URL('../gateway/migrations/0001-search-and-evidence.sql',import.meta.url),'utf8');f.db.exec(migration);const before=f.db.prepare('SELECT total_changes() AS n').get().n;f.db.exec(migration);
   assert.equal(f.db.prepare('SELECT total_changes() AS n').get().n,before);
  }finally{f.db.close();}
+ }
 });
 
 test('late concurrent evidence insertion cannot slip between validation and atomic activation',async()=>{
