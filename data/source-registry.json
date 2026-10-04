@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "course": "2026-2027",
   "since": "2026-06-01",
   "limits": {
@@ -7,28 +7,251 @@
     "max_requests": 160,
     "max_seconds": 240,
     "max_details": 50,
-    "max_undated_details": 5
+    "max_undated_details": 5,
+    "max_index_pages": 3,
+    "max_historical_details": 3,
+    "download_reserve": 12
   },
   "sources": [
     {
-      "id": "rrhh-feed",
-      "kind": "rss",
-      "url": "https://rrhheducacion.carm.es/feed/"
+      "id": "results-secondary",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=24219&IDTIPO=100",
+      "family": "awards",
+      "body": "secondary",
+      "priority": 1,
+      "queue": "recent",
+      "course": "2026-2027"
     },
     {
-      "id": "rrhh-map",
-      "kind": "map",
-      "url": "https://rrhheducacion.carm.es/mapa-web/"
+      "id": "results-maestros",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=24183&IDTIPO=100",
+      "family": "awards",
+      "body": "0597",
+      "priority": 1,
+      "queue": "recent",
+      "course": "2026-2027"
     },
     {
       "id": "annual-lists",
       "kind": "carm_index",
-      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75599&IDTIPO=100"
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75599&IDTIPO=100",
+      "family": "annual_lists",
+      "body": "secondary",
+      "priority": 2,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "annual-maestros",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75501&IDTIPO=100",
+      "family": "annual_lists",
+      "body": "0597",
+      "priority": 2,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "urgent-current",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75669&IDTIPO=100",
+      "family": "urgent",
+      "body": "secondary",
+      "priority": 3,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "extraordinary-current",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75568&IDTIPO=100",
+      "family": "extraordinary",
+      "body": "secondary",
+      "priority": 3,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "open-current",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75757&IDTIPO=100",
+      "family": "open_lists",
+      "body": "secondary",
+      "priority": 3,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "open-tests",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75756&IDTIPO=100",
+      "family": "open_tests",
+      "body": "secondary",
+      "priority": 4,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "novelties",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=4254&IDTIPO=100",
+      "family": "novelties",
+      "body": "all",
+      "priority": 5,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "rrhh-feed",
+      "kind": "rss",
+      "url": "https://rrhheducacion.carm.es/feed/",
+      "family": "announcements",
+      "body": "all",
+      "priority": 6,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "habilitations-15",
+      "kind": "rrhh_page",
+      "url": "https://rrhheducacion.carm.es/habilitaciones-para-la-imparticion-de-modulos-atribuidos-a-especialistas/",
+      "family": "habilitations_modulos",
+      "body": "all",
+      "priority": 7,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-16",
+      "kind": "rrhh_page",
+      "url": "https://rrhheducacion.carm.es/habilitaciones-de-idiomas-para-la-imparticion-del-programa-de-profundizacion-en-lenguas-extranjeras/",
+      "family": "habilitations_idiomas",
+      "body": "all",
+      "priority": 7,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-maestros-procedure",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=52599&IDTIPO=100",
+      "family": "habilitations_maestros",
+      "body": "0597",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-maestros-results",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=52552&IDTIPO=100",
+      "family": "habilitations_maestros",
+      "body": "0597",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-languages-procedure",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=52573&IDTIPO=100",
+      "family": "habilitations_idiomas",
+      "body": "all",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-languages-results",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=52574&IDTIPO=100",
+      "family": "habilitations_idiomas",
+      "body": "all",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-sele-secondary",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=52581&IDTIPO=100",
+      "family": "habilitations_idiomas",
+      "body": "secondary",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-modules",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=33624&IDTIPO=100",
+      "family": "habilitations_modulos",
+      "body": "all",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
+    },
+    {
+      "id": "habilitations-abc",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=24600&IDTIPO=100",
+      "family": "habilitations_abc",
+      "body": "all",
+      "priority": 8,
+      "queue": "recent",
+      "course": "unknown"
     },
     {
       "id": "awards",
       "kind": "carm_index",
-      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=4036&IDTIPO=100&RASTRO=c798%24m3911"
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=4036&IDTIPO=100",
+      "family": "awards",
+      "body": "all",
+      "priority": 10,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "urgent-parent",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=45756&IDTIPO=100",
+      "family": "urgent",
+      "body": "secondary",
+      "priority": 10,
+      "queue": "recent",
+      "course": "2026-2027"
+    },
+    {
+      "id": "open-history",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=75754&IDTIPO=100",
+      "family": "open_lists",
+      "body": "secondary",
+      "priority": 80,
+      "queue": "historical",
+      "course": "2026-2027"
+    },
+    {
+      "id": "novelties-history",
+      "kind": "carm_index",
+      "url": "https://www.carm.es/web/pagina?IDCONTENIDO=27204&IDTIPO=100",
+      "family": "novelties",
+      "body": "all",
+      "priority": 90,
+      "queue": "historical",
+      "course": "2026-2027"
+    },
+    {
+      "id": "rrhh-map",
+      "kind": "map",
+      "url": "https://rrhheducacion.carm.es/mapa-web/",
+      "family": "announcements",
+      "body": "all",
+      "priority": 95,
+      "queue": "historical",
+      "course": "unknown"
     }
   ]
 }

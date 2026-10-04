@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { createGateway, D1Repository } from '../gateway/worker.mjs';
+import { createGateway, D1Repository, createScheduledGateway } from '../gateway/worker.mjs';
 
 const START = Date.parse('2026-10-01T12:00:00Z');
 const ORIGIN = 'https://carlosmartinezfyd.github.io';
@@ -56,9 +56,9 @@ function request(path = '/api/refresh', options = {}) {
 }
 function get(id) { return new Request(`https://gateway.example/api/refresh/${id}`, {headers:{Origin:ORIGIN}}); }
 
-test('20 concurrent requests reserve one shared job and one exact GitHub dispatch', async () => {
+test('100 concurrent requests reserve one shared job and one exact GitHub dispatch', async () => {
   const f = fixture();
-  const replies = await Promise.all(Array.from({length:20}, () => f.handler(request(), env)));
+  const replies = await Promise.all(Array.from({length:100}, () => f.handler(request(), env)));
   const data = await Promise.all(replies.map(r => r.json()));
   assert.equal(new Set(data.map(d => d.id)).size, 1);
   assert.match(data[0].id, /^[a-f0-9]{32}$/);
@@ -192,7 +192,7 @@ test('old job result cannot release a newer job gate', async () => {
   await f.handler(get(old.id), env);
   assert.equal(f.repository.gate.job_id, newer.id);
   assert.equal((await (await f.handler(request(), env)).json()).id, newer.id);
-  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls.filter(c=>c.options.method==='POST').length, 2);
 });
 
 test('unknown jobs, unsafe config, upstream failure and malformed snapshot fail closed', async () => {
@@ -224,7 +224,7 @@ function sqliteD1() {
   const binding = { withSession: () => binding, prepare: sql => ({bind: (...args) => ({
     first: async () => db.prepare(sql).get(...args) || null,
     run: async () => db.prepare(sql).run(...args),
-  })}) };
+  })}),async batch(statements){db.exec('BEGIN');try{const result=[];for(const s of statements)result.push(await s.run());db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}} };
   return {db,binding};
 }
 
@@ -240,7 +240,7 @@ test('real SQLite schema and production D1 CAS share dispatch under concurrency 
   const deps = {fetch,now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0')};
   const handler = createGateway(deps), configuredEnv = {...env,DB:binding};
   try {
-    const results = await Promise.all(Array.from({length:20},async () => (await handler(request(),configuredEnv)).json()));
+    const results = await Promise.all(Array.from({length:100},async () => (await handler(request(),configuredEnv)).json()));
     id = results[0].id;
     assert.equal(new Set(results.map(r=>r.id)).size,1);
     assert.equal(dispatches,1);
@@ -270,4 +270,132 @@ test('production D1 recovery does not dispatch a quota reservation left by an in
     assert.equal(dispatches,0);
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM gateway_jobs').get().n,1);
   } finally {db.close();}
+});
+
+test('bounded cron uses official HEAD validators, one durable probe lease and shared visitor dispatch gate',async()=>{
+ const {db,binding}=sqliteD1();let now=START,heads=0,dispatches=0,validator='"v1"',sequence=0;
+ const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+ const fetch=async(url,options)=>{
+  assert.equal(options.redirect,'manual');
+  if(options.method==='HEAD'){heads++;assert.ok(String(url).startsWith('https://www.carm.es/web/pagina?'));return new Response(null,{headers:{ETag:validator}});}
+  assert.equal(options.method,'POST');dispatches++;return new Response(null,{status:204});
+ };
+ const deps={fetch,now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0')};
+ const scheduled=createScheduledGateway(deps),visitor=createGateway(deps);
+ try{
+  const baseline=await Promise.all(Array.from({length:100},()=>scheduled({scheduledTime:now},configuredEnv)));
+  assert.equal(heads,1);assert.equal(dispatches,0);assert.equal(baseline.filter(r=>r.status==='baseline_recorded').length,1);
+  now+=3600000;assert.equal((await scheduled({scheduledTime:now},configuredEnv)).status,'unchanged');assert.equal(dispatches,0);
+  now+=3600000;validator='"v2"';
+  const [cron,publicReply]=await Promise.all([scheduled({scheduledTime:now},configuredEnv),visitor(request(),configuredEnv)]);
+  assert.equal(cron.status,'shared_job');assert.equal(publicReply.status,202);assert.equal(dispatches,1);
+  assert.equal(db.prepare('SELECT dispatches FROM gateway_gate').get().dispatches,1);
+  const metrics=db.prepare('SELECT * FROM gateway_pilot_metrics ORDER BY started_at').all();
+  assert.equal(metrics.length,3);assert.ok(metrics.every(m=>m.ended_at>=m.started_at));assert.equal(metrics[2].source_id,'3985');
+  assert.match(metrics[2].request_id,/^[a-f0-9]{32}$/);assert.equal(metrics[2].generation_id,null);
+  assert.ok(!JSON.stringify(metrics).includes('test-secret'));
+ }finally{db.close();}
+});
+
+test('cron rejects redirects, unavailable validators, source403 and arbitrary configured destinations without dispatch',async()=>{
+ for(const response of [new Response(null,{status:302,headers:{Location:'https://evil.example/'}}),new Response(null),new Response(null,{status:403})]){
+  const {db,binding}=sqliteD1();let calls=0;
+  const cron=createScheduledGateway({now:()=>START,fetch:async(_url,options)=>{calls++;assert.equal(options.method,'HEAD');assert.equal(options.redirect,'manual');return response;}});
+  const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+  try{
+   assert.ok(['source_failed','no_validator','source_forbidden'].includes((await cron({scheduledTime:START},configuredEnv)).status));assert.equal(calls,1);
+   assert.equal(db.prepare('SELECT dispatches FROM gateway_gate').get().dispatches,0);
+   assert.equal((await cron({}, {...configuredEnv,OFFICIAL_FEED_URL:'https://evil.example/'})).status,'invalid_config');
+   assert.equal((await cron({}, {...configuredEnv,CRON_ENABLED:'false'})).status,'disabled');assert.equal(calls,1);
+  }finally{db.close();}
+ }
+});
+
+test('cron keeps a changed validator pending when cooldown reuses an older completed visitor',async()=>{
+ const {db,binding}=sqliteD1();let now=Date.parse('2026-10-04T12:00:00Z'),validator='v1',dispatches=0,sequence=0,published=null;
+ const deps={now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0'),fetch:async(_url,o)=>{if(o.method==='HEAD')return new Response(null,{headers:{ETag:validator}});if(o.method==='POST'){dispatches++;return new Response(null,{status:204});}return Response.json(published);}};
+ const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+ const cron=createScheduledGateway(deps),visitor=createGateway(deps),repository=new D1Repository(binding);
+ try{
+  assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'baseline_recorded');
+  now=Date.parse('2026-10-04T12:29:00Z');const older=await(await visitor(request(),configuredEnv)).json();
+  await repository.finish(older.id,'completed','confirmed',Date.parse('2026-10-04T12:29:30Z'));
+  now=Date.parse('2026-10-04T12:30:01Z');validator='v2';assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'shared_job');
+  assert.equal(dispatches,1);assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v1');
+  assert.equal(db.prepare('SELECT request_id FROM gateway_probe_pending').get().request_id,older.id);
+  now=Date.parse('2026-10-04T13:01:00Z');assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'shared_job');
+  const pending=db.prepare('SELECT * FROM gateway_probe_pending').get();assert.notEqual(pending.request_id,older.id);assert.equal(dispatches,2);
+  assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v1');
+  await repository.finish(pending.request_id,'completed','confirmed newer source check',now+1000);
+  published={freshness:{request_id:pending.request_id,status:'completed',last_attempt_at:new Date(now+1000).toISOString()}};
+  now=Date.parse('2026-10-04T13:32:00Z');assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'checked');
+  assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v2');assert.equal(db.prepare('SELECT COUNT(*) n FROM gateway_probe_pending').get().n,0);assert.equal(dispatches,2);
+ }finally{db.close();}
+});
+
+test('accepted failed and uncertain cron checks keep pending observations and retry only after shared leases',async()=>{
+ for(const uncertain of [false,true]){
+  const {db,binding}=sqliteD1();let now=START,validator='v1',dispatches=0,sequence=0;
+  const deps={now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0'),fetch:async(_url,o)=>{if(o.method==='HEAD')return new Response(null,{headers:{ETag:validator}});if(o.method!=='POST')return Response.json({});dispatches++;if(uncertain)throw new Error('acceptance unknown');return new Response(null,{status:204});}};
+  const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+  const cron=createScheduledGateway(deps),visitor=createGateway(deps),repository=new D1Repository(binding);
+  try{
+   await cron({scheduledTime:now},configuredEnv);now+=30*60000;validator='v2';assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'shared_job');
+   const first=db.prepare('SELECT * FROM gateway_probe_pending').get();assert.ok(first.request_id);assert.equal(dispatches,1);
+   await Promise.all(Array.from({length:100},()=>visitor(request(),configuredEnv)));assert.equal(dispatches,1);
+   if(!uncertain)await repository.finish(first.request_id,'failed','source processing failed',now+1000);
+   now+=31*60000;assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'shared_job');
+   assert.equal(dispatches,2);assert.notEqual(db.prepare('SELECT request_id FROM gateway_probe_pending').get().request_id,first.request_id);
+   assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v1');
+  }finally{db.close();}
+ }
+});
+
+test('cron-only jobs confirm through a bounded freshness publication without visitor polling',async()=>{
+ const {db,binding}=sqliteD1();let now=START,validator='v1',dispatches=0,statusReads=0,sequence=0,published=null;
+ const deps={now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0'),fetch:async(url,o)=>{
+  if(o.method==='HEAD')return new Response(null,{headers:{ETag:validator}});
+  if(o.method==='POST'){dispatches++;return new Response(null,{status:204});}
+  statusReads++;assert.equal(new URL(url).pathname,'/bolsa-abierta/data/gateway-status.json');assert.equal(o.redirect,'manual');return Response.json(published);
+ }};
+ const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+ const cron=createScheduledGateway(deps);
+ try{
+  await cron({scheduledTime:now},configuredEnv);now+=30*60000;validator='v2';await cron({scheduledTime:now},configuredEnv);
+  const pending=db.prepare('SELECT * FROM gateway_probe_pending').get();
+  published={freshness:{request_id:pending.request_id,status:'completed',last_attempt_at:new Date(now+1000).toISOString()}};
+  // The next natural half-hour tick follows the twenty-minute job deadline.
+  now+=30*60000;
+  assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'checked');assert.equal(statusReads,1);assert.equal(dispatches,1);
+  assert.equal(db.prepare('SELECT status FROM gateway_jobs WHERE id=?').get(pending.request_id).status,'completed');
+  assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v2');
+ }finally{db.close();}
+});
+
+test('public polling and cron require aggregate completion even when vacancy state or stored job says completed',async()=>{
+ const {db,binding}=sqliteD1();let now=START,validator='v1',dispatches=0,sequence=0,published=null;
+ const deps={now:()=>now,newId:()=>(++sequence).toString(16).padStart(32,'0'),fetch:async(url,o)=>{
+  if(o.method==='HEAD')return new Response(null,{headers:{ETag:validator}});
+  if(o.method==='POST'){dispatches++;return new Response(null,{status:204});}
+  if(new URL(url).pathname.endsWith('/state.json'))return Response.json({freshness:{...published.freshness,status:'completed'}});
+  assert.ok(new URL(url).pathname.endsWith('/gateway-status.json'));return Response.json(published);
+ }};
+ const configuredEnv={...env,DB:binding,CRON_ENABLED:'true',OFFICIAL_FEED_URL:'https://www.carm.es/web/pagina?IDCONTENIDO=3985&IDTIPO=100'};
+ const cron=createScheduledGateway(deps),visitor=createGateway(deps),repository=new D1Repository(binding);
+ try{
+  await cron({scheduledTime:now},configuredEnv);now+=30*60000;validator='v2';await cron({scheduledTime:now},configuredEnv);
+  const pending=db.prepare('SELECT * FROM gateway_probe_pending').get();
+  published={freshness:{request_id:pending.request_id,status:'partial',last_attempt_at:new Date(now+1000).toISOString()}};
+  now+=1000;assert.equal((await(await visitor(get(pending.request_id),configuredEnv)).json()).status,'partial');
+  // A legacy writer or old Worker can leave a completed flag; it is not source evidence.
+  db.prepare("UPDATE gateway_jobs SET status='completed' WHERE id=?").run(pending.request_id);
+  now+=30*60000;assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'shared_job');
+  assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v1');assert.equal(dispatches,2);
+  const newer=db.prepare('SELECT * FROM gateway_probe_pending').get();
+  // Even a visitor timeout cannot discard a later, correlated successful publication.
+  await repository.finish(newer.request_id,'failed','visitor timeout',now+20*60000);
+  published={freshness:{request_id:newer.request_id,status:'completed',last_attempt_at:new Date(now+21*60000).toISOString()}};
+  now+=30*60000;assert.equal((await cron({scheduledTime:now},configuredEnv)).status,'checked');
+  assert.equal(JSON.parse(db.prepare('SELECT validator FROM gateway_probe').get().validator)[0],'v2');assert.equal(dispatches,2);
+ }finally{db.close();}
 });

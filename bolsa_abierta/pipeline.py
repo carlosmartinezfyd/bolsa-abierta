@@ -15,8 +15,9 @@ def isolated_parse(data, source_url, retrieved_at):
     except subprocess.TimeoutExpired as exc:
         raise ValueError('PDF analysis exceeded 45 seconds') from exc
     if completed.returncode != 0:
-        # Child output is diagnostic data, never executable or publication content.
-        raise ValueError(completed.stderr.decode('utf-8', errors='replace')[-600:] or 'PDF analysis failed')
+        # A parser error can quote an original's names or identifiers. Keep
+        # arbitrary child output out of public state and workflow logs.
+        raise ValueError('PDF analysis failed structural validation')
     return json.loads(completed.stdout)
 
 
@@ -73,8 +74,9 @@ def run_refresh(store, client=None, discover=None, parser=None):
                     raise ValueError('La respuesta no es un PDF completo (posible bloqueo de acceso).')
                 digest = hashlib.sha256(fetched.body).hexdigest()
                 retrieved = now()
-                # Preserve unaccepted evidence for maintainer review, but never publish its rows/PDF endpoint.
-                archived = store.archive(fetched.body)
+                # Quarantine before interpretation: a mislabelled attachment may
+                # be nominal even though the notice looked like vacancies.
+                archived = store.quarantine(fetched.body)
                 if digest not in documents or documents[digest].get('extraction_status') != 'validated':
                     doc = parser(fetched.body, fetched.final_url, retrieved)
                     if doc['id'] != digest or doc.get('status') != 'approved' or not doc.get('rows'):
@@ -88,6 +90,8 @@ def run_refresh(store, client=None, discover=None, parser=None):
                     added.append(digest)
                 else:
                     documents[digest]['evidence_status'] = 'archived'
+                store.archive(fetched.body)
+                store.private_artifact(digest).unlink(missing_ok=True)
                 accepted.append(digest)
                 rejected.pop(digest, None)
                 seen[url] = digest, None, None

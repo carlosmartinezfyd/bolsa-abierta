@@ -22,8 +22,9 @@ El estado se escribe de forma atómica incluso si la cobertura está incompleta;
 - El RSS general oficial se recorre por `?paged=N` hasta alcanzar el comienzo del curso configurado (`2026-06-01`, incluidas las listas preparadas durante el verano). Una página repetida, desordenada, inválida o un límite antes de esa frontera deja el índice incompleto.
 - El mapa HTML oficial se usa como contraste del catálogo entero. Sus entradas no tienen fecha. Se conservan por una identidad opaca y se resuelven cinco fechas desconocidas por ejecución, rotando por el intento más antiguo. Los documentos anteriores al intervalo quedan fuera del curso, sin confundirlos con omisiones actuales.
 - Las páginas de anuncios del intervalo se revisitan aunque el RSS conserve la misma fecha: pueden cambiar los adjuntos. Se recorren primero las menos recientemente comprobadas. La mitad del presupuesto restante de peticiones se reserva para documentos.
-- Los documentos revisados reciben presupuesto antes del histórico de anuncios. Los restantes se ordenan por su intento más antiguo. Saltarse una petición por falta de presupuesto no renueva su fecha de intento, evitando que el trabajo pendiente se quede permanentemente al final.
-- Los índices CARM se incluyen como fuentes independientes. Actualmente se reconocen sus enlaces directos de descarga; un índice sin documentos reconocibles queda incompleto. No se presupone que sus posibles subpáginas estén recorridas.
+- Los documentos revisados reciben presupuesto antes del histórico de anuncios. Las colas recientes, históricas y sin fecha se conservan por separado. Saltarse una petición por falta de presupuesto no renueva su fecha de intento; se conserva el estado anterior y el trabajo aplazado.
+- Los índices CARM se incluyen como fuentes independientes. Se siguen los enlaces observados de paginación, detalle y adjuntos HTML dentro de límites explícitos. Un índice vacío, bloqueado o inválido no demuestra que hayan desaparecido sus enlaces. La portada se revisita y las continuaciones pendientes reciben turno, incluso en fuentes recientes.
+- El registro contiene 24 fuentes revisadas. Incluye las hojas de resultados de actos 24219 y 24183, el índice anual de Maestros 75501 y familias de listas urgentes, extraordinarias, abiertas y habilitaciones. Una familia inventariada no implica que todos sus documentos tengan adaptador ni estén incorporados.
 
 Los límites son explícitos en el registro. Alcanzarlos produce cobertura pendiente, nunca ausencia de novedades. El cliente limita orígenes oficiales, redirecciones, DNS, bytes y duración. Un CAPTCHA se registra como fallo de acceso.
 
@@ -39,10 +40,13 @@ Cada documento expone `content_id`, `source_url`, `kind`, procedencias opacas (`
 | `pending_review` | Descargado, pero todavía no incorporado con evidencia suficiente. |
 | `incorporated` | Hash coincidente y activación confirmada por el proceso de publicación. |
 | `not_applicable` | Provisional sin documento definitivo revisado asociado; no alimenta la posición. |
+| `skipped` | Descarga aplazada por presupuesto; conserva el intento y resultado anteriores. |
 
 La clasificación distingue listas, complementos, correcciones, admisiones, procedimientos urgentes, aperturas, adjudicaciones definitivas, ceses, reactivaciones, procedimientos desiertos, provisionales y documentos no clasificados. Clasificar un título no valida el contenido ni autoriza su incorporación. Un título que mezcla provisional y definitivo queda sin clasificar.
 
-La desaparición de una fuente, anuncio o documento no borra su evidencia previa. Una descarga fallida conserva `verified_at`; `attempted_at` registra intentos efectivos, y `downloaded_at` la última descarga. `checked_at` global sólo avanza si todo lo descubierto está comprobado e incorporado o descartado de forma admitida. Las fechas desconocidas del mapa se cuentan aparte de los anuncios pendientes del curso.
+La desaparición de una fuente, anuncio o documento no borra su evidencia previa y solo se evalúa después de comprobar correctamente su padre. `content_history` conserva revisiones de bytes; `metadata_history`, revisiones de metadatos con huellas de los títulos. Una descarga fallida conserva `verified_at`; `attempted_at` registra intentos efectivos, y `downloaded_at` la última descarga. `checked_at` global sólo avanza si todo lo descubierto está comprobado e incorporado o descartado de forma admitida. Las fechas desconocidas del mapa se cuentan aparte de los anuncios pendientes del curso.
+
+La cobertura se publica por fuente, familia, cuerpo y curso. `traversal_complete` describe los enlaces recorridos; `downloads_complete`, las descargas; `verification_complete`, los hashes revisados y comprobados en la ejecución. `scope_complete` exige recorrido y verificación. Los contadores de documentos pendientes, fallidos, aplazados y sin revisión explican los huecos. `history_complete` permanece falso: completar un recorrido acotado no acredita el historial administrativo completo.
 
 El estado persistido no contiene nombres, títulos de anuncios, rutas nominales de RRHH ni texto extraído. Los enlaces públicos a descargas CARM permiten recuperar la fuente. Los originales HTML/PDF quedan en almacenamiento privado y no deben publicarse como artifacts, Pages o archivos Git.
 

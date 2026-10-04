@@ -114,6 +114,19 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(result.body, b'')
         self.assertEqual(session.get.call_args.kwargs['headers']['If-None-Match'], 'old')
 
+    def test_feed_validator_is_not_forwarded_to_another_page_on_redirect(self):
+        page2 = FEED_URL + '?paged=2'
+        client, session = self.client([response(status=302, headers={'Location': page2}),
+                                       response(b'<html>page two</html>')])
+        client.fetch(FEED_URL, kind='rss', etag='page-one')
+        self.assertNotIn('If-None-Match', session.get.call_args.kwargs['headers'])
+
+    def test_redirected_unconditional_304_is_rejected(self):
+        client, _ = self.client([response(status=302, headers={'Location': FEED_URL+'?paged=2'}),
+                                response(b'', status=304)])
+        with self.assertRaises(SourceError):
+            client.fetch(FEED_URL, kind='rss', etag='page-one')
+
     def test_unsafe_urls_rejected_before_http(self):
         for url in ['https://rrhheducacion.carm.es.evil.org/a', 'file:///etc/passwd', 'https://user@www.carm.es/a', 'https://www.carm.es:8443/a']:
             client, session = self.client([])

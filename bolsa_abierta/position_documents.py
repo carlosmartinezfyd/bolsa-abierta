@@ -2,6 +2,7 @@
 from collections import Counter
 from datetime import date, datetime
 import hashlib
+from io import BytesIO
 from pathlib import Path
 import re
 from urllib.parse import parse_qs, urlsplit
@@ -12,12 +13,19 @@ from .positions import normalize
 
 
 TITLE = 'Listado Definitivo De Adjudicatarios Con Plaza En Secundaria'
+AWARD_PARSER_REVISION = 'award-v3-affirmative-administrative-facts'
 CODE = re.compile(r'\d{4}[A-Z0-9]\d{2}')
 MONTHS = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
           'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre')
 HEADERS = ((35, 'Pri.'), (60, 'Nº Lista'), (100, 'DNI'), (155, 'Apellido1'),
            (235, 'Apellido2'), (315, 'Nombre'), (395, 'Centro'), (535, 'Municipio'),
            (615, 'Función'), (665, 'Jornada'), (715, 'Perfil'), (765, 'V/S'), (795, 'Obs.'))
+MONTH_ABBREVIATIONS = ('ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+                       'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC')
+REVIEWED_PROVISIONAL_CLAUSE = (
+    'Nombramiento provisional con efectos hasta la resolución definitiva del '
+    'procedimiento de urgencia (art. 40.1 Orden 29 de junio de 2026), '
+    'BORM nº 149 de 01/07/2026')
 
 
 def _text(words):
@@ -50,6 +58,60 @@ def _headers(words, top):
             raise ValueError('Unrecognized award column layout')
 
 
+def _incorporation_date(header, published):
+    match = re.search(r'Fecha de incorporación: (\d{2})-([A-Z]{3})-(\d{2}) - Listado a ', header)
+    if not match or match[2] not in MONTH_ABBREVIATIONS:
+        raise ValueError('Unknown general incorporation date')
+    year = published.year // 100 * 100 + int(match[3])
+    return date(year, MONTH_ABBREVIATIONS.index(match[2])+1, int(match[1])).isoformat()
+
+
+def _administrative_facts(cells, general_incorporation):
+    """Read only explicit appointment/date clauses; discard the raw note.
+
+    Replacement notes can precede OBSERVACIONES, so retain all row words for
+    this narrow extraction, separately from the identity/destination cells.
+    A definitive publication title does not establish appointment status.
+    """
+    note = _text(cells)
+    phrase = r'\bINCORPORACIÓN\s+AL\s+CENTRO\s+ADJUDICADO\s+EL\b'
+    dates = re.findall(phrase + r'\s+(\d{2}/\d{2}/(?:\d{4}|\d{2}))(?![\d/])\b', note, re.IGNORECASE)
+    if len(dates) != len(re.findall(phrase, note, re.IGNORECASE)):
+        raise ValueError('Unrecognized explicit incorporation date')
+    parsed = set()
+    for value in dates:
+        day, month, year = map(int, value.split('/'))
+        if year < 100:
+            year += date.fromisoformat(general_incorporation).year // 100 * 100
+        parsed.add(date(year, month, day).isoformat())
+    if len(parsed) > 1:
+        raise ValueError('Conflicting explicit incorporation dates')
+    facts = {'incorporation_at': next(iter(parsed), general_incorporation)}
+    # A mention is not an appointment. Match complete affirmative observations
+    # only: a standalone appointment statement or the exact reviewed urgent
+    # appointment reservation. Negated, requested or uncertain text stays unknown.
+    observation = re.split(r'\bOBSERVACIONES:\s*', note, maxsplit=1, flags=re.IGNORECASE)
+    appointment = observation[1] if len(observation) == 2 else ''
+    # The PDF interleaves replacement cells into wrapped observations. Drop only
+    # their reviewed masked-ID syntax before matching the administrative clause.
+    appointment = re.sub(r'\bSustituye\s+a\s+\*+\d+\*+', '', appointment, flags=re.IGNORECASE)
+    appointment = re.sub(r'\s+', ' ', appointment).strip()
+    appointment = re.sub(r'^' + phrase + r'\s+\d{2}/\d{2}/(?:\d{4}|\d{2})\.?\s*',
+                         '', appointment, count=1, flags=re.IGNORECASE)
+    if re.fullmatch(re.escape(REVIEWED_PROVISIONAL_CLAUSE) + r'\.?', appointment, re.IGNORECASE):
+        statuses = {'provisional'}
+    else:
+        clauses = re.split(r'\.\s+', appointment)
+        matches = [re.fullmatch(r'Nombramiento\s+(provisional|definitivo)\.?', clause, re.IGNORECASE)
+                   for clause in clauses]
+        statuses = {match[1].lower() for match in matches} if all(matches) else set()
+    if len(statuses) > 1:
+        raise ValueError('Conflicting explicit appointment status')
+    if statuses:
+        facts['appointment_status'] = {'provisional': 'provisional', 'definitivo': 'definitive'}[statuses.pop()]
+    return facts
+
+
 def parse_award_pages(pages, metadata):
     """Parse the reviewed landscape definitive-awards layout, fail closed.
 
@@ -61,7 +123,8 @@ def parse_award_pages(pages, metadata):
     if metadata.get('kind') != 'award' or len(pages) != metadata.get('pages'):
         raise ValueError('Unknown or incomplete award document')
     counts = metadata.get('page_row_counts')
-    if not isinstance(counts, list) or len(counts) != len(pages) or counts[-1] != 0:
+    if (not pages or not isinstance(counts, list) or len(counts) != len(pages)
+            or any(type(count) is not int or count < 0 for count in counts)):
         raise ValueError('Missing reviewed award page counts')
     expected = metadata.get('specialties')
     if not isinstance(expected, list) or not expected:
@@ -82,6 +145,7 @@ def parse_award_pages(pages, metadata):
             raise ValueError(f'Unexpected award heading or pagination on page {page_number}')
         if lines[1] != (pages[0].extract_text() or '').splitlines()[1]:
             raise ValueError('Award pages belong to different publication revisions')
+        general_incorporation = _incorporation_date(lines[1], published)
         listed_date = re.search(r' - Listado a (\d{1,2}) de (\w+) de (\d{4}), a las \d{2}:\d{2}$', lines[1])
         if (not listed_date or int(listed_date[1]) != published.day
                 or listed_date[2].lower() != MONTHS[published.month-1]
@@ -113,6 +177,7 @@ def parse_award_pages(pages, metadata):
             rectangle = rectangles[0]
             cells = [w for w in words if rectangle['top'] <= w['top'] < rectangle['bottom']
                      and w['x0'] >= 35]
+            facts = _administrative_facts(cells, general_incorporation)
             # Observations are drawn below the identity/destination cells; they
             # can contain other people's masked IDs and are deliberately omitted.
             observations = [w['top'] for w in cells
@@ -153,7 +218,7 @@ def parse_award_pages(pages, metadata):
                              name=name, search_name=normalize(name), list_number=number,
                              rank=None, block='', block_name='', page=page_number,
                              destination=f'{center[9:]} · {municipality}', workload=workload,
-                             assigned_function=assigned_function))
+                             assigned_function=assigned_function, **facts))
     if (len(rows) != metadata.get('row_count')
             or actual_counts != Counter({s['code']: s['count'] for s in expected})):
         raise ValueError('Award totals differ from reviewed source')
@@ -165,7 +230,7 @@ def read_document(path, metadata):
     data = Path(path).read_bytes()
     if not data.startswith(b'%PDF-') or hashlib.sha256(data).hexdigest() != metadata.get('sha256'):
         raise ValueError('Document bytes differ from reviewed source')
-    with pdfplumber.open(path) as document:
+    with BytesIO(data) as stream, pdfplumber.open(stream) as document:
         return parse_award_pages(document.pages, metadata)
 
 
@@ -173,7 +238,7 @@ def scan_document(path, source_url, checked_at, *, assigned_function_groups=None
     """Validate a complete new awards PDF before admitting its facts to a version.
 
     The caller supplies the actual successful download time. A new format, a
-    provisional document, or an unreviewed assigned-function mapping raises
+    provisional publication title, or an unreviewed assigned-function mapping raises
     ValueError and must stay pending in the inventory.
     """
     parsed = urlsplit(source_url)
@@ -190,7 +255,7 @@ def scan_document(path, source_url, checked_at, *, assigned_function_groups=None
     data = Path(path).read_bytes()
     if not data.startswith(b'%PDF-'):
         raise ValueError('Source is not a PDF document')
-    with pdfplumber.open(path) as document:
+    with BytesIO(data) as stream, pdfplumber.open(stream) as document:
         pages = document.pages
         if not 2 <= len(pages) <= 1000:
             raise ValueError('Unexpected award document size')
@@ -203,6 +268,7 @@ def scan_document(path, source_url, checked_at, *, assigned_function_groups=None
         metadata = dict(kind='award', content_id=ids[0], source_url=source_url,
                         sha256=hashlib.sha256(data).hexdigest(), published_at=published,
                         checked_at=checked_at, process_id=header[2], pages=len(pages),
+                        parser_revision=AWARD_PARSER_REVISION,
                         page_row_counts=[], assigned_function_groups=assigned_function_groups or {})
         specialties, counts = {}, Counter()
         for page in pages:

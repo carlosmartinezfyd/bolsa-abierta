@@ -114,6 +114,18 @@ function terminalSnapshot(state, job) {
   return freshness.status;
 }
 
+// Only the finalized all-source workflow artifact can confirm a source check.
+// The larger vacancy snapshot remains the public state endpoint's data source.
+async function publishedStatus(fetch, env, timestamp, job, observedAt=job.created_at) {
+  const url=snapshotURL(env,timestamp);url.pathname=url.pathname.replace(/state\.json$/,'gateway-status.json');
+  const response=await fetch(url.href,{cache:'no-store',redirect:'manual',
+    headers:{Accept:'application/json','Cache-Control':'no-cache'},signal:AbortSignal.timeout(8000)});
+  if(!response.ok)throw new Error('Status unavailable');
+  const report=JSON.parse(await boundedText(response,8192)),attempt=Date.parse(report?.freshness?.last_attempt_at);
+  if(!Number.isFinite(attempt)||attempt+1000<observedAt)return null;
+  return terminalSnapshot(report,job);
+}
+
 export function createGateway(dependencies = {}) {
   const fetch = dependencies.fetch || globalThis.fetch;
   const now = dependencies.now || Date.now;
@@ -128,7 +140,7 @@ export function createGateway(dependencies = {}) {
     return state;
   }
 
-  return async function handle(request, env) {
+  return async function handle(request, env,dispatchContext={}) {
     const origin = request.headers.get('Origin');
     const headers = {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Origin'};
     // Public GETs can be inspected without Origin; mutations require the actual site Origin.
@@ -193,7 +205,7 @@ export function createGateway(dependencies = {}) {
             {method:'POST', redirect:'manual', headers:{'Accept':'application/vnd.github+json',
               'Authorization':`Bearer ${env.GITHUB_TOKEN}`, 'Content-Type':'application/json',
               'X-GitHub-Api-Version':'2022-11-28', 'User-Agent':'BolsaAbierta-Gateway'},
-              body:JSON.stringify({ref:env.GITHUB_REF,inputs:{request_id:job.id}}), signal:AbortSignal.timeout(12_000)});
+              body:JSON.stringify({ref:env.GITHUB_REF,inputs:{request_id:job.id,...(dispatchContext.trigger==='worker_cron'?{scheduled_time:dispatchContext.scheduled_time,clock_received_at:dispatchContext.clock_received_at,dispatch_at:dispatchContext.dispatch_at,trigger:'worker_cron'}:{})}}), signal:AbortSignal.timeout(12_000)});
           if ([400,401,403,404,422].includes(response.status)) {
             await repository.finish(job.id,'failed','GitHub ha rechazado la comprobación. Revisa la configuración del servicio.',now());
           } else if (response.status === 204) {
@@ -212,12 +224,9 @@ export function createGateway(dependencies = {}) {
         if (!job) return failure('Comprobación no encontrada.',404);
         if (job.status !== 'queued') return reply(jobData(job));
         const timestamp = now();
-        if (timestamp >= job.deadline) {
-          await repository.finish(id,'failed','No se recibió una publicación confirmada dentro de 20 minutos. Se conserva la copia anterior.',timestamp);
-        } else if (await repository.pollLease(id,timestamp)) {
+        if (await repository.pollLease(id,timestamp)) {
           try {
-            const state = await snapshot(env,timestamp);
-            const status = terminalSnapshot(state,job);
+            const status = await publishedStatus(fetch,env,timestamp,job);
             if (status) await repository.finish(id,status,
               status === 'completed' ? 'Comprobación publicada.' : status === 'partial' ? 'Comprobación parcial publicada. Se conservan los datos válidos.' : 'Comprobación fallida publicada. Se conserva la copia anterior.',now());
           } catch {
@@ -225,6 +234,10 @@ export function createGateway(dependencies = {}) {
           }
         }
         job = await repository.read(id);
+        if(job.status==='queued'&&timestamp>=job.deadline){
+          await repository.finish(id,'failed','No se recibió una publicación confirmada dentro de 20 minutos. Se conserva la copia anterior.',timestamp);
+          job=await repository.read(id);
+        }
         return reply(jobData(job));
       }
       return failure('Método no permitido.',405);
@@ -232,4 +245,77 @@ export function createGateway(dependencies = {}) {
   };
 }
 
-export default { fetch: createGateway() };
+// Opt-in HEAD probe. Never fetch/parse PDFs or nominal HTML in a scheduled invocation.
+function officialFeed(env){
+  const url=new URL(env.OFFICIAL_FEED_URL);
+  if(url.protocol!=='https:'||url.hostname!=='www.carm.es'||url.port||url.username||url.password||url.hash||url.pathname!=='/web/pagina'||!/^\d{1,10}$/.test(url.searchParams.get('IDCONTENIDO')||'')||[...url.searchParams.keys()].some(k=>!['IDCONTENIDO','IDTIPO','RASTRO'].includes(k)))throw new Error('Invalid official feed');
+  return url;
+}
+export function createScheduledGateway(dependencies={}){
+  const fetch=dependencies.fetch||globalThis.fetch,now=dependencies.now||Date.now;
+  const handler=createGateway(dependencies);
+  return async function scheduled(controller,env){
+    if(env.CRON_ENABLED!=='true'||!configured(env))return {status:'disabled'};
+    let url;try{url=officialFeed(env);}catch{return {status:'invalid_config'};}
+    const db=env.DB.withSession('first-primary'),start=now(),id=crypto.randomUUID().replaceAll('-','');
+    const lease=await db.prepare('UPDATE gateway_probe SET lease_until=? WHERE singleton=1 AND lease_until<=? RETURNING validator,source_id').bind(start+30*60000,start).first();
+    if(!lease)return {status:'shared_probe'};
+    const source=url.searchParams.get('IDCONTENIDO');
+    await db.prepare('INSERT INTO gateway_pilot_metrics(id,scheduled_at,started_at,source_id,phase,status) VALUES(?,?,?,?,?,?)').bind(id,controller.scheduledTime||start,start,source,'official_head','started').run();
+    let status='failed',phase='official_head',generation=null;
+    try{
+      const response=await fetch(url.href,{method:'HEAD',redirect:'manual',headers:{Accept:'text/html'},signal:AbortSignal.timeout(8000)});
+      if(!response.ok)status=response.status===429?'source_cap':response.status===403?'source_forbidden':'source_failed';
+      else{
+        const etag=response.headers.get('ETag'),modified=response.headers.get('Last-Modified');
+        if((!etag&&!modified)||(etag?.length||0)>256||(modified?.length||0)>80)status='no_validator';
+        else{
+          const validator=JSON.stringify([etag,modified]);
+          if(lease.validator===validator&&lease.source_id===source){
+            await db.prepare('DELETE FROM gateway_probe_pending WHERE singleton=1').bind().run();status='unchanged';
+          }else if(!lease.validator||lease.source_id!==source){
+            await db.prepare('UPDATE gateway_probe SET validator=?,source_id=? WHERE singleton=1').bind(validator,source).run();status='baseline_recorded';
+          }else{
+            let pending=await db.prepare('SELECT * FROM gateway_probe_pending WHERE singleton=1').bind().first();
+            if(!pending||pending.validator!==validator||pending.source_id!==source){
+              pending={validator,source_id:source,observed_at:now(),request_id:null};
+              await db.prepare(`INSERT INTO gateway_probe_pending(singleton,validator,source_id,observed_at,request_id) VALUES(1,?,?,?,NULL)
+                ON CONFLICT(singleton) DO UPDATE SET validator=excluded.validator,source_id=excluded.source_id,observed_at=excluded.observed_at,request_id=NULL`).bind(validator,source,pending.observed_at).run();
+            }
+            let checked=pending.request_id?await db.prepare('SELECT * FROM gateway_jobs WHERE id=?').bind(pending.request_id).first():null;
+            let confirmed=null;
+            if(checked&&checked.created_at>=pending.observed_at){
+              const repository=new D1Repository(env.DB),timestamp=now();
+              // The half-hour clock exceeds the job's twenty-minute lease. Read
+              // publication first, including late results of timed-out jobs.
+              // Stored terminal flags alone never acknowledge the observation.
+              try{confirmed=await publishedStatus(fetch,env,timestamp,checked,pending.observed_at);
+                if(confirmed)await repository.finish(checked.id,confirmed,'Publicación correlacionada con la comprobación programada.',now());
+              }catch{ /* Retain observation until bounded retry confirms it. */ }
+              if(!confirmed&&checked.status==='queued'&&timestamp>=checked.deadline)
+                await repository.finish(checked.id,'failed','No se recibió una publicación confirmada dentro del plazo.',timestamp);
+              checked=await repository.read(checked.id);
+            }
+            // Only a newer, correlated, confirmed complete publication handles this observation.
+            if(confirmed==='completed'){
+              await db.batch([
+                db.prepare('UPDATE gateway_probe SET validator=?,source_id=? WHERE singleton=1').bind(validator,source),
+                db.prepare('DELETE FROM gateway_probe_pending WHERE singleton=1 AND validator=? AND source_id=? AND request_id=?').bind(validator,source,pending.request_id)
+              ]);generation=pending.request_id;status='checked';
+            }else{
+              phase='shared_dispatch';
+              const result=await handler(new Request('https://gateway.internal/api/refresh',{method:'POST',headers:{Origin:env.ALLOWED_ORIGIN,'Content-Type':'application/json','X-BA-Refresh':'1'},body:'{}'}),env,{trigger:'worker_cron',scheduled_time:new Date(controller.scheduledTime||start).toISOString(),clock_received_at:new Date(start).toISOString(),dispatch_at:new Date(now()).toISOString()});
+              const job=await result.json();generation=job.id||null;
+              status=result.status===429?'dispatch_cap':result.ok?(job.status==='failed'?'dispatch_failed':'shared_job'):'dispatch_failed';
+              // Queued, uncertain, failed and reused older jobs never acknowledge the validator.
+              if(job.id)await db.prepare('UPDATE gateway_probe_pending SET request_id=? WHERE singleton=1 AND validator=? AND source_id=?').bind(job.id,validator,source).run();
+            }
+          }
+        }
+      }
+    }catch{status='probe_failed';}
+    await db.prepare('UPDATE gateway_pilot_metrics SET ended_at=?,request_id=?,phase=?,status=? WHERE id=?').bind(now(),generation,phase,status,id).run();
+    return {status};
+  };
+}
+export default {fetch:createGateway(),scheduled:createScheduledGateway()};

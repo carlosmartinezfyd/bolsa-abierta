@@ -294,7 +294,368 @@
       "assigned_function_groups": {
         "059006S": "0590006",
         "0590Y8L": "0590018"
-      }
+      },
+      "parser_revision": "award-v3-affirmative-administrative-facts",
+      "validated_at": "2026-10-04T10:49:25.044033+00:00"
+    },
+    {
+      "kind": "award",
+      "content_id": "209314",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJCONPLAZASECUNDARIA-216302.pdf&ALIAS=ARCH&IDCONTENIDO=209314&RASTRO=c798$m3911,4036,24219",
+      "sha256": "cd130841878cb2caa0443f34a9cf52ef0d3ddd79865100172b81c078cfc29067",
+      "published_at": "2026-09-30",
+      "checked_at": "2026-10-04T09:32:49.444540+00:00",
+      "process_id": "3133",
+      "pages": 24,
+      "parser_revision": "award-v3-affirmative-administrative-facts",
+      "page_row_counts": [
+        4,
+        5,
+        9,
+        8,
+        7,
+        7,
+        7,
+        7,
+        7,
+        8,
+        7,
+        7,
+        6,
+        7,
+        4,
+        5,
+        4,
+        4,
+        6,
+        4,
+        4,
+        4,
+        5,
+        1
+      ],
+      "assigned_function_groups": {
+        "059004S": "0590004"
+      },
+      "row_count": 137,
+      "specialties": [
+        {
+          "code": "0590003",
+          "name": "LATIN",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590004",
+          "name": "LENGUA CASTELLANA Y LITERATURA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 17
+        },
+        {
+          "code": "0590005",
+          "name": "GEOGRAFIA E HISTORIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 7
+        },
+        {
+          "code": "0590006",
+          "name": "MATEMATICAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 7
+        },
+        {
+          "code": "0590007",
+          "name": "FISICA Y QUIMICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590008",
+          "name": "BIOLOGIA Y GEOLOGIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590009",
+          "name": "DIBUJO",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590010",
+          "name": "FRANCES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 5
+        },
+        {
+          "code": "0590011",
+          "name": "INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 13
+        },
+        {
+          "code": "0590016",
+          "name": "MUSICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590017",
+          "name": "EDUCACION FISICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590018",
+          "name": "ORIENTACION EDUCATIVA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 6
+        },
+        {
+          "code": "0590019",
+          "name": "TECNOLOGIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 4
+        },
+        {
+          "code": "0590061",
+          "name": "ECONOMIA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590101",
+          "name": "ADMINISTRACION DE EMPRESAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590103",
+          "name": "ASESORIA Y PROCESOS DE IMAGEN PERSONAL",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 6
+        },
+        {
+          "code": "0590107",
+          "name": "INFORMATICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590110",
+          "name": "ORGANIZACION Y GESTION COMERCIAL",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590112",
+          "name": "ORGANIZACION Y PROYECTOS DE FABRICACION MECANICA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590113",
+          "name": "ORGANIZACION Y PROYECTOS DE SISTEMAS ENERGETICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590119",
+          "name": "PROCESOS Y MEDIOS DE COMUNICACION",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590125",
+          "name": "SISTEMAS ELECTROTECNICOS Y AUTOMATICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590206",
+          "name": "INSTALACIONES ELECTROTECNICAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590212",
+          "name": "OFICINA DE PROYECTOS DE CONSTRUCCION",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590215",
+          "name": "OPERACIONES DE PROCESOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590219",
+          "name": "PROCEDIMIENTOS DE DIAGNOSTICO CLINICO Y ORTOPROTESICO",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590220",
+          "name": "PROCEDIMIENTOS SANITARIOS Y ASISTENCIALES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590222",
+          "name": "PROCESOS DE GESTION ADMINISTRATIVA",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590225",
+          "name": "SERVICIOS A LA COMUNIDAD",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 3
+        },
+        {
+          "code": "0590227",
+          "name": "SISTEMAS Y APLICACIONES INFORMATICAS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590231",
+          "name": "EQUIPOS ELECTRONICOS",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590F05",
+          "name": "GEOGRAFIA E HISTORIA / FRANCES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590I07",
+          "name": "FISICA Y QUIMICA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590I09",
+          "name": "DIBUJO / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0590I16",
+          "name": "MUSICA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 1
+        },
+        {
+          "code": "0590I19",
+          "name": "TECNOLOGIA / INGLES",
+          "body": "PROFESORES DE ENSEÑANZA SECUNDARIA",
+          "count": 2
+        },
+        {
+          "code": "0592011",
+          "name": "INGLES",
+          "body": "PROFESORES DE ESCUELAS OFICIALES DE IDIOMAS",
+          "count": 1
+        },
+        {
+          "code": "0594403",
+          "name": "CANTO",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594429",
+          "name": "TUBA",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594431",
+          "name": "VIOLA",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594433",
+          "name": "VIOLIN",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 1
+        },
+        {
+          "code": "0594460",
+          "name": "LENGUAJE MUSICAL",
+          "body": "PROFESORES DE MÚSICA Y ARTES ESCÉNICAS",
+          "count": 3
+        },
+        {
+          "code": "0598001",
+          "name": "COCINA Y PASTELERIA",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 1
+        },
+        {
+          "code": "0598002",
+          "name": "ESTETICA",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 1
+        },
+        {
+          "code": "0598004",
+          "name": "MANTENIMIENTO DE VEHICULOS",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 2
+        },
+        {
+          "code": "0598005",
+          "name": "MECANIZADO Y MANTENIMIENTO DE MAQUINAS",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 2
+        },
+        {
+          "code": "0598007",
+          "name": "PELUQUERIA",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 1
+        },
+        {
+          "code": "0598010",
+          "name": "SOLDADURA",
+          "body": "PROFESORES ESPECIALISTAS EN SECTORES SINGULARES DE F.P.",
+          "count": 1
+        }
+      ],
+      "validated_at": "2026-10-04T10:49:26.798180+00:00"
+    }
+  ],
+  "observation_documents": [
+    {
+      "kind": "optan_observation",
+      "content_id": "209124",
+      "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJOPTANSECUNDARIA-58987.pdf&ALIAS=ARCH&IDCONTENIDO=209124&RASTRO=c798$m3911,4036,24219",
+      "sha256": "08bdf29cc81cd3df8e0f47816c94af00bb207ff50aefc1125189a8cc7d7c20c2",
+      "published_at": "2026-09-24",
+      "checked_at": "2026-10-04T09:32:56.545841+00:00",
+      "validated_at": "2026-10-04T10:41:25.548332+00:00",
+      "parser_revision": "optan-v1-document-evidence-only",
+      "process_id": "3125",
+      "pages": 1,
+      "row_count": 1,
+      "page_row_counts": [
+        1
+      ],
+      "semantic_status": "unconfirmed",
+      "specialties": [
+        {
+          "code": "0590206",
+          "name": "INSTALACIONES ELECTROTECNICAS",
+          "body_code": "0590",
+          "count": 1
+        }
+      ]
     }
   ]
 }

@@ -142,7 +142,12 @@ class OfficialClient:
                         raise SourceError('Official request exceeded time budget', 'time_limit')
                     self._validate_dns(current)
                     remaining = max(0.1, deadline - time.monotonic())
-                    response = self.session.get(current, headers=request_headers,
+                    # A validator belongs to one URL, including its pagination
+                    # query; even an official redirect cannot transfer it.
+                    scoped_headers = dict(request_headers)
+                    if canonical_url(current) != canonical_url(url):
+                        scoped_headers.pop('If-None-Match', None)
+                    response = self.session.get(current, headers=scoped_headers,
                                                 timeout=tuple(min(v, remaining) for v in self.timeout),
                                                 allow_redirects=False, stream=True)
                     try:
@@ -160,7 +165,7 @@ class OfficialClient:
                             _allowed_url(current)
                             continue
                         if status == 304:
-                            if not etag:
+                            if not scoped_headers.get('If-None-Match'):
                                 raise SourceError('Unconditional response unexpectedly returned 304', 'http_error')
                             return FetchResult(url, current, b'', '', status, headers)
                         if status in (429, 500, 502, 503, 504):

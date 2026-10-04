@@ -2,11 +2,130 @@ import unittest
 import tempfile
 from pathlib import Path
 import json
+import os
 from unittest.mock import patch
 from bolsa_abierta import position_sync
 
 
 class SyncTests(unittest.TestCase):
+    def test_baseline_course_parser_and_reviewed_scope_change_generation(self):
+        source = {'sha256': 'a' * 64, 'row_count': 1, 'course': '2026-2027',
+            'parser_revision': 'secondary-lists-v1', 'scope': 'published_list'}
+        original = position_sync.build_version(source, '2026-10-04T12:00:00Z')['id']
+        for key, changed in [('course', '2027-2028'), ('parser_revision', 'secondary-lists-v2'),
+                             ('scope', 'reviewed_list')]:
+            with self.subTest(key=key):
+                self.assertNotEqual(original, position_sync.build_version({**source, key: changed},
+                    '2026-10-04T12:00:00Z')['id'])
+
+    def test_resume_skips_exact_existing_ids_even_when_staging_has_holes(self):
+        ids = [f'{n:032x}' for n in range(1, 4)]
+        calls = []
+        def send(body):
+            calls.append(body)
+            if body['action'] == 'begin':
+                return {'ready': False}
+            if body['action'] == 'status':
+                return {'existing_ids': [ids[0], ids[2]], 'more': False}
+            return {'ready': body['action'] == 'activate'}
+        result = position_sync.publish({'id': 'a' * 64, 'row_count': 3},
+            lambda: [{'id': identity} for identity in ids], send, resume=True)
+        self.assertEqual(result, 'published')
+        batches = [call for call in calls if call['action'] == 'rows']
+        self.assertEqual(batches[0]['rows'], [{'id': ids[1]}])
+
+    def test_staging_cannot_smuggle_a_record_outside_the_reviewed_generation(self):
+        calls = []
+        def send(body):
+            calls.append(body['action'])
+            return {'ready': False} if body['action'] == 'begin' else {
+                'existing_ids': ['f' * 32], 'more': False}
+        with self.assertRaises(ValueError):
+            position_sync.publish({'id': 'a' * 64, 'row_count': 1},
+                lambda: [{'id': 'a' * 32}], send, resume=True)
+        self.assertNotIn('activate', calls)
+        self.assertNotIn('rows', calls)
+
+    def test_failed_configuration_preserves_state_and_reports_previous_success(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            state, summary = Path(directory) / 'state.json', Path(directory) / 'summary.json'
+            prior = {'active_version': 'a' * 64, 'checked_at': '2026-10-02T12:00:00Z'}
+            state.write_text(json.dumps(prior))
+            result = position_sync.main(['--state', str(state), '--summary', str(summary)])
+            self.assertEqual(result, 1)
+            self.assertEqual(json.loads(state.read_text()), prior)
+            status = json.loads(summary.read_text())
+            self.assertEqual(status['status'], 'failed')
+            self.assertEqual(status['checked_at'], prior['checked_at'])
+            self.assertEqual(status['active_version'], prior['active_version'])
+            self.assertEqual(status['error_code'], 'not_configured')
+
+    def test_daily_write_pause_never_replaces_the_active_reference(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state, summary = Path(directory) / 'state.json', Path(directory) / 'summary.json'
+            prior = {'active_version': 'c' * 64, 'checked_at': '2026-10-02T12:00:00Z'}
+            state.write_text(json.dumps(prior))
+            source = {'sha256': 'a' * 64, 'row_count': 1}
+            def send(body):
+                if body['action'] == 'begin':
+                    return {'ready': False}
+                if body['action'] == 'status':
+                    return {'existing_ids': [], 'more': False}
+                raise position_sync.PublicationDeferred('2026-10-05T00:00:00Z')
+            with patch.object(position_sync, 'publication_client', return_value=send), \
+                    patch.object(position_sync, 'source_collection', return_value=(source, [], 0)), \
+                    patch.object(position_sync, 'required_documents', return_value=[]), \
+                    patch.object(position_sync, 'fetch_documents', return_value=[]), \
+                    patch.object(position_sync, 'read_collection', return_value=[{'id': 'a' * 32}]):
+                result = position_sync.main(['--state', str(state), '--summary', str(summary)])
+            self.assertEqual(result, 2)
+            self.assertEqual(json.loads(state.read_text()), prior)
+            status = json.loads(summary.read_text())
+            self.assertEqual(status['status'], 'pending_budget')
+            self.assertEqual(status['active_version'], prior['active_version'])
+            self.assertEqual(status['staged_version'], 'a' * 64)
+            self.assertEqual(status['checked_at'], prior['checked_at'])
+            self.assertEqual(status['resume_after'], '2026-10-05T00:00:00Z')
+
+    def test_reviewed_metadata_revision_wins_without_changing_original_hash(self):
+        previous = {'content_id': '9', 'sha256': 'a' * 64, 'parser_revision': 'v1', 'incorporated': True,
+                    'checked_at': '2026-10-02T12:00:00Z'}
+        reviewed = {**previous, 'parser_revision': 'v2', 'validated_at': '2026-10-04T12:00:00Z'}
+        actual = position_sync.reconcile_documents([reviewed], [previous])
+        self.assertEqual(actual[0]['parser_revision'], 'v2')
+        self.assertNotIn('incorporated', actual[0])
+        self.assertEqual(actual[0]['checked_at'], previous['checked_at'])
+        with self.assertRaises(ValueError):
+            position_sync.reconcile_documents([{**reviewed, 'sha256': 'b' * 64}], [previous])
+
+    def test_validation_and_download_times_do_not_change_generation_identity(self):
+        source = {'sha256': 'a' * 64, 'row_count': 1, 'specialties': [
+            {'code': '0590001', 'name': 'Filosofia', 'body': 'Secundaria', 'count': 1}],
+            'documents': [{'kind': 'award', 'content_id': '9', 'sha256': 'b' * 64,
+                'row_count': 1, 'parser_revision': 'v2', 'validated_at': '2026-10-04T11:00:00Z',
+                'specialties': [{'code': '0590001', 'name': 'Filosofia', 'body': 'Secundaria', 'count': 1}]}]}
+        one = position_sync.build_version(source, '2026-10-04T12:00:00Z')
+        source['documents'][0].update(validated_at='2026-10-04T13:00:00Z', downloaded_at='2026-10-04T12:30:00Z')
+        two = position_sync.build_version(source, '2026-10-04T14:00:00Z')
+        self.assertEqual(one['id'], two['id'])
+        source['documents'][0]['parser_revision'] = 'v3'
+        self.assertNotEqual(two['id'], position_sync.build_version(source, '2026-10-04T14:00:00Z')['id'])
+
+    def test_duplicate_local_rows_never_start_row_publication(self):
+        calls = []
+        def send(body):
+            calls.append(body['action'])
+            return {'ready': False}
+        with self.assertRaises(ValueError):
+            position_sync.publish({'id': 'a' * 64, 'row_count': 2},
+                lambda: [{'id': 'same'}, {'id': 'same'}], send)
+        self.assertEqual(calls, ['begin'])
+
+    def test_changed_revision_requires_explicit_review_of_the_previous_hash(self):
+        old = {'content_id': '9', 'sha256': 'a' * 64}
+        revised = {'content_id': '9', 'sha256': 'b' * 64, 'supersedes_sha256': 'a' * 64}
+        self.assertEqual(position_sync.reconcile_documents([revised], [old])[0]['sha256'], 'b' * 64)
+
     def test_durable_document_manifest_does_not_drop_prior_publications_or_accept_changed_ids(self):
         self.assertTrue(callable(getattr(position_sync, 'merge_documents', None)))
         one={'content_id':'1','sha256':'a'*64,'incorporated':True}

@@ -2,9 +2,11 @@
 
 Consulta de tu puesto en una lista publicada de interinos de Murcia y comparación de vacantes docentes. Es un proyecto independiente: la publicación administrativa oficial prevalece.
 
-La pantalla **Mi posición** busca en listas y adjudicaciones oficiales incorporadas, incluidas funciones bilingües. Una lista ordenada muestra su puesto fechado; una adjudicación muestra el destino publicado y nunca se convierte en un puesto entre disponibles. [Cobertura, pruebas y operación de la consulta](docs/personal-position.md).
+La pantalla **Mi posición** busca en listas y adjudicaciones oficiales incorporadas, incluidas funciones bilingües y la lista única de Maestros. Una lista ordenada muestra su puesto fechado; una adjudicación muestra el destino y la fecha de incorporación publicados. La disponibilidad actual sigue sin calcularse. [Cobertura, pruebas y operación de la consulta](docs/personal-position.md).
 
-El [inventario del curso](docs/source-coverage.md) recorre el RSS paginado, contrasta el mapa de publicaciones y consulta índices CARM. Conserva documentos pendientes, cambios de hash y fallos entre ejecuciones. La generación nominal reúne la lista de julio, sus correcciones revisadas y las 147 adjudicaciones del 24 de septiembre (42 funciones). Los nuevos documentos con el mismo formato estricto pueden incorporarse automáticamente; otros formatos y revisiones quedan pendientes de revisión. No se afirma cobertura total ni disponibilidad actual.
+El [inventario del curso](docs/source-coverage.md) recorre el RSS paginado, contrasta el mapa de publicaciones y consulta 24 fuentes revisadas, incluidos resultados de actos, Maestros, listas urgentes, extraordinarias, abiertas y habilitaciones. Conserva documentos pendientes, cambios de hash y fallos entre ejecuciones. Distingue el recorrido de los índices, la descarga y la revisión de sus documentos.
+
+El corpus validado para esta entrega contiene **22.393 registros**: 12.898 pertenencias a listas de Secundaria y otros cuerpos, 9.211 a la lista única de Maestros y 284 adjudicaciones de dos actos. Estos recuentos no son personas únicas ni acreditan una activación remota: la web identifica la generación realmente activa. Los nuevos documentos con el mismo formato estricto pueden incorporarse automáticamente; otros formatos y revisiones quedan pendientes de revisión. [Evidencia de validación](docs/validation/2026-10-04.json).
 
 ## Información que obtiene
 
@@ -18,25 +20,27 @@ La copia inicial del 30/09/2026 contiene **77 filas y 85 plazas**, proceso 3133.
 
 - Se comprueban origen HTTPS, destinos de red, redirecciones, tipo de contenido, firma PDF, tamaño y tiempo. No se sortean CAPTCHA ni verificaciones de acceso.
 - El extractor valida cabeceras, fechas, proceso, páginas, columnas, códigos y cantidades. Conserva celdas originales, coordenadas y filas duplicadas. Las especialidades nuevas con código válido conservan su nombre original.
-- Los bytes se archivan por SHA-256 antes de extraer. Una extracción rechazada conserva evidencia para revisión del mantenedor, pero no publica sus filas como válidas. HTML, errores y extracciones vacías nunca sustituyen datos aprobados.
+- Los bytes se conservan por SHA-256 en privado antes de extraer, y el lector procesa el mismo contenido cuyo hash se verificó. Solo los PDF de vacantes aprobados pasan al archivo público. Una extracción rechazada conserva evidencia privada para revisión. HTML, errores y extracciones vacías nunca sustituyen datos aprobados.
 - La fecha de emisión, descarga e intento de comprobación son distintas. «Comprobación completada» se refiere a las fuentes cubiertas en esa ejecución; no acredita que cada plaza siga disponible en tiempo real.
 - La firma electrónica **no se autentica criptográficamente**. No hay OCR; los PDF escaneados, otros diseños o estructuras no revisadas requieren ampliar el corpus y el parser.
 - La comparación describe diferencias entre publicaciones de procesos distintos. Una desaparición no demuestra adjudicación, retirada ni resultado administrativo. Se guardan también revisiones del mismo proceso.
-- No se consultan cuentas de Educarm. La búsqueda nominal de la lista publicada utiliza una base privada D1, sin DNI ni motivos de exclusión. Favoritos y selección personal permanecen en el navegador, sin analítica.
+- No se consultan cuentas de Educarm. La búsqueda nominal utiliza D1, sin DNI ni motivos de exclusión. La base tiene acceso administrativo restringido, pero su API de consulta es pública: POST y `noindex` no son autenticación. Guardar una selección personal requiere confirmación y puede deshacerse en el navegador; no hay analítica.
 - La descarga de datos para el navegador se limita a 8 MiB: conserva siempre las dos copias comparadas y omite primero las filas más antiguas, avisando en la interfaz. El historial íntegro permanece en SQLite y los PDF en el archivo; las omisiones no eliminan los favoritos guardados. Se publican hasta 300 avisos recientes. La pasarela acepta hasta 16 MiB para dejar margen al transporte.
 
 ## Publicación gratuita
 
 La ruta principal utiliza **GitHub Pages + GitHub Actions en este repositorio público**. [GitHub documenta el uso gratuito de runners estándar para repositorios públicos](https://docs.github.com/en/actions/concepts/billing-and-usage). No requiere instalar nada a los visitantes.
 
-1. Integrar esta rama en `main` tras revisar el cambio.
-2. En Settings → Pages → Build and deployment, seleccionar **GitHub Actions**. El despliegue anterior desde la raíz de `main` debe cambiarse a este modo.
-3. Ejecutar **Official source refresh** desde Actions. El workflow consulta fuentes, guarda SQLite y PDF en la rama `data-state`, genera la web y publica Pages. La rama de datos debe conservarse para mantener historial y evidencia.
+1. En Settings → Pages → Build and deployment, seleccionar **GitHub Actions** al preparar un nuevo despliegue.
+2. Preparar y comprobar el Worker compatible mediante **Prepare or deploy existing Cloudflare gateway**; el procedimiento y sus requisitos están en [Operación y recuperación](docs/operations.md).
+3. Ejecutar **Official source refresh** desde Actions. El workflow consulta fuentes, guarda SQLite de vacantes, PDF de vacantes aprobados y metadatos en `data-state`, genera la web y publica Pages. Los originales nominales solo pueden persistirse cifrados con una clave independiente. La rama de datos debe conservarse para mantener historial y evidencia.
 4. El calendario solicita dos ejecuciones por hora, en los minutos 17 y 47 UTC. GitHub puede retrasar o desactivar calendarios por inactividad; no es una garantía de actualización puntual. La fecha visible permite detectar una automatización detenida.
 
 Sin pasarela, **Recargar datos** vuelve a cargar el último resultado publicado; no activa una consulta oficial. El botón **Actualizar** solicita una comprobación oficial y conserva su resultado visible, incluso cuando no hay un listado nuevo. Para activarlo en otro despliegue, configurar la [pasarela gratuita Cloudflare Worker + D1](docs/free-gateway.md) y la variable de repositorio `PUBLIC_API_BASE`. El token de GitHub se guarda únicamente como secreto del Worker. Sus peticiones comparten trabajo y tienen límites de frecuencia y cuota diaria; el resultado puede tardar varios minutos por la cola de Actions. La pasarela exige una cuenta y configuración externa; no queda activada al clonar este código.
 
 La web mantiene una copia estática cuando la API no está disponible y explica qué acción puede realizar. Los planes gratuitos tienen límites; no se contratan servicios ni se habilita facturación desde este repositorio.
+
+La ingesta reanuda lotes de 40 registros bajo un presupuesto diario, mantiene la generación anterior durante la carga y activa la nueva de forma atómica tras su validación. La [recepción administrativa](docs/administrative-intake.md) admite originales revisados sin dar por comprobado de nuevo el origen. El [seguimiento operativo](docs/operations.md) distingue pruebas locales, ejecuciones observadas y mediciones todavía pendientes; catorce días de observación no se dan por realizados al desplegar.
 
 ## Desarrollo y servicio opcional
 

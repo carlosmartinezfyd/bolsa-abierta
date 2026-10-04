@@ -63,6 +63,7 @@
         running: "En curso",
         never: "Sin comprobación",
         read: "Leído",
+        checked: "Comprobado",
         ok: "Correcto",
         not_modified: "Sin cambios",
         fetch_failed: "Error de descarga",
@@ -71,6 +72,16 @@
         approved: "Incorporado",
         pending: "Pendiente",
         blocked: "Acceso bloqueado",
+        skipped: "Omitido por presupuesto",
+        verified: "Documento verificado",
+        incorporated: "Incorporado",
+        pending_review: "Pendiente de revisión",
+        unavailable: "Acceso sin resolver",
+        not_applicable: "Fuera del ámbito",
+        budget_deferred: "Pendiente por presupuesto",
+        queued: "En cola",
+        removed: "Enlace no observado",
+        deferred: "Pendiente por presupuesto",
       }[value] ||
       value ||
       "Sin comprobación"
@@ -366,6 +377,43 @@
       return false;
     }
   }
+  const scopeCourse=course=>course==='unknown'?'Curso desconocido':course||'Sin curso';
+  function scopeEvidence(scope) {
+    const value=(key,yes,no,unknown)=>scope[key]===true?yes:scope[key]===false?no:unknown;
+    return `<p>Recorrido observado: ${value('traversal_complete','completado','pendiente','no consignado')} · Descargas: ${value('downloads_complete','completadas','pendientes','no consignadas')} · Evidencia revisada: ${value('verification_complete','completada','pendiente','no consignada')}</p><p>Cobertura del ámbito: ${value('scope_complete','completa','parcial','no consignada')} · ${scope.history_complete===true?'Historial completo acreditado':scope.history_complete===false?'Historial incompleto':'Historial no consignado'}</p>`;
+  }
+  function scopeDocuments(scope) {
+    const counts=[['document_count','documento inventariado','documentos inventariados','Documentos inventariados: no consignados'],['pending_documents','documento pendiente','documentos pendientes','Documentos pendientes: no consignados'],['failed_documents','documento con error','documentos con error','Documentos con error: no consignados'],['skipped_documents','documento omitido por presupuesto','documentos omitidos por presupuesto','Documentos omitidos por presupuesto: no consignados'],['unreviewed_documents','documento sin revisar','documentos sin revisar','Documentos sin revisar: no consignados']];
+    return `<p>${counts.map(([key,single,plural,unknown])=>Number.isInteger(scope[key])?U.count(scope[key],single,plural):unknown).join(' · ')}</p>`;
+  }
+  function inventoryCoverage(m) {
+    const inventory=m.state.source_inventory||m.state.catalog.source_inventory;
+    if(!inventory)return `<section class="panel section"><h2>Cobertura del inventario</h2><p>No hay metadatos de cobertura por fuente, familia y curso en esta copia. Los documentos incorporados no representan el corpus oficial completo.</p></section>`;
+    const coverage=inventory.coverage||{}, sources=coverage.sources||inventory.scopes||[], families=coverage.families||[];
+    const counts=inventory.status_counts||inventory.statuses||{};
+    const rows=sources.filter(x=>x&&typeof x==='object');
+    const total=inventory.document_count??inventory.total??(Object.keys(counts).length?Object.values(counts).reduce((n,x)=>n+Number(x||0),0):null);
+    const totalLabel=total===null?'Recuento de documentos sin publicar.':`${E(total)} documentos inventariados.`;
+    const pending=(x,key,label)=>Number.isInteger(x[key])?`${x[key]} ${label}`:`${label}: sin datos`;
+    return `<section class="panel section"><h2>Cobertura del inventario</h2><p>${totalLabel} Completar un recorrido no acredita la descarga y revisión de sus documentos, un historial completo ni disponibilidad actual. Ampliar las fuentes iniciales no incorpora automáticamente sus documentos.</p>${Object.keys(counts).length?`<dl class="freshness-grid">${Object.entries(counts).map(([key,value])=>`<div><dt>${E(statusName(key))}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>`:''}${rows.length?`<div class="data-table-wrap"><table class="table-small"><thead><tr><th>Fuente</th><th>Familia / cuerpo / curso</th><th>Recorrido, evidencia y pendientes</th><th>Fechas de evidencia</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${E(x.source_id||x.source||'Sin identificar')}</td><td>${E(x.family||'Sin clasificar')} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}</td><td><p>${E(statusName(x.status))}</p>${scopeEvidence(x)}${scopeDocuments(x)}<p>${E(pending(x,'pending_pages','páginas pendientes'))} · ${E(pending(x,'pending_details','detalles pendientes'))}</p></td><td>${checkDates(x)||"Sin fechas registradas"}</td></tr>`).join('')}</tbody></table></div>`:'<p>Desglose por fuente y curso pendiente de publicar.'}${families.length?`<details class="technical-details"><summary>Familias de publicaciones</summary><ul>${families.filter(x=>x&&typeof x==='object').map(x=>`<li>${E(x.family)} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}${scopeEvidence(x)}${scopeDocuments(x)}</li>`).join('')}</ul></details>`:''}<details class="technical-details"><summary>Cómo interpretar los estados</summary><p>Omitido por presupuesto indica trabajo aplazado, sin un nuevo intento de descarga. Las fechas de comprobación o descarga anteriores siguen siendo evidencia histórica. Que un enlace deje de observarse no acredita la revocación del documento. La cobertura del ámbito combina el recorrido observado y la verificación de los documentos; las etapas sin datos siguen sin confirmar.</p></details></section>`;
+  }
+  function checkDates(check) {
+    const fmt={hour:"2-digit",minute:"2-digit"};
+    const deferred=['skipped','budget_deferred','deferred'].includes(check.work_status||check.status);
+    return `${check.queued_at?`<p>En cola desde: ${E(BA.date(check.queued_at,fmt))}</p>`:''}${check.attempted_at?`<p>Último intento: ${E(BA.date(check.attempted_at,fmt))}</p>`:!deferred&&check.checked_at?`<p>Comprobación registrada: ${E(BA.date(check.checked_at,fmt))}</p>`:''}${check.checked_at&&check.attempted_at?`<p>Última comprobación: ${E(BA.date(check.checked_at,fmt))}</p>`:deferred&&check.checked_at?`<p>Comprobación anterior: ${E(BA.date(check.checked_at,fmt))}</p>`:''}${check.downloaded_at?`<p>Última descarga: ${E(BA.date(check.downloaded_at,fmt))}</p>`:''}${deferred?'<p>Trabajo pendiente por presupuesto; no hubo un nuevo intento de descarga.</p>':''}`;
+  }
+  function positionCheck(m) {
+    const p=m.state.position_status;
+    if(!p||typeof p!=='object')return '';
+    const label={verified:'Comprobación verificada',failed:'Comprobación fallida',pending_budget:'Pausada por presupuesto',degraded:'Evidencia revisada conservada'}[p.status]||'Comprobación pendiente';
+    const dates=[['Último intento',p.attempted_at],['Última comprobación satisfactoria',p.checked_at],['Reanudar a partir de',p.resume_after]].filter(([key,value])=>value||key==='Última comprobación satisfactoria');
+    const counts=[Number.isInteger(p.record_count)?`${p.record_count.toLocaleString('es')} registros declarados en la comprobación`:null,Number.isInteger(p.verified_documents)?`${p.verified_documents} documentos verificados`:null,Number.isInteger(p.pending_documents)?`${p.pending_documents} documentos pendientes`:null].filter(Boolean);
+    const originCounts=[['origin_verified_documents','documento comprobado en origen','documentos comprobados en origen'],['origin_failed_documents','documento con fallo de origen','documentos con fallo de origen'],['cached_documents','documento servido desde evidencia conservada','documentos servidos desde evidencia conservada']].filter(([key])=>Number.isInteger(p[key])).map(([key,single,plural])=>U.count(p[key],single,plural));
+    const officialCheck=p.origin_check_complete===true?'La comprobación oficial registrada está completa.':p.origin_check_complete===false?(p.origin_verified_documents>0?'La última comprobación oficial fue parcial.':p.origin_failed_documents>0?'La última comprobación oficial falló.':'La última comprobación oficial está incompleta.'):'El resultado de la última comprobación oficial no está consignado.';
+    const notice=p.status==='degraded'?`${officialCheck} La generación activa puede incorporar evidencia revisada conservada tras el fallo de acceso al origen; servir esa generación no acredita una nueva comprobación oficial completa.`:p.status==='verified'?'La comprobación registrada no acredita disponibilidad actual ni cobertura completa del corpus.':`${p.status==='pending_budget'?'La comprobación está pausada al alcanzar el presupuesto de escritura.':'No se ha completado la comprobación de estas publicaciones.'} ${p.active_version?'Se conserva la generación activa y su evidencia fechada en las consultas.':'No se acredita una generación activa en estos metadatos.'}`;
+    const cacheLabel={unconfigured:'No configurada',ready:'Disponible',failed:'Con fallo'}[p.cache_status];
+    return `<section class="panel section" data-position-check><div class="act-top"><h2>Comprobación de listas y adjudicaciones</h2><span class="pill ${p.status==='verified'?'observed':'pending'}">${E(label)}</span></div><p>${E(notice)}</p><dl class="freshness-grid">${dates.map(([key,value])=>`<div><dt>${key}</dt><dd>${E(value?BA.date(value,{hour:'2-digit',minute:'2-digit'}):'Sin fecha acreditada')}</dd></div>`).join('')}</dl>${counts.length?`<p>${E(counts.join(' · '))}.</p>`:''}${originCounts.length?`<p>${E(originCounts.join(' · '))}.</p>`:''}${p.active_version||p.staged_version||p.error_code||cacheLabel?`<details class="technical-details"><summary>Estado de las generaciones</summary><dl>${p.active_version?`<dt>Generación activa</dt><dd class="hash">${E(p.active_version)}</dd>`:''}${p.staged_version?`<dt>Generación preparada, pendiente de activar</dt><dd class="hash">${E(p.staged_version)}</dd>`:''}${cacheLabel?`<dt>Conservación de evidencia</dt><dd>${cacheLabel}</dd>`:''}${p.error_code?`<dt>Motivo registrado</dt><dd><code>${E(p.error_code)}</code></dd>`:''}</dl></details>`:''}</section>`;
+  }
   function sources(m) {
     const cat = m.state.catalog,
       checks = m.state.checks || cat.checks || [],
@@ -377,8 +425,10 @@
       refreshFeedback(m) +
       historyNotice(m) +
       `<section class="panel section source-overview"><div class="act-top"><h2>Comprobaciones</h2></div>${freshness(m)}<p><strong>${U.count(pending.length, "publicación pendiente", "publicaciones pendientes")}.</strong> Los documentos sin validar no sustituyen al último listado válido.</p></section>` +
+      positionCheck(m) +
+      inventoryCoverage(m) +
       U.notice(
-        "Alcance: vacantes sin cubrir de Secundaria y otros cuerpos",
+        "Alcance de esta vista: vacantes sin cubrir de Secundaria y otros cuerpos",
         `${canCheck(m) ? "Consulta del RSS, índice y anuncios de RRHH." : "Recargar datos consulta la última copia publicada. La comprobación a petición no está conectada."} Convocatorias, resultados e incidencias: cobertura incompleta.`,
         "neutral",
       ) +
@@ -388,11 +438,11 @@
           const check = checks
             .filter((c) => c.id === s.id || sameSourceUrl(c.url, s.url))
             .at(-1);
-          return `<article class="source-row"><div><h3>${E(s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `<p>Intento: ${E(BA.date(check.checked_at, { hour: "2-digit", minute: "2-digit" }))}${check.error ? " · " + E(check.error) : ""}</p>` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.id === "aepd-information" ? "Las preferencias se guardan en este navegador." : s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
+          return `<article class="source-row"><div><h3>${E(s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `${checkDates(check)}${check.error?`<p>${E(check.error)}</p>`:""}` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.id === "aepd-information" ? "Las preferencias se guardan en este navegador." : s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success&&!(["skipped","budget_deferred","deferred"].includes(check.work_status||check.status)) ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.work_status||check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
         })
         .join("")}</div></section>` +
       (checks.length
-        ? `<details class="panel section technical-log"><summary>Últimos intentos por recurso <span class="count">${checks.length}</span></summary><ol class="event-list">${checks.map((c) => `<li class="event"><time>${E(BA.date(c.checked_at, { hour: "2-digit", minute: "2-digit" }))}</time><div><strong>${E(statusName(c.status))}</strong><p>${E(c.error || "")} ${U.external(c.url, "Recurso oficial", "")}</p><code class="resource-id">${E(c.id)}</code></div></li>`).join("")}</ol></details>`
+        ? `<details class="panel section technical-log"><summary>Trabajo y comprobaciones por recurso <span class="count">${checks.length}</span></summary><ol class="event-list">${checks.map((c) => `<li class="event"><div><strong>${E(statusName(c.work_status||c.status))}</strong>${checkDates(c)}<p>${E(c.error || "")} ${U.external(c.url, "Recurso oficial", "")}</p><code class="resource-id">${E(c.id)}</code></div></li>`).join("")}</ol></details>`
         : "") +
       `<details class="panel technical-log"><summary>Registro de operaciones</summary><ol class="event-list">${
         m.state.events
@@ -424,9 +474,9 @@
     return `<div class="landing">
       <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#position" data-view="position">Mi posición ${U.icon("arrow")}</a></nav></header>
       <main id="main" class="landing-main" tabindex="-1">
-        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Secundaria y otros cuerpos</p><h1 id="landing-title">Consulta tu puesto en las listas docentes de Murcia.</h1><p class="landing-lead">Encuentra tu ficha en las listas de interinos de Secundaria y otros cuerpos. Consulta tu puesto en la publicación oficial y las vacantes de tu especialidad.</p><a class="button primary landing-cta" href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
+        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Listas docentes y adjudicaciones publicadas</p><h1 id="landing-title">Consulta tu puesto en las listas docentes de Murcia.</h1><p class="landing-lead">Busca tu ficha en las publicaciones incorporadas y consulta su ordinal oficial o su adjudicación fechada. La cobertura es parcial y la disponibilidad actual no está confirmada.</p><a class="button primary landing-cta" href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
         <aside class="landing-publication" aria-label="Última publicación incorporada"><div class="landing-publication-head"><span>Último listado incorporado</span>${U.icon("calendar")}</div>${doc ? `<h2>${E(BA.date(doc.published_at))}</h2><p class="landing-scope">Vacantes sin cubrir</p><ul class="landing-sample">${sample.map((row) => `<li><strong>${E(BA.title(row.function))}</strong><span>${E(BA.title(row.municipality))} · ${row.workload === "full" ? "Jornada completa" : E(row.hours) + " h"}</span></li>`).join("")}</ul><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Ver ${U.count(places, "plaza", "plazas")}${U.icon("arrow")}</button><p class="landing-availability">La publicación no confirma la disponibilidad actual.</p>` : `<h2>Consulta de publicaciones</h2><p class="landing-scope">Todavía no hay un listado validado disponible.</p><a class="landing-publication-link" href="#sources" data-view="sources">Ver fuentes ${U.icon("arrow")}</a>`}</aside></section>
-        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Encuentra tu ficha</h2><p>Elige tu especialidad y busca por nombre o número de lista.</p><a href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, desaparecen o cambian entre publicaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Consulta las vacantes</h2><p>Busca las plazas por especialidad, municipio y jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article></section>
+        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Encuentra tu ficha</h2><p>Busca por nombre o número de lista y filtra por lista o función.</p><a href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, dejan de figurar o cambian entre publicaciones, sin inferir adjudicaciones o revocaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Consulta las vacantes</h2><p>Busca las plazas por especialidad, municipio y jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article></section>
         <section class="landing-origin" aria-labelledby="landing-origin-title"><div><h2 id="landing-origin-title">El origen de los datos</h2><p>Los datos proceden de RRHH Educación y CARM. Puedes consultar la fecha de cada publicación y abrir su fuente.</p></div><a href="#sources" data-view="sources">Consultar fuentes ${U.icon("arrow")}</a></section>
       </main><footer class="landing-footer"><p>Bolsa Abierta es un proyecto independiente de la CARM. Las solicitudes y adjudicaciones se tramitan por los canales oficiales.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
   }

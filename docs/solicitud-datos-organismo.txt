@@ -1,0 +1,151 @@
+BOLSA ABIERTA — SOLICITUD DE DATOS Y PROPUESTA DE COLABORACIÓN
+Textos preparados el 4 de octubre de 2026. No enviados.
+
+
+A. SOLICITUD DE ACCESO A INFORMACIÓN PREEXISTENTE
+Procedimiento 1307: Acceso a información pública
+
+DESTINATARIO
+A la persona titular de la Consejería de Educación y Formación Profesional de la Región de Murcia, como órgano competente por razón de la materia, con atención a la Dirección General de Recursos Humanos, Planificación Educativa e Innovación y al Servicio de Personal Docente.
+
+ASUNTO
+Acceso a información existente sobre listas docentes, ordenación, cambios y estado público de disponibilidad para el proyecto Bolsa Abierta.
+
+SOLICITANTE
+[nombre del solicitante]
+Medio de notificación/contacto: [contacto]
+
+EXPONE
+
+Bolsa Abierta es un proyecto de consulta web dirigido al personal docente interino de la Región de Murcia. Su finalidad es facilitar la localización de la propia ficha, el orden que consta en las listas oficiales, los cambios acreditados y las vacantes publicadas, con fecha y procedencia verificables.
+
+Para ofrecer información fiable se necesita conocer qué conjuntos están completos, a qué momento se refieren y qué hechos reflejan. Esta solicitud se limita a información que ya obre en poder de la Administración, incluidas las extracciones obtenibles mediante un tratamiento informatizado de uso corriente, conforme al artículo 26.4.c de la Ley 12/2014, de 16 de diciembre. La propuesta de crear o mejorar un suministro periódico se formula separadamente en el texto B.
+
+SOLICITA
+
+1. Listas, ámbitos y cobertura temporal.
+
+Facilitar los conjuntos completos vigentes del curso 2026/2027 para todos los cuerpos, especialidades y ámbitos de provisión docente: listas ordinarias, extraordinarias y abiertas; relaciones de seleccionados en procedimientos de urgencia; y habilitaciones y perfiles que intervengan en la participación u ordenación. Se solicita incluir las listas constituidas en cursos anteriores que continúen vigentes.
+
+Interesan el corte vigente más reciente disponible al atender esta solicitud, con su fecha y hora, y los documentos o registros existentes que permitan reconstruir la situación inicial del curso y los cambios posteriores. Se pide identificar expresamente los cuerpos, especialidades, tipos de lista y periodos incluidos, así como cualquier parte no cubierta. Si intervienen varios sistemas o unidades, se solicita su identificación y la documentación existente sobre el alcance de cada uno.
+
+2. Diccionarios y significado de la ordenación.
+
+Facilitar los diccionarios, catálogos y reglas documentadas de códigos de cuerpo, especialidad, lista, ámbito, prioridad/procedencia, habilitación y perfil, con vigencia y equivalencias oficiales cuando existan.
+
+Se solicita distinguir el número oficial de lista, el criterio de prioridad, el ordinal dentro de una publicación y el orden aplicable a una convocatoria concreta. Interesa la ordenación resultante y los campos necesarios para interpretarla, sin desglosar circunstancias personales protegidas o innecesarias. Se pide incluir la documentación existente sobre personas presentes en varias listas, integración desde procedimientos urgentes o abiertos, perfiles bilingües y efectos de cambios normativos o transitorios.
+
+3. Identificación mínima y enlace entre registros.
+
+Se solicita conocer y, si puede facilitarse legalmente, recibir un identificador oficial opaco ya existente, estable durante el ciclo de vida de las listas y consistente entre ámbitos concurrentes. Su finalidad es evitar homónimos, números repetidos y doble recuento de una misma persona en varias listas. Interesa asimismo la identificación pública mínima que permita reconocer la propia ficha, en la medida en que resulte necesaria y jurídicamente procedente.
+
+No se solicitan NIF, NIE, DNI, números de Seguridad Social, hashes de documentos identificativos, direcciones, teléfonos ni datos médicos o familiares. Si no existe una clave reutilizable adecuada, se solicita indicarlo y describir las alternativas de enlace ya disponibles. La posible creación de una clave nueva se plantea únicamente como propuesta de colaboración en el texto B. El uso de una clave opaca no se presenta como garantía automática de anonimización.
+
+4. Cambios y estado público mínimo de disponibilidad.
+
+Facilitar los documentos o registros existentes sobre altas, bajas, exclusiones, rectificaciones, cambios de orden, integraciones y modificaciones de habilitaciones/perfiles, con fecha de publicación, fecha de efecto y referencia a la resolución correspondiente.
+
+Se solicita confirmar si existe un corte completo y fechado del estado de disponibilidad o elegibilidad para participar por lista, especialidad, perfil y ámbito. Si ese estado puede facilitarse legalmente, se solicita únicamente su valor mínimo, definición y vigencia, sin los motivos personales que lo expliquen.
+
+Se pide la documentación existente que precise si dicho estado incorpora adjudicaciones definitivas y sus anulaciones, nombramientos, jornadas parciales o compatibles, ceses, renuncias, reactivaciones y movimientos tramitados fuera de los actos ordinarios, así como los retrasos o movimientos pendientes de incorporación. Se solicita diferenciar los estados oficiales de cualquier inferencia derivada de la ausencia en una publicación.
+
+Si no existe ese corte o no procede facilitarlo, se solicita una respuesta expresa sobre este extremo. Como alternativa útil, se pide el resto de información accesible sobre orden publicado, movimientos acreditados y vacantes, junto con agregados existentes realmente anonimizados por ámbito y fecha y la identificación de la consulta personal oficial. En ese caso Bolsa Abierta ofrecería el orden publicado y los hechos comprobados, sin atribuirles el significado de posición actual entre personas disponibles.
+
+5. Originales, anexos y versiones.
+
+Facilitar los documentos originales y todos sus anexos, o una relación completa de enlaces que permita obtenerlos, distinguiendo resoluciones definitivas, documentos provisionales, convocatorias, incidencias, vacantes ofertadas y resultados de adjudicación.
+
+Se solicitan los metadatos existentes de identificación de documento y órgano emisor, fechas de publicación y efecto, versión, correcciones y relaciones de sustitución, anulación o complemento. Cuando estén disponibles, interesa también la información de firma o código seguro de verificación y el mecanismo oficial para contrastar la copia. Si se ha reemplazado un archivo manteniendo la misma URL, se solicita la versión vigente y la identificación de las anteriores que se conserven y puedan facilitarse.
+
+6. Formatos y acceso técnico existentes.
+
+Se solicita entrega electrónica en el formato reutilizable preexistente que conserve mejor los datos: CSV, JSON, XML u otro formato tabular disponible, acompañado de sus diccionarios y documentos de referencia. Se acepta el formato existente más sencillo de suministrar. Cuando corresponda, se solicita una extracción mediante tratamiento informático corriente en los términos del artículo 26.4.c de la Ley 12/2014.
+
+Se pide la documentación de las APIs, exportaciones o vías de descarga masiva que ya existan: direcciones exactas, esquema y versión, paginación, recuentos por ámbito, significado de nulos, corte temporal, criterios de actualización y mecanismos para identificar cambios. Para su uso automatizado, interesa conocer las condiciones de identificación del cliente, credenciales de servicio si proceden, límites, caché, reintentos, horarios y contacto técnico. Se solicita también la vía existente que permita obtener originales y anexos completos desde un proceso automático.
+
+7. Reutilización y respuesta parcial.
+
+Se solicita identificar las condiciones aplicables a cada conjunto o documento: fuente y atribución, fecha de referencia, conservación, difusión de resultados y restricciones específicas sobre datos personales, cuando existan. La petición no presupone una autorización previa universal: el artículo 21.3 de la Ley 12/2014 permite la reutilización sin ella para la información comprendida en su ámbito, respetando los límites legales. Interesa aclarar qué condiciones concretas resultan aplicables a los datos solicitados y a la finalidad descrita.
+
+Si una limitación afecta solo a parte de la información, se solicita acceso parcial útil, identificando lo omitido, el motivo y sus efectos sobre la cobertura. La eventual limitación de la disponibilidad personal no debería impedir la entrega del resto de información accesible. Si otro órgano custodia alguno de los conjuntos, se solicita la remisión correspondiente o su identificación para dirigir correctamente la petición.
+
+Se solicita respuesta y entrega por medios electrónicos, con resolución en el plazo previsto en el artículo 26.1 de la Ley 12/2014 y comunicación de la eventual ampliación que proceda. Se agradecería que la respuesta identificara los apartados atendidos, los no disponibles y los sujetos a limitación.
+
+[fecha de presentación]
+[nombre del solicitante]
+
+Referencia normativa: Ley 12/2014 de la Región de Murcia, artículos 21.3, 26.1 y 26.4.c.
+https://www.boe.es/buscar/act.php?id=BOE-A-2015-184
+
+
+B. PROPUESTA SEPARADA DE COLABORACIÓN Y SUMINISTRO PERIÓDICO
+
+DESTINATARIOS
+Unidad responsable del Portal de Datos Abiertos en la Región de Murcia y órgano responsable de las listas docentes de la Consejería de Educación y Formación Profesional.
+
+ASUNTO
+Propuesta de publicación reutilizable y actualización periódica de listas docentes para Bolsa Abierta.
+
+CONTACTO
+[nombre del solicitante] — [contacto]
+
+Bolsa Abierta propone colaborar en una publicación oficial reutilizable que reduzca consultas repetidas, permita comprobar la cobertura y facilite información fiable a los aspirantes a interinidad docente.
+
+Esta propuesta se refiere a posibles mejoras o servicios nuevos. Puede tramitarse de forma independiente de la solicitud de acceso a información preexistente formulada mediante el procedimiento 1307.
+
+Se propone acordar un suministro con las siguientes características:
+
+1. Un corte completo de las listas vigentes, con los ámbitos, diccionarios y reglas de ordenación necesarios, acompañado de un registro de altas, bajas y rectificaciones. Cada entrega debería identificar su fecha de corte, vigencia, versión de esquema, recuentos y relación con la anterior, de modo que un cambio pueda aplicarse una sola vez y pueda detectarse una secuencia incompleta.
+
+2. Un identificador opaco generado por el órgano, estable durante el periodo necesario y común a las listas concurrentes cuando resulte procedente. Su alcance y conservación se definirían con el responsable del dato. La finalidad es enlazar registros sin recibir documentos identificativos; también se definirían los campos mínimos que permitan a una persona reconocer su ficha.
+
+3. Cuando sea jurídicamente viable, un estado mínimo y fechado de disponibilidad o elegibilidad por ámbito, calculado por el sistema competente y acompañado de su significado y cobertura. No se requieren razones médicas, familiares ni otras circunstancias personales. Si ese estado no puede ofrecerse, el suministro conservaría su utilidad mediante listas vigentes, cambios publicados, vacantes y agregados apropiados.
+
+4. Un formato sencillo y sostenible para el organismo: preferentemente archivos CSV/JSON o una API documentada, con descarga de originales y anexos. Se propone publicar tras cada lote administrativo relevante; como alternativa inicial, un corte diario con hora y retraso declarados. Se acordarían frecuencia, límites, identificación del cliente, control de versiones, avisos de rectificación y condiciones de caché y reintento.
+
+5. Una vía administrativa alternativa para entregar originales oficiales al responsable de Bolsa Abierta cuando falle la descarga automática. Esta entrega podría realizarse mediante un repositorio, un paquete de archivos u otro canal que el organismo establezca, con inventario y referencias verificables. Su incorporación correspondería al responsable del servicio.
+
+6. Condiciones de reutilización y de tratamiento de datos personales adecuadas a cada contenido, con atribución, fechas, conservación, atención de rectificaciones y contacto responsable. Se propone coordinar este diseño con las unidades de datos abiertos, gestión docente, sistemas y protección de datos que correspondan. No se atribuye al proyecto carácter de servicio oficial ni patrocinio administrativo.
+
+Se solicita identificar un interlocutor funcional y técnico, los datos que ya puedan publicarse y una posible fase piloto. Bolsa Abierta puede aportar un esquema de prueba y una relación de comprobaciones de formato, cantidades, cobertura y versiones, ajustadas al suministro que resulte viable.
+
+Quedamos a disposición del organismo a través de [contacto].
+
+[fecha]
+[nombre del solicitante]
+
+
+C. CANALES VERIFICADOS Y GUÍA DE USO PARA EL RESPONSABLE
+Información de apoyo; no forma parte del escrito A ni del texto B.
+Canales contrastados el 4 de octubre de 2026.
+
+Presentación formal del escrito A:
+Procedimiento 1307 — Acceso a información pública (SIA 207141).
+https://sede.carm.es/web/pagina/pagina?IDCONTENIDO=1307&IDTIPO=240&RASTRO=c%24m40288
+La ficha indica identificación y firma para la presentación electrónica, y contempla la vía presencial cuando proceda. El formulario de Datos Abiertos y un correo de consulta no sustituyen esta presentación si se desea una resolución formal.
+
+Propuesta B al Portal de Datos Abiertos:
+https://datosabiertos.regiondemurcia.es/participa
+El formulario permite pedir datos para el catálogo y proponer aplicaciones.
+
+Contacto funcional del Servicio de Personal Docente:
+https://rrhheducacion.carm.es/servicio-de-personal-docente/
+Infantil y Primaria: spd_primaria@murciaeduca.es
+Secundaria y otros cuerpos: spd_secundaria@murciaeduca.es
+Estos contactos figuran en la página del Servicio; pueden orientar o remitir la propuesta al responsable del sistema.
+
+Ayuda para localizar información o dirigir la solicitud:
+https://transparencia.carm.es/web/transparencia/buzon
+Correo publicado: transparencia@carm.es
+Información general sobre el derecho de acceso:
+https://transparencia.carm.es/daip
+
+Uso recomendado:
+
+1. Completar únicamente los marcadores de nombre, contacto y fecha. Introducir los datos de identificación que exija la sede directamente en el procedimiento, sin añadir datos de aspirantes ni documentos identificativos a este texto.
+2. Presentar el escrito A por el procedimiento 1307 y conservar justificante, fecha y número de expediente. Utilizar el texto B separadamente para la propuesta técnica; no condiciona la resolución de acceso a información existente.
+3. El artículo 26.1 prevé veinte días y posible ampliación por otros veinte en los supuestos legales. Seguir el expediente y sus notificaciones; el artículo 26.5 determina el órgano competente, no el plazo.
+4. Al recibir respuesta, registrar por separado datos entregados, ámbitos excluidos, corte temporal, condiciones de reutilización y compromisos técnicos. Una respuesta sobre acceso no acredita por sí sola actualización futura ni cobertura completa de disponibilidad.
+5. Validar una entrega completa y sus recuentos antes de incorporarla. Si no se facilita disponibilidad, mantener el resultado referido al orden publicado y a los movimientos acreditados, con fecha y procedencia.
+
+Este documento contiene textos preparados para que los presente su responsable. No se ha enviado ninguna solicitud, correo ni formulario.

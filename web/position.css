@@ -67,3 +67,10 @@
 .position-confirm .buttons{margin-top:26px}
 #position-person{scroll-margin-top:calc(var(--nav-height) + 20px)}
 @media(max-width:600px){.position-workspace{margin:4px auto 36px}.position-heading{margin-bottom:18px}.position-heading h1{font-size:26px}.position-search,.position-card{padding:20px 16px}.position-person{gap:12px}.position-person h2{font-size:21px}.position-rank{padding:28px 0}.position-card-footer{align-items:start;flex-direction:column;gap:14px}.position-details dl{grid-template-columns:1fr;gap:3px}.position-details dd{margin-bottom:10px}.position-query-row{gap:6px}.position-search .button{padding:10px 12px}.position-filter-row{margin-top:2px}.position-search-date{margin-top:12px}.position-picker{padding:16px}}
+.position-qualifiers{padding:0 0 24px;overflow-wrap:anywhere}
+.position-qualifiers h3{font-size:15px;font-weight:500;margin:0 0 10px}
+.position-qualifiers ul{padding-left:20px;margin:0;color:var(--muted);font-size:14px}
+.position-qualifiers li+li{margin-top:6px}
+.position-source-information{margin-top:16px;padding-bottom:0;font-size:13px}
+.position-source-information ul{padding-left:20px;overflow-wrap:anywhere}
+.position-source-information li+li{margin-top:8px}

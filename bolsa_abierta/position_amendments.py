@@ -2,6 +2,7 @@
 
 from collections import Counter
 import hashlib
+from io import BytesIO
 import re
 
 import pdfplumber
@@ -45,9 +46,10 @@ def parse_amendment(text, content_id):
 
 
 def read_amendment(path, source):
-    if hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
+    data = path.read_bytes()
+    if hashlib.sha256(data).hexdigest() != source['sha256']:
         raise ValueError('Amendment bytes differ from the reviewed original')
-    with pdfplumber.open(path) as pdf:
+    with BytesIO(data) as stream, pdfplumber.open(stream) as pdf:
         if len(pdf.pages) != source['pages']:
             raise ValueError('Amendment page count changed')
         text = pdf.pages[0].filter(lambda obj: obj.get('upright', True) and obj.get('x0', 100) >= 38).extract_text() or ''
