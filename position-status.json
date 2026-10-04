@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "attempted_at": "2026-10-04T11:59:40.009955+00:00",
+  "checked_at": "2026-10-02T17:19:32.306403+00:00",
+  "resume_after": null,
+  "active_version": "482d3e30394d5934abb3b21f85da0773a87268adead5e241a62ad800dd4b563a",
+  "pending_documents": 0,
+  "origin_verified_documents": 0,
+  "origin_failed_documents": 7,
+  "cached_documents": 0,
+  "origin_check_complete": false,
+  "cache_status": "unconfigured",
+  "error_code": "access_challenge"
+}
