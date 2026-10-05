@@ -3,7 +3,7 @@
   "daily_resumption": true,
   "reason": "missing_configuration",
   "status": "pending",
-  "updated_at": "2026-10-04T11:57:57.262518+00:00",
+  "updated_at": "2026-10-05T15:56:25.715880+00:00",
   "version": 1,
   "worker": "bolsa-abierta-gateway"
 }
