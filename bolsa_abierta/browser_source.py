@@ -7,6 +7,7 @@ Only a bounded GET through browser networking returns bytes to OfficialClient.
 import atexit
 import base64
 import ipaddress
+import os
 import socket
 import threading
 import time
@@ -107,7 +108,11 @@ class Browser:
         try:
             self.browser = self.driver.chromium.launch(headless=False, channel='chromium',
                 timeout=remaining(deadline), args=['--no-proxy-server',
-                    f'--host-resolver-rules=MAP www.carm.es {pin}, MAP * ~NOTFOUND'])
+                    f'--host-resolver-rules=MAP www.carm.es {pin}, MAP * ~NOTFOUND'],
+                env={key: value for key, value in os.environ.items() if key in {
+                    'DISPLAY', 'PATH', 'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TEMP', 'TMP',
+                    'LANG', 'LC_ALL', 'XDG_RUNTIME_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME',
+                    'SYSTEMROOT', 'WINDIR', 'LOCALAPPDATA', 'APPDATA', 'COMSPEC', 'PATHEXT'}})
             self.context = self.browser.new_context(service_workers='block', accept_downloads=False)
             self.page = self.context.new_page()
             self.bootstrap = 'https://www.carm.es/__bolsa_abierta_origin_' + uuid.uuid4().hex
