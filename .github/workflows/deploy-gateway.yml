@@ -99,7 +99,9 @@ jobs:
           from pathlib import Path
           from bolsa_abierta.operations import prepare_gateway_migration
           def execute(sql):
-              result=subprocess.run(['npx','wrangler','d1','execute','bolsa-abierta-gateway','--remote','--config','gateway/wrangler.toml','--command',sql,'--json'],capture_output=True,text=True,timeout=60)
+              # Core SQL starts with a '--' comment; bind it to the option so
+              # Wrangler cannot interpret the SQL itself as another flag.
+              result=subprocess.run(['npx','wrangler','d1','execute','bolsa-abierta-gateway','--remote','--config','gateway/wrangler.toml','--command='+sql,'--json'],capture_output=True,text=True,timeout=60)
               if result.returncode: raise ValueError('d1_operation_failed')
               report=json.loads(result.stdout)
               if not isinstance(report,list) or any(item.get('success') is False for item in report): raise ValueError('d1_result_failed')
