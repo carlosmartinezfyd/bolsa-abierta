@@ -81,31 +81,15 @@ jobs:
           fi
       - name: Start metadata-only run evidence
         run: python -m bolsa_abierta.operations --state saved-state/operations.json start
-      - name: Discover course sources and retain pending documents
-        id: inventory
-        continue-on-error: true
-        env:
-          SOURCE_RETRY_STATE: saved-state/source-retries.json
-          OFFICIAL_SOURCE_TRANSPORT: chromium
-        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
-      - name: Verify published personal-position reference
-        id: positions
-        continue-on-error: true
-        env:
-          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
-          POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
-          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
-          SOURCE_RETRY_STATE: saved-state/source-retries.json
-          OFFICIAL_SOURCE_TRANSPORT: chromium
-        # Command output is suppressed by the wrapper. Original PDFs and rows are
-        # ephemeral/private and must never enter data-state or public artifacts.
-        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions --allow-partial -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
+      # Check current vacancies before broad discovery. Space CARM requests
+      # in every collection phase while retaining the durable inventory queue.
       - name: Collect and validate official vacancies
         id: collect
         continue-on-error: true
         env:
           SOURCE_RETRY_STATE: saved-state/source-retries.json
           OFFICIAL_SOURCE_TRANSPORT: chromium
+          CARM_MIN_REQUEST_INTERVAL: "2"
         run: |
           xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --allow-partial --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
           python - <<'PY'
@@ -117,6 +101,27 @@ jobs:
           status=status if status in ('success','partial','failed') else 'failed'
           with open(os.environ['GITHUB_OUTPUT'],'a') as output: output.write('phase_status='+status+'\n')
           PY
+      - name: Discover course sources and retain pending documents
+        id: inventory
+        continue-on-error: true
+        env:
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+          CARM_MIN_REQUEST_INTERVAL: "2"
+        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
+      - name: Verify published personal-position reference
+        id: positions
+        continue-on-error: true
+        env:
+          PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
+          POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+          CARM_MIN_REQUEST_INTERVAL: "2"
+        # Command output is suppressed by the wrapper. Original PDFs and rows are
+        # ephemeral/private and must never enter data-state or public artifacts.
+        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions --allow-partial -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
       - name: Build snapshot with explicit check status
         id: build
         continue-on-error: true
