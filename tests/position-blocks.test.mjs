@@ -87,6 +87,7 @@ test('legacy unindexed generation stays searchable and can be restored after blo
   assert.equal((await f.call('/api/positions/search',{query:'MARTINEZ'})).status,200);
   f.db.prepare('DELETE FROM position_search_status WHERE version_id=?').run(old.id);
   assert.equal((await f.ingest({action:'begin',version:old})).status,200);
+  assert.equal(f.db.prepare('SELECT ready FROM position_search_status WHERE version_id=?').get(old.id).ready,0);
   assert.equal((await f.call('/api/positions/search',{query:'MARTINEZ'})).status,200);
   await f.ingest({action:'begin',version});
   await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2)]});
