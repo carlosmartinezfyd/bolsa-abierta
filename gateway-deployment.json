@@ -1,13 +1,19 @@
 {
   "version": 1,
   "worker": "bolsa-abierta-gateway",
-  "code_sha": "0e4d0bca749d5706f732eae6f9adacd19af233dd",
+  "code_sha": "3e8c1d3655be44c975679ec9103a74b6f9248f17",
+  "worker_source_sha": "42827de5d0f6104d9f6afedbe3a8a4598e1f6e21",
   "status": "deployed",
   "reason": "verified_local_wrangler_deployment",
-  "updated_at": "2026-10-12T21:56:59.435399+00:00",
-  "worker_version": "e437d2c8-9f22-44c4-93e2-7d45c0ca0150",
+  "updated_at": "2026-10-12T23:13:17.456165+00:00",
+  "worker_version": "be5732fe-861b-4b32-afdf-2bb4c2c86cc9",
   "position_storage": "blocks-v1",
   "daily_resumption": false,
-  "candidate_validation_run": "38312631115",
-  "validated_records": 22393
+  "watchdog_enabled": true,
+  "native_schedule_enabled": true,
+  "validated_refresh_run": "38320263409",
+  "validated_records": 22393,
+  "encrypted_restore": "verified",
+  "production_cpu_sample_events": 4,
+  "production_cpu_sample_max_ms": 8
 }
