@@ -112,6 +112,14 @@ class OfficialClient:
         self.retry_state = retry_state or os.environ.get('SOURCE_RETRY_STATE')
         self.clock = clock or time.time
 
+    def _browser_transport(self, url):
+        value = _allowed_url(url)
+        return (os.environ.get('OFFICIAL_SOURCE_TRANSPORT') == 'chromium'
+                and value.scheme == 'https' and value.hostname == 'www.carm.es')
+
+    def _retry_identity(self, url, kind, browser=False):
+        return hashlib.sha256((('chromium:' if browser else '') + kind + ':' + canonical_url(url)).encode()).hexdigest()
+
     def _retry_entries(self):
         path = Path(self.retry_state)
         entries = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
@@ -130,12 +138,16 @@ class OfficialClient:
         """Per-resource cooldown; never infer that another URL is inaccessible."""
         if not self.retry_state:
             return
-        identity = hashlib.sha256((kind + ':' + canonical_url(url)).encode()).hexdigest()
-        entry = self._retry_entries().get(identity)
-        if entry and entry['next_attempt_at'] > self.clock():
-            error = SourceError('Official resource is awaiting its next retry', entry['error_code'])
-            error.retry_deferred = True
-            raise error
+        entries = self._retry_entries()
+        browser = self._browser_transport(url)
+        for scope in (False, True) if browser else (False,):
+            entry = entries.get(self._retry_identity(url, kind, scope))
+            if browser and not scope and entry and entry['error_code'] == 'access_challenge':
+                continue  # A rejected HTTP client is not evidence against Chromium.
+            if entry and entry['next_attempt_at'] > self.clock():
+                error = SourceError('Official resource is awaiting its next retry', entry['error_code'])
+                error.retry_deferred = True
+                raise error
 
     def fetch(self, url, *, kind='html', etag=None):
         self.check_retry(url, kind)
@@ -153,7 +165,8 @@ class OfficialClient:
             return
         from .store import atomic_write
         entries = self._retry_entries()
-        identity = hashlib.sha256((kind + ':' + canonical_url(url)).encode()).hexdigest()
+        browser = self._browser_transport(url)
+        identity = self._retry_identity(url, kind, browser and error_code == 'access_challenge')
         failures = min(5, entries.get(identity, {}).get('failures', 0) + 1)
         # Prune old failures, retaining only opaque identities and fixed codes.
         entries = {k: v for k, v in entries.items() if v['next_attempt_at'] > self.clock() - 7 * 86400}
@@ -162,6 +175,8 @@ class OfficialClient:
                 'next_attempt_at': self.clock() + max(retry_after, min(21600, 3600 * 2 ** (failures - 1)))}
         else:
             entries.pop(identity, None)
+            if browser:
+                entries.pop(self._retry_identity(url, kind, True), None)
         if len(entries) > 4096:
             raise ValueError('source_retry_capacity_exceeded')
         atomic_write(Path(self.retry_state), (json.dumps(entries, sort_keys=True) + '\n').encode())
@@ -207,9 +222,13 @@ class OfficialClient:
                     scoped_headers = dict(request_headers)
                     if canonical_url(current) != canonical_url(url):
                         scoped_headers.pop('If-None-Match', None)
-                    response = self.session.get(current, headers=scoped_headers,
-                                                timeout=tuple(min(v, remaining) for v in self.timeout),
-                                                allow_redirects=False, stream=True)
+                    if self._browser_transport(current):
+                        from .browser_source import browser_get
+                        response = browser_get(current, headers=scoped_headers, limit=limit, deadline=deadline)
+                    else:
+                        response = self.session.get(current, headers=scoped_headers,
+                                                    timeout=tuple(min(v, remaining) for v in self.timeout),
+                                                    allow_redirects=False, stream=True)
                     try:
                         status = response.status_code
                         headers = dict(response.headers)
