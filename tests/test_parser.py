@@ -47,7 +47,7 @@ def pdf_streams(streams, *, encrypted=False):
     return bytes(output)
 
 
-def template_pdf(counts, *, process_ids=None, dates=None, bad_footer=False, bad_header=False, closing=False, clock="14:35"):
+def template_pdf(counts, *, process_ids=None, dates=None, bad_footer=False, bad_header=False, closing=False, clock="14:35", signatures=None):
     """Independently draw known tables to exercise the actual PDF boundary."""
     streams = []
     columns = [35, 285, 373, 638, 668, 688, 770, 824]
@@ -86,11 +86,40 @@ def template_pdf(counts, *, process_ids=None, dates=None, bad_footer=False, bad_
                 text(35, 200, "P.D.(Orden de 29/09/2023, BORM nº 229)")
                 text(35, 230, "LA D.G. DE RECURSOS HUMANOS, PLANIFICACIÓN EDUCATIVA E INNOVACIÓN")
                 text(35, 260, "María del Mar Sánchez Rodríguez")
+        for index, value in enumerate((signatures or {}).get(page, [])):
+            text(35, bottom + 30 + index * 20, value)
         streams.append("\n".join(operations).encode("latin1"))
     return pdf_streams(streams)
 
 
 class ParserTests(unittest.TestCase):
+    def test_october_original_with_signature_below_last_table(self):
+        data = FIXTURE.with_name('carm-2026-10-07.pdf').read_bytes()
+        self.assertEqual(hashlib.sha256(data).hexdigest(),
+            'b668022511f140042b3422f1ed045a2d3be46a31d265fff63790b05e744d65c7')
+        doc = self.parse(data, source='https://www.carm.es/web/descarga?IDCONTENIDO=209571',
+                         retrieved='2026-10-12T20:00:00+00:00')
+        self.assertEqual((doc['process_id'], doc['published_at']), ('3137', '2026-10-07T12:49:00+00:00'))
+        self.assertEqual((doc['row_count'], doc['places'], doc['page_counts']), (24, 26, [21, 3]))
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            originals = [row for page in pdf.pages for table in page.extract_tables() for row in table[1:]]
+        self.assertEqual([row['raw_cells'] for row in doc['rows']], originals)
+
+    def test_inline_signature_is_exact_dated_and_only_on_final_page(self):
+        signature = ['Murcia, a 30 de septiembre de 2026',
+            'EL CONSEJERO DE EDUCACIÓN Y FORMACIÓN PROFESIONAL',
+            'P.D.(Orden de 29/09/2023, BORM nº 229)',
+            'LA D.G. DE RECURSOS HUMANOS, PLANIFICACIÓN EDUCATIVA E INNOVACIÓN',
+            'María del Mar Sánchez Rodríguez']
+        self.assertEqual(self.parse(template_pdf([1], signatures={1: signature}))['row_count'], 1)
+        for block in (signature[:-1], signature + ['Contenido sin interpretar'],
+                      signature[:-1] + ['Firmante diferente'],
+                      ['Murcia, a 29 de septiembre de 2026'] + signature[1:]):
+            with self.subTest(block=block), self.assertRaises(self.parser.ParseError):
+                self.parse(template_pdf([1], signatures={1: block}))
+        with self.assertRaises(self.parser.ParseError):
+            self.parse(template_pdf([1, 1], signatures={1: signature}))
+
     @classmethod
     def setUpClass(cls):
         cls.data = FIXTURE.read_bytes()

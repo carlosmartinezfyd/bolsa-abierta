@@ -19,6 +19,7 @@ La copia inicial del 30/09/2026 contiene **77 filas y 85 plazas**, proceso 3133.
 ## Fiabilidad y límites
 
 - Se comprueban origen HTTPS, destinos de red, redirecciones, tipo de contenido, firma PDF, tamaño y tiempo. No se sortean CAPTCHA ni verificaciones de acceso.
+- La captación programada usa [Chromium acotado para CARM](docs/carm-browser-access.md), con pantalla virtual en GitHub Actions. La descarga sigue pasando por las validaciones de originales y extracción.
 - El extractor valida cabeceras, fechas, proceso, páginas, columnas, códigos y cantidades. Conserva celdas originales, coordenadas y filas duplicadas. Las especialidades nuevas con código válido conservan su nombre original.
 - Los bytes se conservan por SHA-256 en privado antes de extraer, y el lector procesa el mismo contenido cuyo hash se verificó. Solo los PDF de vacantes aprobados pasan al archivo público. Una extracción rechazada conserva evidencia privada para revisión. HTML, errores y extracciones vacías nunca sustituyen datos aprobados.
 - La fecha de emisión, descarga e intento de comprobación son distintas. «Comprobación completada» se refiere a las fuentes cubiertas en esa ejecución; no acredita que cada plaza siga disponible en tiempo real.

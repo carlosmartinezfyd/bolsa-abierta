@@ -44,7 +44,7 @@ jobs:
   refresh:
     if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.WORKER_CRON_ENABLED != 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 35
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -62,7 +62,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: python -m pip install -e '.[test]'
+      - run: python -m pip install -e '.[test,browser]'
+      - run: python -m playwright install --with-deps chromium
       - name: Test before collection
         run: |
           python -m unittest discover -s tests -p 'test_*.py'
@@ -85,7 +86,8 @@ jobs:
         continue-on-error: true
         env:
           SOURCE_RETRY_STATE: saved-state/source-retries.json
-        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
       - name: Verify published personal-position reference
         id: positions
         continue-on-error: true
@@ -94,16 +96,18 @@ jobs:
           POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
           PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
           SOURCE_RETRY_STATE: saved-state/source-retries.json
+          OFFICIAL_SOURCE_TRANSPORT: chromium
         # Command output is suppressed by the wrapper. Original PDFs and rows are
         # ephemeral/private and must never enter data-state or public artifacts.
-        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions --allow-partial -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
+        run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions --allow-partial -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
       - name: Collect and validate official vacancies
         id: collect
         continue-on-error: true
         env:
           SOURCE_RETRY_STATE: saved-state/source-retries.json
+          OFFICIAL_SOURCE_TRANSPORT: chromium
         run: |
-          python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --allow-partial --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
+          xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --allow-partial --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
           python - <<'PY'
           import json,os
           run_id=os.environ['GITHUB_RUN_ID']+':'+os.environ.get('GITHUB_RUN_ATTEMPT','1')

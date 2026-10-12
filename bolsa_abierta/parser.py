@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 import pdfplumber
 
 
-PARSER_VERSION = "carm-sin-cubrir/1.0.0"
+PARSER_VERSION = "carm-sin-cubrir/1.0.1"
 MAX_BYTES = 10 * 1024 * 1024
 MAX_PAGES = 50
 TITLE = "Listado de Vacantes Sin Cubrir de Secundaria"
@@ -141,8 +141,7 @@ def validate_table(header, cells, *, page, document_id, cell_bboxes):
     return result
 
 
-def _signature_page(text, metadata):
-    lines = text.splitlines()[2:-1]
+def _signature_block(lines, metadata):
     if len(lines) != 5:
         raise ParseError("Empty page or unknown closing page")
     match = re.fullmatch(r"Murcia, a (\d{1,2}) de ([a-záéíóú]+) de (\d{4})", lines[0])
@@ -178,7 +177,7 @@ def _parse_pages(pdf, document_id):
         if not tables:
             if number != len(pages) or not rows:
                 raise ParseError("Missing vacancy table on data page; OCR unavailable")
-            _signature_page(text, metadata)
+            _signature_block(text.splitlines()[2:-1], metadata)
             counts.append(0)
             continue
         if len(tables) != 1:
@@ -201,7 +200,9 @@ def _parse_pages(pdf, document_id):
             raise ParseError("Vacancy text and extracted table disagree")
         after = page.crop((0, table.bbox[3] + 0.5, page.width, page.height)).extract_text() or ""
         if after != f"Página {number} de {len(pages)}":
-            raise ParseError("Unparsed content below table")
+            if number != len(pages):
+                raise ParseError("Unparsed content below table")
+            _signature_block(after.splitlines()[:-1], metadata)
         rows.extend(page_rows)
         counts.append(len(page_rows))
     if not rows:
