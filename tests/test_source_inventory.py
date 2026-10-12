@@ -42,6 +42,29 @@ class Client:
 
 
 class InventoryTests(unittest.TestCase):
+    def test_expected_source_and_review_deferrals_are_partial_but_invalid_data_fails(self):
+        for code, expected in [('access_challenge', 3), ('detail_limit', 3),
+                ('detail_depth_limit', 3), ('traversal_limit', 3),
+                ('classification_conflict', 3), ('invalid_pdf', 1),
+                ('invalid_feed', 1), ('forbidden_url', 1)]:
+            with self.subTest(code=code):
+                self.assertEqual(inventory.inventory_exit_code({'review_complete': False,
+                    'documents': [{'error_code': code}]}), expected)
+        self.assertEqual(inventory.inventory_exit_code({'review_complete': True}), 0)
+
+    def test_deferred_download_does_not_consume_request_budget(self):
+        values = self.normal()
+        client = Client(values)
+        def check_retry(url, kind):
+            if url == DOC:
+                raise SourceError('Waiting for retry', 'access_challenge')
+        client.check_retry = check_retry
+        result = inventory.collect_inventory(self.registry(), {}, client=client, now=NOW)
+        # Feed pages, map and one detail; no HTTP request for the deferred PDF.
+        self.assertEqual(result['requests_used'], 4)
+        self.assertFalse(result['downloads_complete'])
+        self.assertFalse(result['review_complete'])
+
     def registry(self, **limits):
         return {'course': '2026-2027', 'since': '2026-06-01', 'limits': {'max_undated_details': 0, **limits},
                 'sources': [{'id': 'rrhh-feed', 'kind': 'rss', 'url': FEED},
@@ -490,7 +513,7 @@ class InventoryTests(unittest.TestCase):
                 try:
                     inventory.main()
                 except SystemExit as error:
-                    self.assertEqual(error.code, 1)
+                    self.assertEqual(error.code, 0)
             state = json.loads((directory/'state.json').read_text(encoding='utf8'))
             self.assertEqual(state['documents'][0]['status'], 'incorporated')
             self.assertTrue(state['review_complete'])

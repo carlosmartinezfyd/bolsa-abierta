@@ -83,7 +83,9 @@ jobs:
       - name: Discover course sources and retain pending documents
         id: inventory
         continue-on-error: true
-        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
+        env:
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
       - name: Verify published personal-position reference
         id: positions
         continue-on-error: true
@@ -91,14 +93,17 @@ jobs:
           PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
           POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
           PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
         # Command output is suppressed by the wrapper. Original PDFs and rows are
         # ephemeral/private and must never enter data-state or public artifacts.
-        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
+        run: python -m bolsa_abierta.operations --state saved-state/operations.json run --phase positions --allow-partial -- python -m bolsa_abierta.position_sync --state saved-state/source-documents.json --summary saved-state/position-status.json --inventory-state saved-state/source-inventory.json --inventory-dir .runtime/source-inventory --archive-dir saved-state/private-originals
       - name: Collect and validate official vacancies
         id: collect
         continue-on-error: true
+        env:
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
         run: |
-          python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
+          python -m bolsa_abierta.operations --state saved-state/operations.json run --phase vacancies --allow-partial --freshness-db saved-state/runtime/state.sqlite3 -- python -m bolsa_abierta --data-dir saved-state/runtime refresh --request-id "$REQUEST_ID"
           python - <<'PY'
           import json,os
           run_id=os.environ['GITHUB_RUN_ID']+':'+os.environ.get('GITHUB_RUN_ATTEMPT','1')
@@ -121,16 +126,12 @@ jobs:
         env:
           PUBLIC_API_BASE: ${{ vars.PUBLIC_API_BASE }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
-          INVENTORY_OUTCOME: ${{ steps.inventory.outcome }}
-          POSITION_OUTCOME: ${{ steps.positions.outcome }}
-          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
-          COLLECT_STATUS: ${{ steps.collect.outputs.phase_status }}
         run: |
-          status=success
-          if [ "$BUILD_OUTCOME" != success ]; then status=failed
-          elif [ "$INVENTORY_OUTCOME" != success ] || [ "$POSITION_OUTCOME" != success ] || [ "$COLLECT_OUTCOME" != success ] || [ "$COLLECT_STATUS" != success ]; then status=partial
+          if [ "$BUILD_OUTCOME" = success ]; then
+            python -m bolsa_abierta.operations --state saved-state/operations.json finish
+          else
+            python -m bolsa_abierta.operations --state saved-state/operations.json finish --status failed
           fi
-          python -m bolsa_abierta.operations --state saved-state/operations.json finish --status "$status"
           if [ "$BUILD_OUTCOME" = success ]; then
             python -m bolsa_abierta --data-dir saved-state/runtime export --output site --inventory-state saved-state/source-inventory.json --position-status saved-state/position-status.json --operations-state saved-state/operations.json
             python -c "import json,os,pathlib,urllib.parse; base=os.environ.get('PUBLIC_API_BASE',''); assert not base or urllib.parse.urlsplit(base).scheme=='https'; pathlib.Path('site/web/config.js').write_text('window.BA_CONFIG = '+json.dumps({'apiBase':base})+';\n',encoding='utf-8')"
@@ -158,7 +159,7 @@ jobs:
           if [ -d saved-state/runtime/artifacts ] || [ -n "$(git -C saved-state ls-files -- runtime/artifacts)" ]; then
             git -C saved-state add -u -- runtime/artifacts
           fi
-          for path in source-inventory.json source-documents.json position-status.json operations.json; do
+          for path in source-inventory.json source-documents.json position-status.json operations.json source-retries.json; do
             if [ -f "saved-state/$path" ]; then git -C saved-state add "$path"; fi
           done
           python - <<'PY'
@@ -190,6 +191,6 @@ jobs:
       - name: Record aggregate operational evidence
         if: always() && steps.restore.outcome == 'success'
         run: python -m bolsa_abierta.operations --state saved-state/operations.json summary >> "$GITHUB_STEP_SUMMARY"
-      - name: Fail incomplete check after persisting and publishing diagnostics
-        if: always() && (steps.persist.outputs.archive_status == 'failed' || steps.collect.outcome == 'failure' || steps.collect.outputs.phase_status == 'partial' || steps.collect.outputs.phase_status == 'failed' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure' || steps.build.outcome == 'failure')
+      - name: Fail operational errors after persisting and publishing diagnostics
+        if: always() && (steps.persist.outputs.archive_status == 'failed' || steps.collect.outcome == 'failure' || steps.collect.outputs.phase_status == 'failed' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure' || steps.build.outcome == 'failure')
         run: exit 1

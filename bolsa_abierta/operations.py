@@ -119,11 +119,15 @@ def start_run(state, *, run_id, code_sha=None, trigger='local', now=None,
 
 
 def finish_run(state, run_id, *, status, now=None):
-    if status not in ('success', 'failed', 'partial', 'skipped'):
+    if status not in (None, 'success', 'failed', 'partial', 'skipped'):
         raise ValueError('invalid_status')
     state = _clean(state)
     for run in state['runs']:
         if run['run_id'] == run_id:
+            if status is None:
+                phases = [run['phases'].get(name, {}).get('status') for name in PHASES]
+                status = ('failed' if any(s not in ('success', 'partial', 'pending_budget') for s in phases)
+                          else 'success' if all(s == 'success' for s in phases) else 'partial')
             run['ended_at'] = timestamp(now)
             run['elapsed_seconds'] = _seconds(run['started_at'], run['ended_at'])
             run['status'] = status
@@ -310,7 +314,10 @@ def _freshness_status(path):
     """Read only the aggregate check result; no nominal JSON enters metrics."""
     try:
         with sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=5) as db:
-            row = db.execute("SELECT json_extract(payload, '$.freshness.status') FROM state WHERE id=1").fetchone()
+            row = db.execute("SELECT json_extract(payload, '$.freshness.status'), "
+                             "json_extract(payload, '$.freshness.operational_status') FROM state WHERE id=1").fetchone()
+        if row and row[1] == 'failed':
+            return 'failed'
         status = row[0] if row else None
         return {'completed': 'success', 'partial': 'partial', 'failed': 'failed'}.get(status, 'failed')
     except (sqlite3.Error, TypeError, ValueError):
@@ -350,9 +357,11 @@ def main(argv=None):
     run_parser = subs.add_parser('run')
     run_parser.add_argument('--phase', choices=PHASES, required=True)
     run_parser.add_argument('--freshness-db', type=Path, help='Read-only vacancy check status after the process exits')
+    run_parser.add_argument('--allow-partial', action='store_true',
+        help='Accept documented partial/deferred exits while retaining their actual code and source status')
     run_parser.add_argument('command', nargs=argparse.REMAINDER)
     finish_parser = subs.add_parser('finish')
-    finish_parser.add_argument('--status', choices=('success', 'failed', 'partial', 'skipped'), required=True)
+    finish_parser.add_argument('--status', choices=('success', 'failed', 'partial', 'skipped'))
     subs.add_parser('summary')
     args = parser.parse_args(argv)
     run_id = args.run_id or (os.environ.get('GITHUB_RUN_ID', '') + ':' + os.environ.get('GITHUB_RUN_ATTEMPT', '1'))
@@ -386,12 +395,15 @@ def main(argv=None):
             code = result.returncode
         except OSError:
             code = 127
-        status = 'success' if code == 0 else ('pending_budget' if args.phase == 'positions' and code == 2 else ('partial' if args.phase == 'positions' and code == 3 else 'failed'))
+        status = 'success' if code == 0 else ('pending_budget' if args.phase == 'positions' and code == 2 else ('partial' if args.phase in ('inventory', 'positions') and code == 3 else 'failed'))
         if code == 0 and args.phase == 'vacancies' and args.freshness_db:
             status = _freshness_status(args.freshness_db)
         phase.update(ended_at=timestamp(), elapsed_seconds=round(time.monotonic() - started, 3),
                      status=status, exit_code=code)
         _write(args.state, state)
+        print(json.dumps({'phase': args.phase, 'status': status, 'exit_code': code}))
+        if args.allow_partial:
+            return 0 if status in ('success', 'partial', 'pending_budget') else (code or 1)
         return code if code >= 0 else 128 - code
     except (ValueError, OSError):
         print('operations_state_error', file=__import__('sys').stderr)

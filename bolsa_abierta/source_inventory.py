@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 from bs4 import BeautifulSoup
 
-from .sources import OfficialClient, SourceError, _allowed_url, _challenge, _fold, canonical_url
+from .sources import OfficialClient, SourceError, TRANSIENT_SOURCE_ERRORS, _allowed_url, _challenge, _fold, canonical_url
 
 
 STATES = frozenset({'discovered', 'unavailable', 'changed', 'pending_review',
@@ -325,6 +325,8 @@ def collect_inventory(registry, manifest, *, previous=None, client=None, now=Non
 
     def fetch(url, kind='html', *, reserve_requests=0):
         nonlocal requests_used
+        if hasattr(client, 'check_retry'):
+            client.check_retry(url, kind)
         if requests_used >= limits['max_requests']-reserve_requests or time.monotonic() >= deadline:
             raise SourceError('Inventory traversal budget exhausted', 'traversal_limit')
         requests_used += 1
@@ -716,6 +718,18 @@ def collect_inventory(registry, manifest, *, previous=None, client=None, now=Non
     return report
 
 
+def inventory_exit_code(report):
+    """Review queues and bounded/external deferrals are data states, not crashes."""
+    expected = TRANSIENT_SOURCE_ERRORS | {'traversal_limit', 'classification_conflict',
+        'unknown_publication_date', 'unsupported_document_origin', 'source_removed',
+        'detail_limit', 'detail_depth_limit'}
+    for group in ('sources', 'announcements', 'documents'):
+        if any(item.get('error_code') and item['error_code'] not in expected
+               for item in report.get(group, [])):
+            return 1
+    return 0 if report.get('review_complete') else 3
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--registry', default='data/source-registry.json')
@@ -753,8 +767,7 @@ def main():
     # Never log announcement URLs, titles, names, or the response body.
     print(json.dumps({key: report[key] for key in ('index_complete', 'downloads_complete', 'review_complete',
            'requests_used', 'unresolved_catalogue_dates', 'pending_announcements', 'status_counts')}))
-    if not report['review_complete']:
-        raise SystemExit(1)
+    raise SystemExit(inventory_exit_code(report))
 
 
 if __name__ == '__main__':

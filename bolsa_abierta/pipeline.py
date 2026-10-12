@@ -6,6 +6,7 @@ import sys
 import time
 
 from .store import now
+from .sources import SourceError, TRANSIENT_SOURCE_ERRORS
 
 
 def isolated_parse(data, source_url, retrieved_at):
@@ -41,6 +42,8 @@ def run_refresh(store, client=None, discover=None, parser=None):
         store.publish(state)
         return {'status': 'failed', 'message': 'No se pudo consultar el catálogo oficial.', 'errors': [str(exc)[:600]]}
     checks.extend(discovered['checks'])
+    operational_failure = any(not c.get('success') and c.get('error_code') not in
+        TRANSIENT_SOURCE_ERRORS | {'discovery_limit'} for c in checks)
     notices = discovered['notices']
     documents = {doc['id']: doc for doc in state['documents']}
     seen = {}
@@ -97,6 +100,8 @@ def run_refresh(store, client=None, discover=None, parser=None):
                 seen[url] = digest, None, None
                 checks.append({'id': digest, 'url': url, 'checked_at': retrieved, 'status': 'read', 'success': True})
             except Exception as exc:
+                if not isinstance(exc, SourceError) or exc.code not in TRANSIENT_SOURCE_ERRORS:
+                    operational_failure = True
                 error = str(exc)[:600]
                 seen[url] = None, error, archived
                 notice_errors.append(error)
@@ -130,7 +135,9 @@ def run_refresh(store, client=None, discover=None, parser=None):
         state['catalog']['latest_notice'] = dict(latest, pdf_url=next(iter(latest.get('pdf_urls', [])), None))
     complete = discovered['complete'] and not errors and all(c.get('success') for c in checks)
     status = 'completed' if complete else 'partial'
-    state['freshness'].update(status=status, checked_scope='recent_rrhh_vacancy_notices')
+    operational_status = 'failed' if operational_failure else 'success'
+    state['freshness'].update(status=status, checked_scope='recent_rrhh_vacancy_notices',
+                              operational_status=operational_status)
     state['freshness'].pop('error', None)
     if complete:
         state['freshness']['last_success_at'] = now()
@@ -140,5 +147,5 @@ def run_refresh(store, client=None, discover=None, parser=None):
                                   'details': {'document_ids': added}})
     state['events'] = state['events'][:200]
     store.publish(state)
-    return {'status': status, 'added': added, 'errors': errors,
+    return {'status': status, 'operational_status': operational_status, 'added': added, 'errors': errors,
             'message': 'Comprobación completada para los avisos cubiertos.' if complete else 'Comprobación parcial. Se conservan los datos válidos.'}
