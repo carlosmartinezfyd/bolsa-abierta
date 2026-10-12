@@ -15,7 +15,7 @@ import requests
 
 from .positions import parse_pdf
 from .position_amendments import read_amendment, apply_insertions
-from .sources import OfficialClient, SourceError
+from .sources import OfficialClient, SourceError, TRANSIENT_SOURCE_ERRORS
 from .store import atomic_write
 
 
@@ -265,6 +265,10 @@ def collect_evidence(documents, client, private, *, archive_dir=None, key=None, 
             diagnostics['cached_documents'] += 1
     unresolved = [identity for identity in identities if evidence[identity]['source_status'] == 'unavailable']
     if unresolved:
+        for identity in unresolved:
+            error = failures[identity]
+            if not isinstance(error, SourceError) or error.code not in TRANSIENT_SOURCE_ERRORS:
+                raise error
         raise failures[unresolved[0]]
     checks = [evidence[identity]['origin_checked_at'] for identity in identities]
     checked = min(checks, key=_time_key) if checks and all(checks) else None
@@ -557,6 +561,18 @@ def main(argv=None):
         return 2
     except Exception as error:
         code = getattr(error, 'code', None)
+        if phase == 'source_verification' and isinstance(error, SourceError) and code in TRANSIENT_SOURCE_ERRORS:
+            # A retained local pointer alone is not proof the service still works.
+            # Confirm the previous generation remains available, without renewing
+            # its official check date or publishing unverified source bytes.
+            try:
+                active = send({'action': 'metadata', 'id': prior['active_version']}) if send else {}
+                if active.get('active') is True and active.get('ready') is True:
+                    status.update(status='unavailable', error_code=code)
+                    print('Official source unavailable; previously verified generation is still served.')
+                    return 3
+            except Exception:
+                pass
         status.update(status='failed', error_code=code if code in (
             'access_challenge', 'invalid_pdf', 'traversal_limit', 'timeout', 'network_error')
             else {'configuration': 'not_configured', 'source_verification': 'source_verification_failed',

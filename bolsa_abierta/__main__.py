@@ -49,7 +49,7 @@ def main():
             store.publish(state)
         print(json.dumps(job, ensure_ascii=False))
         # Partial collection is published honestly and must not discard the previous snapshot.
-        return 0 if job['status'] in ('completed', 'partial') else 1
+        return 0 if job['status'] in ('completed', 'partial') and job.get('operational_status') != 'failed' else 1
     if args.command == 'export':
         summaries = {}
         for key, path in (('inventory', args.inventory_state), ('positions', args.position_status),

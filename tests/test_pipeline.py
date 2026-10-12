@@ -38,6 +38,20 @@ def parse(body, source_url, retrieved_at):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_partial_source_outage_is_distinct_from_parser_or_storage_failure(self):
+        from unittest.mock import Mock
+        from bolsa_abierta.sources import SourceError
+        blocked = Mock()
+        blocked.fetch.side_effect = SourceError('Verification required', 'access_challenge')
+        self.assertEqual(self.run_it(client=blocked)['operational_status'], 'success')
+        def broken_parser(*args):
+            raise ValueError('Invalid PDF layout')
+        result = self.run_it(parser=broken_parser)
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(result['operational_status'], 'failed')
+        self.assertEqual(self.store.state()['freshness']['operational_status'], 'failed')
+        self.assertIsNone(self.store.state()['freshness']['last_success_at'])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

@@ -11,6 +11,30 @@ from pathlib import Path
 
 
 class OperationsTests(unittest.TestCase):
+    def test_automation_accepts_expected_partial_but_keeps_actual_failure_and_evidence(self):
+        for name, code, expected, status in (
+            ('inventory', 3, 0, 'partial'), ('positions', 2, 0, 'pending_budget'),
+            ('positions', 3, 0, 'partial'), ('inventory', 1, 1, 'failed'),
+            ('build', 3, 3, 'failed'), ('positions', 127, 127, 'failed')):
+            with self.subTest(name=name, code=code), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'operations.json'
+                result = subprocess.run([sys.executable, '-m', 'bolsa_abierta.operations',
+                    '--state', str(path), 'run', '--phase', name, '--allow-partial', '--',
+                    sys.executable, '-c', f'raise SystemExit({code})'], capture_output=True, text=True)
+                self.assertEqual(result.returncode, expected)
+                phase = json.loads(path.read_text())['runs'][0]['phases'][name]
+                self.assertEqual(phase['status'], status)
+                self.assertEqual(phase['exit_code'], code)
+
+    def test_finish_derives_partial_and_missing_or_failed_phases_fail(self):
+        operations = self.operations()
+        for phase_status, expected in (('partial', 'partial'), ('pending_budget', 'partial'),
+                                       ('failed', 'failed'), ('running', 'failed')):
+            state = self.correlated_run(operations)
+            state['runs'][0]['phases']['inventory']['status'] = phase_status
+            result = operations.finish_run(state, '1', status=None)
+            self.assertEqual(result['runs'][0]['status'], expected)
+
     def operations(self):
         self.assertIsNotNone(importlib.util.find_spec('bolsa_abierta.operations'),
                              'metadata-only operations implementation is required')

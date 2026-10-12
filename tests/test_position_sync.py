@@ -8,6 +8,39 @@ from bolsa_abierta import position_sync
 
 
 class SyncTests(unittest.TestCase):
+    def test_later_integrity_failure_is_not_hidden_by_first_blocked_document(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        client = Mock()
+        client.fetch.side_effect = [position_sync.SourceError('blocked', 'access_challenge'),
+                                   SimpleNamespace(body=b'%PDF-changed')]
+        documents = [{'content_id': str(n), 'sha256': 'a' * 64,
+                      'source_url': f'https://www.carm.es/web/descarga?IDCONTENIDO={n}'}
+                     for n in (1, 2)]
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                position_sync.collect_evidence(documents, client, Path(directory), key='')
+
+    def test_blocked_origin_is_partial_only_when_previous_generation_is_still_served(self):
+        for error_code, active, expected in [('access_challenge', True, 3),
+                ('access_challenge', False, 1), ('invalid_pdf', True, 1)]:
+            with self.subTest(error_code=error_code, active=active), tempfile.TemporaryDirectory() as directory:
+                state, summary = Path(directory) / 'state.json', Path(directory) / 'summary.json'
+                prior = {'active_version': 'a' * 64, 'checked_at': '2026-10-02T12:00:00Z'}
+                state.write_text(json.dumps(prior))
+                def send(body):
+                    self.assertEqual(body, {'action': 'metadata', 'id': prior['active_version']})
+                    return {'active': active, 'ready': active}
+                with patch.object(position_sync, 'publication_client', return_value=send), \
+                        patch.object(position_sync, 'collect_evidence',
+                            side_effect=position_sync.SourceError('blocked', error_code)):
+                    result = position_sync.main(['--state', str(state), '--summary', str(summary)])
+                self.assertEqual(result, expected)
+                self.assertEqual(json.loads(state.read_text()), prior)
+                status = json.loads(summary.read_text())
+                self.assertEqual(status['checked_at'], prior['checked_at'])
+                self.assertEqual(status['status'], 'unavailable' if expected == 3 else 'failed')
+
     def test_baseline_course_parser_and_reviewed_scope_change_generation(self):
         source = {'sha256': 'a' * 64, 'row_count': 1, 'course': '2026-2027',
             'parser_revision': 'secondary-lists-v1', 'scope': 'published_list'}

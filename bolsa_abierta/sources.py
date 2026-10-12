@@ -6,6 +6,8 @@ from email.utils import parsedate_to_datetime
 import hashlib
 import ipaddress
 import json
+import os
+from pathlib import Path
 import re
 import socket
 import time
@@ -27,6 +29,8 @@ KNOWN_ANNOUNCEMENTS = ({
 },)
 MAX_ANNOUNCEMENTS = 20
 DISCOVERY_SECONDS = 120
+TRANSIENT_SOURCE_ERRORS = frozenset(('access_challenge', 'dns_error', 'network_error',
+                                    'temporary_http', 'timeout', 'time_limit'))
 
 
 class SourceError(Exception):
@@ -94,7 +98,7 @@ class OfficialClient:
     """
     def __init__(self, session=None, *, resolver=None, sleep=None, max_html_bytes=2_000_000,
                  max_pdf_bytes=12_000_000, timeout=(4, 8), max_seconds=30,
-                 max_redirects=4, retries=1):
+                 max_redirects=4, retries=1, retry_state=None, clock=None):
         self.session = session if session is not None else requests.Session()
         self.session.trust_env = False
         self.resolver = resolver or socket.getaddrinfo
@@ -105,6 +109,62 @@ class OfficialClient:
         self.max_seconds = max_seconds
         self.max_redirects = max_redirects
         self.retries = min(max(retries, 0), 2)
+        self.retry_state = retry_state or os.environ.get('SOURCE_RETRY_STATE')
+        self.clock = clock or time.time
+
+    def _retry_entries(self):
+        path = Path(self.retry_state)
+        entries = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+        if not isinstance(entries, dict) or len(entries) > 4096:
+            raise ValueError('invalid_source_retry_state')
+        for identity, entry in entries.items():
+            if (not re.fullmatch('[a-f0-9]{64}', identity) or not isinstance(entry, dict)
+                    or entry.get('error_code') not in TRANSIENT_SOURCE_ERRORS
+                    or type(entry.get('failures')) is not int or not 1 <= entry['failures'] <= 5
+                    or type(entry.get('next_attempt_at')) not in (int, float)
+                    or not 0 <= entry['next_attempt_at'] <= 253402300799):
+                raise ValueError('invalid_source_retry_state')
+        return entries
+
+    def check_retry(self, url, kind='html'):
+        """Per-resource cooldown; never infer that another URL is inaccessible."""
+        if not self.retry_state:
+            return
+        identity = hashlib.sha256((kind + ':' + canonical_url(url)).encode()).hexdigest()
+        entry = self._retry_entries().get(identity)
+        if entry and entry['next_attempt_at'] > self.clock():
+            error = SourceError('Official resource is awaiting its next retry', entry['error_code'])
+            error.retry_deferred = True
+            raise error
+
+    def fetch(self, url, *, kind='html', etag=None):
+        self.check_retry(url, kind)
+        try:
+            result = self._fetch(url, kind=kind, etag=etag)
+        except SourceError as error:
+            if error.code in TRANSIENT_SOURCE_ERRORS:
+                self._save_retry(url, kind, error.code, getattr(error, 'retry_after', 0))
+            raise
+        self._save_retry(url, kind, None)
+        return result
+
+    def _save_retry(self, url, kind, error_code, retry_after=0):
+        if not self.retry_state:
+            return
+        from .store import atomic_write
+        entries = self._retry_entries()
+        identity = hashlib.sha256((kind + ':' + canonical_url(url)).encode()).hexdigest()
+        failures = min(5, entries.get(identity, {}).get('failures', 0) + 1)
+        # Prune old failures, retaining only opaque identities and fixed codes.
+        entries = {k: v for k, v in entries.items() if v['next_attempt_at'] > self.clock() - 7 * 86400}
+        if error_code:
+            entries[identity] = {'error_code': error_code, 'failures': failures,
+                'next_attempt_at': self.clock() + max(retry_after, min(21600, 3600 * 2 ** (failures - 1)))}
+        else:
+            entries.pop(identity, None)
+        if len(entries) > 4096:
+            raise ValueError('source_retry_capacity_exceeded')
+        atomic_write(Path(self.retry_state), (json.dumps(entries, sort_keys=True) + '\n').encode())
 
     def _validate_dns(self, url):
         value = _allowed_url(url)
@@ -123,7 +183,7 @@ class OfficialClient:
             if not address.is_global:
                 raise SourceError('Official origin resolved to a non-public address', 'private_address')
 
-    def fetch(self, url, *, kind='html', etag=None):
+    def _fetch(self, url, *, kind='html', etag=None):
         if kind not in ('html', 'pdf', 'rss'):
             raise ValueError('Unsupported fetch kind')
         _allowed_url(url)
@@ -179,7 +239,9 @@ class OfficialClient:
                                         retry_delay = max(1, (parsedate_to_datetime(retry_after) - datetime.now(timezone.utc)).total_seconds())
                                     except (ValueError, TypeError):
                                         retry_delay = self.max_seconds
-                            raise SourceError(f'Official origin returned HTTP {status}', 'temporary_http')
+                            error = SourceError(f'Official origin returned HTTP {status}', 'temporary_http')
+                            error.retry_after = retry_delay
+                            raise error
                         if status != 200:
                             raise SourceError(f'Official origin returned HTTP {status}', 'http_error')
                         length = response.headers.get('Content-Length')

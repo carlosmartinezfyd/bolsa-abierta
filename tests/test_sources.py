@@ -26,6 +26,58 @@ def public_dns(host, port, **kwargs):
 
 
 class ClientTests(unittest.TestCase):
+    def test_persistent_backoff_respects_server_retry_after_longer_than_default(self):
+        import tempfile, json
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'retries.json'
+            client, session = self.client([response(status=429, headers={'Retry-After': '86400'})],
+                retry_state=path, clock=lambda: 100000)
+            with self.assertRaises(SourceError):
+                client.fetch(INDEX_URL)
+            self.assertEqual(next(iter(json.loads(path.read_text()).values()))['next_attempt_at'], 186400)
+
+    def test_persistent_backoff_releases_other_urls_and_retries_after_deadline(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'retries.json'
+            clock = Mock(return_value=100000)
+            client, session = self.client([response(status=302, headers={
+                'Location': 'https://validate.perfdrive.com/?challenge=opaque'})],
+                retry_state=path, clock=clock)
+            with self.assertRaises(SourceError):
+                client.fetch(PDF_URL, kind='pdf')
+            self.assertNotIn(PDF_URL, path.read_text())
+            resumed, resumed_session = self.client([response(), response(b'%PDF-ok',
+                headers={'Content-Type': 'application/pdf'})], retry_state=path, clock=clock)
+            with self.assertRaises(SourceError) as caught:
+                resumed.fetch(PDF_URL, kind='pdf')
+            self.assertEqual(caught.exception.code, 'access_challenge')
+            self.assertEqual(resumed_session.get.call_count, 0)
+            self.assertEqual(resumed.fetch(INDEX_URL).status, 200)
+            clock.return_value += 3600
+            self.assertEqual(resumed.fetch(PDF_URL, kind='pdf').body, b'%PDF-ok')
+            self.assertEqual(__import__('json').loads(path.read_text()), {})
+
+    def test_repeated_blocks_back_off_and_invalid_state_fails_closed(self):
+        import tempfile, json
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'retries.json'
+            clock = Mock(return_value=100000)
+            for delay in (3600, 7200, 14400, 21600, 21600):
+                client, _ = self.client([response(b'Radware Captcha Page')],
+                    retry_state=path, clock=clock)
+                with self.assertRaises(SourceError):
+                    client.fetch(INDEX_URL)
+                entry = next(iter(json.loads(path.read_text()).values()))
+                self.assertEqual(entry['next_attempt_at'], clock.return_value + delay)
+                clock.return_value += delay
+            path.write_text('{broken')
+            with self.assertRaises(ValueError):
+                client.fetch(INDEX_URL)
+
     def client(self, responses, **kwargs):
         session = Mock()
         session.get.side_effect = responses
