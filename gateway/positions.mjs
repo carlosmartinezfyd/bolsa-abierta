@@ -171,8 +171,8 @@ export async function positionRoute(request,env,reply){
       if(body.action==='begin'){
         const v=validateVersion(body.version);
         await db.prepare('INSERT OR IGNORE INTO position_versions(id,metadata) VALUES(?,?)').bind(v.id,JSON.stringify(v)).run();
-        await db.prepare('INSERT OR IGNORE INTO position_search_status(version_id,ready) VALUES(?,1)').bind(v.id).run();
         const saved=await db.prepare('SELECT metadata,ready FROM position_versions WHERE id=?').bind(v.id).first();
+        await db.prepare('INSERT OR IGNORE INTO position_search_status(version_id,ready) VALUES(?,?)').bind(v.id,compact&&saved.ready?0:1).run();
         const stored=JSON.parse(saved.metadata);
         if(JSON.stringify({...stored,checked_at:null})!==JSON.stringify({...v,checked_at:null}))return reply({error:'Versión incompatible.'},409);
         if(compact&&!saved.ready){

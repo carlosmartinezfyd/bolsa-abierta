@@ -79,16 +79,35 @@ test('validation does not activate, paging and empty/numeric searches remain bou
 
 test('legacy unindexed generation stays searchable and can be restored after block activation',async()=>{
  const f=setup();try{
-  const old={...version,id:'f'.repeat(64)};
+  const old={...version,id:'f'.repeat(64),sha256:'f'.repeat(64)};
   f.db.prepare('INSERT INTO position_versions(id,metadata,ready) VALUES(?,?,1)').run(old.id,JSON.stringify(old));
   f.db.prepare('INSERT INTO position_search_status(version_id,ready) VALUES(?,0)').run(old.id);
   for(const r of [row(1),row(2)])f.db.prepare('INSERT INTO position_rows(version_id,id,specialty,list_number,search_name,rank,payload) VALUES(?,?,?,?,?,?,?)').run(old.id,r.id,r.specialty,r.list_number,r.name,r.rank,JSON.stringify(r));
   f.db.prepare('INSERT INTO position_active(singleton,version_id) VALUES(1,?)').run(old.id);
+  assert.equal((await f.call('/api/positions/search',{query:'MARTINEZ'})).status,200);
+  f.db.prepare('DELETE FROM position_search_status WHERE version_id=?').run(old.id);
+  assert.equal((await f.ingest({action:'begin',version:old})).status,200);
   assert.equal((await f.call('/api/positions/search',{query:'MARTINEZ'})).status,200);
   await f.ingest({action:'begin',version});
   await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2)]});
   assert.equal((await f.ingest({action:'activate',id:version.id})).status,200);
   assert.equal((await f.ingest({action:'rollback',id:old.id})).status,200);
   assert.equal((await (await f.call('/api/positions')).json()).version.id,old.id);
+ }finally{f.db.close();}
+});
+
+test('a late bucket invalidates the validation snapshot and never activates',async()=>{
+ const f=setup();try{
+  await f.ingest({action:'begin',version});
+  await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2)]});
+  const batch=f.env.DB.batch;
+  f.env.DB.batch=async ss=>{
+   f.env.DB.batch=batch;
+   const late={...row(1),id:'ff'+'1'.repeat(30),search_name:'MARTINEZ'};
+   f.db.prepare('INSERT INTO position_blocks(version_id,bucket,payload) VALUES(?,?,?)').run(version.id,'ff',JSON.stringify([late]));
+   return batch(ss);
+  };
+  assert.equal((await f.ingest({action:'activate',id:version.id})).status,409);
+  assert.equal((await f.call('/api/positions')).status,503);
  }finally{f.db.close();}
 });
