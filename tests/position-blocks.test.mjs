@@ -8,7 +8,7 @@ const version={id:'a'.repeat(64),sha256:'a'.repeat(64),published_at:'2026-07-22'
 const row=(n,name='MARTINEZ MARTINEZ, CARLOS')=>({id:String(n).padStart(32,'0'),specialty:'0590001',block:'68',block_name:'Bloque 1',list_number:`250000${n}0`,name,rank:n,page:2,dni:'EXCLUDED'});
 function setup(){
  const db=new DatabaseSync(':memory:');
- for(const file of ['schema.sql','positions.sql','migrations/0002-position-blocks.sql']){
+ for(const file of ['schema.sql','positions.sql','migrations/0002-position-blocks.sql','migrations/0003-search-blocks.sql']){
   const path=new URL('../gateway/'+file,import.meta.url);if(existsSync(path))db.exec(readFileSync(path,'utf8'));
  }
  let queue=Promise.resolve();
@@ -32,6 +32,27 @@ test('compact publication is negotiated and stores only whitelisted immutable ro
   assert.equal(f.db.prepare('SELECT COUNT(*) n FROM position_entries').get().n,0);
   assert.equal(f.db.prepare('SELECT COUNT(*) n FROM position_rows').get().n,0);
   assert.equal((await f.ingest(block)).status,409);
+ }finally{f.db.close();}
+});
+
+test('server-derived search blocks can be resumed on ready data and preserve infix semantics',async()=>{
+ const f=setup();try{
+  await f.ingest({action:'begin',version});
+  await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2,'ÁLVAREZ, ANA')]});
+  await f.ingest({action:'activate',id:version.id});
+  const progress=await (await f.ingest({action:'begin',version})).json();
+  assert.deepEqual(progress.search_pending,['00']);
+  assert.equal((await f.ingest({action:'search-block',id:version.id,bucket:'00'})).status,200);
+  assert.equal((await f.ingest({action:'search-block',id:version.id,bucket:'00'})).status,200);
+  assert.deepEqual((await (await f.ingest({action:'begin',version})).json()).search_pending,[]);
+  f.db.exec('DELETE FROM position_search_complete');
+  await f.ingest({action:'begin',version});
+  assert.ok(f.db.prepare('SELECT 1 FROM position_search_complete WHERE version_id=?').get(version.id),'repairs lost completion acknowledgement');
+  for(const [query,count] of [['TINEZ CARLOS',1],['MARTINEZ MARTINEZ',1],['ALV',1],['25000020',1],['ZZZZZZ',0]]){
+   const response=await f.call('/api/positions/search',{query});assert.equal(response.status,200,query);
+   assert.equal((await response.json()).results.length,count);
+  }
+  assert.equal((await f.ingest({action:'activate',id:version.id})).status,200,'activation retry after lost response');
  }finally{f.db.close();}
 });
 test('incomplete or duplicate ranks cannot replace the active generation',async()=>{
@@ -110,5 +131,22 @@ test('a late bucket invalidates the validation snapshot and never activates',asy
   };
   assert.equal((await f.ingest({action:'activate',id:version.id})).status,409);
   assert.equal((await f.call('/api/positions')).status,503);
+ }finally{f.db.close();}
+});
+
+test('a single client cannot consume the shared daily search quota',async()=>{
+ const f=setup();try{
+  await f.ingest({action:'begin',version});await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2)]});
+  await f.ingest({action:'activate',id:version.id});
+  const handler=createGateway();
+  const search=()=>handler(new Request('https://example.test/api/positions/search',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.1'},body:JSON.stringify({query:'MARTINEZ'})}),f.env);
+  assert.equal((await search()).status,200);
+  f.db.exec('UPDATE position_client_budget SET requests=120');
+  assert.equal((await search()).status,429);
+  const stored=f.db.prepare('SELECT client FROM position_client_budget').get().client;
+  assert.match(stored,/^[a-f0-9]{64}$/);assert.ok(!stored.includes('192.0.2.1'));
+  f.db.exec("DELETE FROM position_client_budget; UPDATE position_read_budget SET used=3000000 WHERE day=date('now')");
+  assert.equal((await search()).status,429);
+  assert.equal(f.db.prepare('SELECT COUNT(*) n FROM position_client_budget').get().n,0,'no public writes after global admission closes');
  }finally{f.db.close();}
 });

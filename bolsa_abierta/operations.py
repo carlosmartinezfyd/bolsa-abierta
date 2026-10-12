@@ -190,7 +190,22 @@ def gateway_status(state, operations):
     status = status if status in ('completed', 'partial', 'failed') else 'failed'
     if status == 'completed' and not complete:
         status = 'partial'
-    return {'freshness': {'request_id': request_id if correlated else None,
+    from .coverage import position_summary
+    position = position_summary(state.get('position_status', {}))
+    inventory = state.get('source_inventory', {}).get('status_counts', {})
+    counts = {k: v if type(v) is int and 0 <= v <= 100000 else 0
+              for k, v in inventory.items() if k in ('pending_review', 'unavailable')}
+    health = {'published_at': last['ended_at'] if last else None,
+              'run_status': last['status'] if last else 'unknown',
+              'vacancy_status': vacancy.get('status', 'unknown'),
+              'position_status': position['status'],
+              **{k: position.get(k) for k in ('active_version', 'checked_at', 'record_count',
+                                             'origin_check_complete', 'cache_status')},
+              'pending_documents': counts.get('pending_review', 0),
+              'coverage_complete': all(state.get('source_inventory', {}).get(k) is True
+                                       for k in ('index_complete', 'downloads_complete', 'review_complete')),
+              'unavailable_documents': counts.get('unavailable', 0)}
+    return {'health': health, 'freshness': {'request_id': request_id if correlated else None,
                           'status': status,
                           'last_attempt_at': attempt if correlated else None}}
 

@@ -122,6 +122,12 @@ jobs:
           OFFICIAL_SOURCE_TRANSPORT: chromium
           CARM_MIN_REQUEST_INTERVAL: "2"
         run: xvfb-run -a python -m bolsa_abierta.operations --state saved-state/operations.json run --phase inventory --allow-partial -- python -m bolsa_abierta.source_inventory --state saved-state/source-inventory.json --documents saved-state/source-documents.json --private-dir .runtime/source-inventory --max-seconds 240 --max-requests 160
+      - name: Restore encrypted originals and verify current hashes
+        id: recovery
+        continue-on-error: true
+        env:
+          PRIVATE_ARCHIVE_KEY: ${{ secrets.PRIVATE_ARCHIVE_KEY }}
+        run: python -m bolsa_abierta.recovery --archives saved-state/private-originals --state saved-state/source-documents.json --report saved-state/recovery-status.json
       - name: Build snapshot with explicit check status
         id: build
         continue-on-error: true
@@ -168,7 +174,7 @@ jobs:
           if [ -d saved-state/runtime/artifacts ] || [ -n "$(git -C saved-state ls-files -- runtime/artifacts)" ]; then
             git -C saved-state add -u -- runtime/artifacts
           fi
-          for path in source-inventory.json source-documents.json position-status.json operations.json source-retries.json; do
+          for path in source-inventory.json source-documents.json position-status.json operations.json source-retries.json recovery-status.json; do
             if [ -f "saved-state/$path" ]; then git -C saved-state add "$path"; fi
           done
           python - <<'PY'
@@ -180,6 +186,8 @@ jobs:
                   paths=validated_archive_paths(Path('saved-state/private-originals'))
                   for path in paths:
                       subprocess.run(['git','-C','saved-state','add','--',str(path.relative_to('saved-state'))],check=True,capture_output=True)
+                  if paths:
+                      subprocess.run(['git','-C','saved-state','add','-u','--','private-originals'],check=True,capture_output=True)
               except Exception:
                   with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('archive_status=failed\n')
                   with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('Encrypted archive persistence pending: authentication/completeness/budget validation failed. No new bundle staged; source diagnostics still persisted.\n')
@@ -197,9 +205,12 @@ jobs:
       - uses: actions/deploy-pages@v4
         if: steps.build.outcome == 'success'
         id: deployment
+      - name: Verify public API and Pages convergence
+        if: steps.deployment.outcome == 'success'
+        run: python -m bolsa_abierta.publication_check --snapshot site/data/state.json
       - name: Record aggregate operational evidence
         if: always() && steps.restore.outcome == 'success'
         run: python -m bolsa_abierta.operations --state saved-state/operations.json summary >> "$GITHUB_STEP_SUMMARY"
       - name: Fail operational errors after persisting and publishing diagnostics
-        if: always() && (steps.persist.outputs.archive_status == 'failed' || steps.collect.outcome == 'failure' || steps.collect.outputs.phase_status == 'failed' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure' || steps.build.outcome == 'failure')
+        if: always() && (steps.persist.outputs.archive_status == 'failed' || steps.recovery.outcome == 'failure' || steps.collect.outcome == 'failure' || steps.collect.outputs.phase_status == 'failed' || steps.positions.outcome == 'failure' || steps.inventory.outcome == 'failure' || steps.build.outcome == 'failure')
         run: exit 1

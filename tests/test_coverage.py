@@ -50,7 +50,7 @@ class CoverageTests(unittest.TestCase):
             export_static(store, output, inventory={'course': '2026-2027', 'documents': [
                 {'kind': 'award', 'status': 'pending_review', 'name': 'PRIVATE PERSON'}]},
                 positions={'status': 'failed', 'rows': [{'name': 'PRIVATE PERSON'}]})
-            public = (output / 'data/state.json').read_text()
+            public = (output / 'data/state.json').read_text(encoding='utf-8')
             self.assertNotIn('PRIVATE PERSON', public)
             state = json.loads(public)
             self.assertEqual(state['source_inventory']['document_count'], 1)

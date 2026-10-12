@@ -1,5 +1,6 @@
 import {reserveWriteBudget,settleWriteBudget,pendingWriteBudget} from './write-budget.mjs';
-import {reserveReadBudget,settleReadBudget} from './read-budget.mjs';
+import {reserveReadBudget,settleReadBudget,allowClientRead,clientReadKey,chargeClientRead} from './read-budget.mjs';
+import {searchIndex,searchPaths,selectivePath,indexedCandidates,completeSearchIndex} from './search-blocks.mjs';
 /* Dated, immutable published-list ranks. Active availability is not inferred. */
 const HASH=/^[a-f0-9]{64}$/, ID=/^[a-f0-9]{32}$/;
 const fold=value=>value.normalize('NFKD').replace(/\p{M}/gu,'').toUpperCase().replace(/\s+/g,' ').trim();
@@ -181,7 +182,10 @@ export async function positionRoute(request,env,reply){
           await db.prepare('INSERT OR IGNORE INTO position_block_versions(version_id) VALUES(?)').bind(v.id).run();
         }
         const blocked=compact&&!!await db.prepare('SELECT 1 FROM position_block_versions WHERE version_id=?').bind(v.id).first();
-        return reply({id:v.id,ready:!!saved.ready,...(blocked?{storage:'blocks-v1'}:{})});
+        const progress=blocked?(await db.prepare(`SELECT b.bucket,s.bucket AS indexed FROM position_blocks b
+          LEFT JOIN position_search_blocks s ON s.version_id=b.version_id AND s.bucket=b.bucket WHERE b.version_id=? ORDER BY b.bucket`).bind(v.id).all()).results:[];
+        if(blocked&&saved.ready&&!progress.some(b=>!b.indexed))await completeSearchIndex(db,v.id);
+        return reply({id:v.id,ready:!!saved.ready,...(blocked?{storage:'blocks-v1',buckets:progress.map(b=>b.bucket),search_pending:progress.filter(b=>!b.indexed).map(b=>b.bucket)}:{})});
       }
       if(!HASH.test(body.id))invalid();
       const saved=await db.prepare('SELECT metadata,ready FROM position_versions WHERE id=?').bind(body.id).first();
@@ -189,6 +193,28 @@ export async function positionRoute(request,env,reply){
       const v=JSON.parse(saved.metadata);
       const blocked=compact&&!!await db.prepare('SELECT 1 FROM position_block_versions WHERE version_id=?').bind(body.id).first();
       const table=blocked?'position_block_rows':v.coverage==='multi_source'?'position_entries':'position_rows';
+      if(body.action==='search-block'&&blocked){
+        if(!/^[a-f0-9]{2}$/.test(body.bucket))invalid();
+        if(await db.prepare('SELECT 1 FROM position_search_blocks WHERE version_id=? AND bucket=?').bind(body.id,body.bucket).first()){
+          await completeSearchIndex(db,body.id);return reply({indexed:true,unchanged:true});
+        }
+        const block=await db.prepare('SELECT payload FROM position_blocks WHERE version_id=? AND bucket=?').bind(body.id,body.bucket).first();
+        if(!block)return reply({error:'Bloque desconocido.'},404);
+        const payload=searchIndex(JSON.parse(block.payload));
+        const reservation=await reserveWriteBudget(db,env,1,8);
+        if(!reservation)return reply({error:'La indexación espera al presupuesto diario.',...await pendingWriteBudget(db)},429);
+        const written=await db.prepare(`INSERT OR IGNORE INTO position_search_blocks(version_id,bucket,payload)
+          SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM position_write_reservations r JOIN position_write_reservation_leases l ON l.id=r.id WHERE r.id=? AND r.settled=0 AND l.expires_at>unixepoch('now'))`).bind(body.id,body.bucket,payload,reservation.id).run();
+        const write_budget=await settleWriteBudget(db,reservation,[written]);
+        if(write_budget.expired)return reply({error:'La reserva ha caducado.'},409);
+        await completeSearchIndex(db,body.id);
+        return reply({indexed:true,write_budget});
+      }
+      if(body.action==='activate'&&saved.ready){
+        if(blocked)await completeSearchIndex(db,body.id);
+        const active=await db.prepare('SELECT 1 FROM position_active WHERE singleton=1 AND version_id=?').bind(body.id).first();
+        return active?reply({id:body.id,ready:true}):reply({error:'Otra generación está activa; utiliza la recuperación explícita.'},409);
+      }
       if(blocked&&['index','recover','rows'].includes(body.action))return reply({error:'Esta generación utiliza bloques inmutables.'},409);
       if(body.action==='index'){
         const status=await db.prepare('SELECT ready,after_rowid FROM position_search_status WHERE version_id=?').bind(body.id).first();
@@ -212,10 +238,11 @@ export async function positionRoute(request,env,reply){
         return reply({id:body.id,index_ready:false,indexed:rows.length,write_budget});
       }
       if(body.action==='checked'){
-        if(!saved.ready || !Number.isFinite(Date.parse(body.checked_at)))invalid();
+        if(!saved.ready || !Number.isFinite(Date.parse(body.checked_at)) || Date.parse(body.checked_at)>Date.now()+60000)invalid();
         if(v.checked_at===null||Date.parse(body.checked_at)>Date.parse(v.checked_at)){
           v.checked_at=body.checked_at;
-          await db.prepare('UPDATE position_versions SET metadata=? WHERE id=?').bind(JSON.stringify(v),body.id).run();
+          await db.prepare(`UPDATE position_versions SET metadata=? WHERE id=? AND
+            (json_extract(metadata,'$.checked_at') IS NULL OR julianday(json_extract(metadata,'$.checked_at'))<julianday(?))`).bind(JSON.stringify(v),body.id,body.checked_at).run();
         }
         return reply({id:body.id,ready:true});
       }
@@ -316,6 +343,7 @@ export async function positionRoute(request,env,reply){
           db.prepare('INSERT INTO position_active(singleton,version_id) SELECT 1,? WHERE EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1) ON CONFLICT(singleton) DO UPDATE SET version_id=excluded.version_id').bind(body.id,body.id,body.id)
         ]);
         if(!(await db.prepare('SELECT ready FROM position_versions WHERE id=?').bind(body.id).first())?.ready)return failed('La generación cambió durante la validación. Repite la activación; se conserva la anterior.','concurrent_change');
+        if(blocked)await completeSearchIndex(db,body.id);
         await db.prepare(`UPDATE position_ingest_metrics SET updated_at=?,phase='activated',failure_status=NULL WHERE version_id=?`).bind(new Date().toISOString(),body.id).run();
         return reply({id:body.id,ready:true});
       }
@@ -364,19 +392,27 @@ export async function positionRoute(request,env,reply){
       // CROSS JOIN keeps FTS as the outer loop across SQLite versions; NOT INDEXED
       // prevents a generation index from replacing the candidate's rowid lookup.
       const match='version_id : "'+version.id.slice(0,16)+'" AND '+longTokens.map(t=>'search_name : "'+t+'"').join(' AND ');
-      const candidateSQL=numeric?`SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND list_number=? LIMIT ${cap+1}`:scanSearch?
+      const clientKey=await clientReadKey(request,env);
+      if(!await allowClientRead(db,clientKey))return reply({error:'Has alcanzado el límite de consultas de hoy para esta conexión. Vuelve a intentarlo mañana.',client_limit:true},429);
+      const allowance=scanSearch||clientKey?await reserveReadBudget(db,6*version.row_count+30000):null;
+      if((scanSearch||clientKey)&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy. Vuelve a intentarlo mañana.',pending_budget:true},429);
+      const clientCharge=await chargeClientRead(db,clientKey);
+      if(clientCharge&&!clientCharge.results.length){
+        await settleReadBudget(db,allowance,[clientCharge]);return reply({error:'Has alcanzado el límite de consultas de hoy para esta conexión.',client_limit:true},429);
+      }
+      const indexed=blocked&&!!await db.prepare('SELECT 1 FROM position_search_complete WHERE version_id=?').bind(version.id).first();
+      const selection=indexed?await selectivePath(db,version.id,searchPaths(longTokens,numeric,query)):null;
+      const candidateSQL=indexed?`SELECT * FROM (${indexedCandidates}) WHERE ${numeric?'list_number=?':longTokens.map(()=> 'search_name LIKE ?').join(' AND ')} ${scoped?'AND specialty=?':''} LIMIT ${cap+1}`:numeric?`SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND list_number=? LIMIT ${cap+1}`:scanSearch?
         `SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND ${longTokens.map(()=> 'search_name LIKE ?').join(' AND ')} LIMIT ${cap+1}`:
         `SELECT p.* FROM ${fts} CROSS JOIN ${table} p NOT INDEXED ON p.rowid=${fts}.rowid WHERE ${fts} MATCH ? AND p.version_id=? ${scoped?'AND p.specialty=?':''} LIMIT ${cap+1}`;
-      const candidateArgs=numeric?[version.id,...(scoped?[body.specialty]:[]),query]:scanSearch?[version.id,...(scoped?[body.specialty]:[]),...longTokens.map(t=>'%'+t+'%')]:[match,version.id,...(scoped?[body.specialty]:[])];
+      const candidateArgs=indexed?[selection.path,version.id,...(numeric?[query]:longTokens.map(t=>'%'+t+'%')),...(scoped?[body.specialty]:[])]:numeric?[version.id,...(scoped?[body.specialty]:[]),query]:scanSearch?[version.id,...(scoped?[body.specialty]:[]),...longTokens.map(t=>'%'+t+'%')]:[match,version.id,...(scoped?[body.specialty]:[])];
       const keyCondition=after?`AND (${order}) > (${after.k.map(()=>'?').join(',')})`:'';
       const sql=`WITH candidates AS MATERIALIZED (${candidateSQL}), bounded AS (SELECT COUNT(*) AS n FROM candidates), page AS (
         SELECT payload,search_name,specialty,rank,id FROM candidates WHERE (SELECT n FROM bounded)<=${cap} AND ${numeric?'1':condition}
         ${keyCondition} ORDER BY ${order} LIMIT 21 OFFSET ?)
         SELECT *,0 AS oversized FROM page UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,1 FROM bounded WHERE n>${cap}`;
-      const allowance=scanSearch?await reserveReadBudget(db,6*version.row_count+30000):null;
-      if(scanSearch&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy. Vuelve a intentarlo mañana.',pending_budget:true},429);
       const report=await db.prepare(sql).bind(...candidateArgs,...(numeric?[]:values),...(after?after.k:[]),after?0:offset).all();
-      if(allowance)await settleReadBudget(db,allowance,[report]);
+      if(allowance)await settleReadBudget(db,allowance,[...(clientCharge?[clientCharge]:[]),...(selection?[selection.report]:[]),report]);
       const results=report.results;
       if(results[0]?.oversized)return reply({error:'La búsqueda es demasiado amplia. Añade otro apellido, el nombre o elige una lista.',search_limit:cap},422);
       const more=results.length>20, page=results.slice(0,20), last=page.at(-1);
@@ -386,10 +422,16 @@ export async function positionRoute(request,env,reply){
     }
     const match=path.match(/^\/api\/positions\/([a-f0-9]{32})$/);
     if(match && request.method==='GET'){
-      const allowance=blocked?await reserveReadBudget(db,3000):null;
-      if(blocked&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy.',pending_budget:true},429);
+      const clientKey=await clientReadKey(request,env);
+      if(!await allowClientRead(db,clientKey))return reply({error:'Has alcanzado el límite de consultas de hoy para esta conexión.',client_limit:true},429);
+      const allowance=blocked||clientKey?await reserveReadBudget(db,3000):null;
+      if((blocked||clientKey)&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy.',pending_budget:true},429);
+      const clientCharge=await chargeClientRead(db,clientKey);
+      if(clientCharge&&!clientCharge.results.length){
+        await settleReadBudget(db,allowance,[clientCharge]);return reply({error:'Has alcanzado el límite de consultas de hoy para esta conexión.',client_limit:true},429);
+      }
       const report=await db.prepare(`SELECT payload FROM ${table} WHERE version_id=? ${blocked?'AND bucket=?':''} AND id=?`).bind(version.id,...(blocked?[match[1].slice(0,2)]:[]),match[1]).all();
-      if(allowance)await settleReadBudget(db,allowance,[report]);
+      if(allowance)await settleReadBudget(db,allowance,[...(clientCharge?[clientCharge]:[]),report]);
       const row=report.results[0];
       return row?reply({version,person:JSON.parse(row.payload)}):reply({error:'Esta persona no figura en la publicación consultada.'},404);
     }

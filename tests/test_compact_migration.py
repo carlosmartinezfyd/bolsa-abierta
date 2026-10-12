@@ -9,7 +9,9 @@ class CompactMigrationTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1] / 'gateway'
         source = '\n'.join([(root / 'schema.sql').read_text(),
             (root / 'positions.sql').read_text().split('-- Indexed exact')[0],
-            (root / 'migrations/0002-position-blocks.sql').read_text()])
+            (root / 'migrations/0002-position-blocks.sql').read_text(),
+            (root / 'migrations/0003-search-blocks.sql').read_text(),
+            (root / 'migrations/0004-watchdog.sql').read_text()])
         with sqlite3.connect(':memory:') as db:
             db.executescript((root / 'migrations/budget-bootstrap.sql').read_text())
             def execute(sql):
@@ -26,4 +28,5 @@ class CompactMigrationTests(unittest.TestCase):
             self.assertEqual(prepare_compact_gateway(execute, source, 'ddl:41:1')['status'], 'ready')
             self.assertEqual(db.execute('SELECT COUNT(*) FROM position_write_allocations').fetchone()[0], count)
             self.assertIn('position_block_rows', {r[0] for r in db.execute('SELECT name FROM sqlite_schema')})
+            self.assertIn('position_search_complete', {r[0] for r in db.execute('SELECT name FROM sqlite_schema')})
             self.assertNotIn('position_entries_fts', {r[0] for r in db.execute('SELECT name FROM sqlite_schema')})

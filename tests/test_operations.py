@@ -189,6 +189,20 @@ class OperationsTests(unittest.TestCase):
         evidence['runs'][0]['status'] = 'success'
         self.assertEqual(operations.gateway_status(state, evidence)['freshness']['status'], 'completed')
 
+    def test_native_runs_publish_small_independent_freshness_evidence(self):
+        operations = self.operations()
+        evidence = self.correlated_run(operations, request_id='')
+        state = {'position_status': {'status': 'verified', 'active_version': 'a' * 64,
+                 'checked_at': '2026-10-04T00:17:45Z', 'record_count': 22393,
+                 'origin_check_complete': True, 'cache_status': 'ready'},
+                 'source_inventory': {'status_counts': {'pending_review': 29, 'unavailable': 17}},
+                 'documents': [{'name': 'PRIVATE_NOMINAL_ROW'}]}
+        result = operations.gateway_status(state, evidence)
+        self.assertEqual(result['health']['published_at'], '2026-10-04T00:19:00Z')
+        self.assertEqual(result['health']['pending_documents'], 29)
+        self.assertEqual(result['health']['checked_at'], '2026-10-04T00:17:45Z')
+        self.assertNotIn('PRIVATE_NOMINAL_ROW', json.dumps(result))
+
     def test_gateway_correlation_rejects_missing_different_and_stale_request_evidence(self):
         operations = self.operations()
         state = {'freshness': {'request_id': 'a' * 32, 'status': 'completed',
@@ -301,6 +315,7 @@ class OperationsTests(unittest.TestCase):
                 db.execute('INSERT INTO state VALUES(1, ?)', (json.dumps({
                     'freshness': {'status': 'partial'}, 'documents': [{'name': 'PRIVATE_NOMINAL_ROW'}],
                     'current_id': 'previous_good_generation'}),))
+            db.close()
             before = database.read_bytes()
             env = {**os.environ, 'GITHUB_RUN_ID': '56', 'GITHUB_RUN_ATTEMPT': '1'}
             result = subprocess.run([sys.executable, '-m', 'bolsa_abierta.operations', '--state', str(state_path),

@@ -10,6 +10,7 @@ GITHUB_REPOSITORY = "carlosmartinezfyd/bolsa-abierta"
 GITHUB_REF = "main"
 # Optional bounded cron: opt in only after observing the official HEAD validators.
 CRON_ENABLED = "false"
+WATCHDOG_ENABLED = "true"
 OFFICIAL_FEED_URL = "https://www.carm.es/web/pagina?IDCONTENIDO=REPLACE_WITH_REVIEWED_FEED_ID&IDTIPO=100"
 POSITION_DAILY_WRITE_LIMIT = "70000"
 POSITION_ROW_WRITE_ESTIMATE = "32"
@@ -24,3 +25,7 @@ database_id = "REPLACE_WITH_D1_DATABASE_ID"
 # At most one additional cron; enable CRON_ENABLED only after configuring the feed.
 # [triggers]
 # crons = ["17,47 * * * *"]
+
+# Independent freshness observer; native GitHub schedule remains enabled.
+[triggers]
+crons = ["7,37 * * * *"]

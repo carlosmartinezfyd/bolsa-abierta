@@ -156,11 +156,14 @@ def export_bundle(private_dir, output_dir, *, key=None, metadata=None, expected_
                 _, existing = _decode_bundle(path, secret)
                 if existing != payload:
                     raise ValueError('Immutable archive conflict')
-            directory_fd = os.open(output, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            # Windows has no O_DIRECTORY; the file was flushed before the atomic
+            # hard-link installation. POSIX additionally persists the directory.
+            if hasattr(os, 'O_DIRECTORY'):
+                directory_fd = os.open(output, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
         finally:
             temporary.unlink(missing_ok=True)
     return {'path': str(path), 'bundle_id': digest, 'document_count': len(hashes),
