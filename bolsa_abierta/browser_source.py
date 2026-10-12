@@ -166,11 +166,14 @@ def browser_get(url, *, headers, limit, deadline):
     except SourceError:
         raise
     except Exception as error:
-        # Dependency/setup failures are operational failures; do not conceal them
-        # as a source outage, nor log arbitrary browser/page output.
-        from playwright.sync_api import TimeoutError as BrowserTimeout, Error as BrowserError
-        if isinstance(error, BrowserTimeout):
-            raise SourceError('Official browser request timed out', 'time_limit') from error
-        if isinstance(error, BrowserError) and getattr(_local, 'browser', None):
-            raise SourceError('Official browser request failed', 'network_error') from error
-        raise RuntimeError('Official browser transport could not start') from error
+        # FETCH already types genuine network/stream failures. A dead renderer,
+        # protocol error or setup defect must remain an operational failure.
+        broken = getattr(_local, 'browser', None)
+        if broken:
+            del _local.browser
+            atexit.unregister(broken.close)
+            try:
+                broken.close()
+            except Exception:
+                pass
+        raise RuntimeError('Official browser transport failed') from error

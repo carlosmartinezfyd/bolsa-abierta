@@ -7,6 +7,19 @@ from tests.test_sources import public_dns, response, PDF_URL
 
 
 class BrowserTransportTests(unittest.TestCase):
+    def test_renderer_failure_is_operational_and_discards_broken_browser(self):
+        import time
+        from types import SimpleNamespace
+        from bolsa_abierta.browser_source import browser_get
+        broken = Mock()
+        broken.page.evaluate.side_effect = RuntimeError('Renderer failure')
+        local = SimpleNamespace(browser=broken)
+        with patch('bolsa_abierta.browser_source._local', local):
+            with self.assertRaises(RuntimeError):
+                browser_get(PDF_URL, headers={}, limit=32, deadline=time.monotonic()+5)
+        broken.close.assert_called_once()
+        self.assertFalse(hasattr(local, 'browser'))
+
     def test_browser_denies_subresources_navigations_and_other_origins(self):
         from bolsa_abierta.browser_source import Browser
         browser = Browser.__new__(Browser)
