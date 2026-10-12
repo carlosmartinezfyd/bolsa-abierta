@@ -408,14 +408,42 @@ def source_collection(args, prior):
         from .position_documents import scan_document
         inventory = json.loads(Path(args.inventory_state).read_text(encoding='utf8'))
         known = {d['content_id'] for d in source['documents']}
-        for item in inventory.get('documents', []):
+        missing_budget, missing_client, inventory_changed = 5, None, False
+        candidates = sorted(inventory.get('documents', []),
+            key=lambda d: (d.get('published_at') or '', d['content_id']), reverse=True)
+        # Rotate attempts across fresh runners; repeated failures must not starve
+        # older discoveries. Recent publication is only the tie breaker.
+        candidates.sort(key=lambda d: _time_key(_timestamp(d.get('position_attempted_at'))
+                                               or '1970-01-01T00:00:00Z'))
+        for item in candidates:
             if item['content_id'] in known or item.get('kind') != 'award' or not item.get('sha256'):
                 continue
-            path = Path(args.inventory_dir) / (item['sha256'] + '.pdf')
-            if not path.exists():
-                pending += 1
-                continue
             try:
+                if (not re.fullmatch('[a-f0-9]{64}', item['sha256'])
+                        or not re.fullmatch('[0-9]+', item['content_id']) or not _same_original(item, item)):
+                    raise ValueError('Invalid inventoried original identity')
+                directory = Path(args.inventory_dir)
+                path = directory / (item['sha256'] + '.pdf')
+                if directory.is_symlink() or path.is_symlink():
+                    raise ValueError('Invalid private inventory directory')
+                if not path.exists() and getattr(args, 'fetch_missing_inventory', False) and missing_budget:
+                    # A previous run keeps metadata, not loose nominal PDFs.
+                    # Retrieve at most five exact originals before broad crawling;
+                    # a changed hash remains pending and cannot replace evidence.
+                    missing_budget -= 1
+                    if missing_client is None:
+                        missing_client = OfficialClient(max_seconds=15, retries=0)
+                    item['position_attempted_at'] = datetime.now(timezone.utc).isoformat()
+                    inventory_changed = True
+                    fetched = missing_client.fetch(item['source_url'], kind='pdf')
+                    verify_source(fetched.body, item)
+                    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    atomic_write(path, fetched.body)
+                    path.chmod(0o600)
+                    item = {**item, 'downloaded_at': datetime.now(timezone.utc).isoformat()}
+                if not path.exists():
+                    pending += 1
+                    continue
                 # Assigned-function aliases belong to an explicitly reviewed
                 # document. A new original may not borrow another file's alias.
                 with quiet_parser_output():
@@ -426,6 +454,8 @@ def source_collection(args, prior):
                 known.add(item['content_id'])
             except Exception:
                 pending += 1
+        if inventory_changed:
+            atomic_write(Path(args.inventory_state), json.dumps(inventory, ensure_ascii=False).encode('utf8'))
     return source, manifest.get('observation_documents', []), pending
 
 
@@ -485,6 +515,8 @@ def main(argv=None):
     parser.add_argument('--summary', default='.runtime/position-status.json')
     parser.add_argument('--inventory-state')
     parser.add_argument('--inventory-dir', default='.runtime/source-inventory')
+    parser.add_argument('--fetch-missing-inventory', action='store_true',
+                        help='Retrieve up to five missing exact award originals from previous discovery')
     parser.add_argument('--private-dir', default='.runtime/positions')
     parser.add_argument('--archive-dir', help='Authenticated encrypted cache; requires PRIVATE_ARCHIVE_KEY')
     parser.add_argument('--validate-only', action='store_true', help='Validate without contacting the publication service')
