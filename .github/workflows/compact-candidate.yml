@@ -1,0 +1,31 @@
+name: Validate compact candidate
+on:
+  push:
+    branches: [fix/compact-position-publication]
+    paths: ['scripts/validate_compact_candidate.py', '.github/workflows/compact-candidate.yml']
+permissions:
+  contents: read
+concurrency:
+  group: official-source-publication
+  cancel-in-progress: false
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test,browser]'
+      - run: python -m playwright install --with-deps chromium
+      - run: |
+          git fetch origin data-state
+          git worktree add --detach saved-state FETCH_HEAD
+      - name: Stage and validate real originals without changing the active generation
+        env:
+          POSITION_INGEST_TOKEN: ${{ secrets.POSITION_INGEST_TOKEN }}
+          SOURCE_RETRY_STATE: saved-state/source-retries.json
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+          CARM_MIN_REQUEST_INTERVAL: '2'
+        run: xvfb-run -a python scripts/validate_compact_candidate.py
