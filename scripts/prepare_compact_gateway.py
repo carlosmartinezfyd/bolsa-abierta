@@ -28,7 +28,9 @@ def main():
     execute(Path('gateway/migrations/budget-bootstrap.sql').read_text())
     core = '\n'.join([Path('gateway/schema.sql').read_text(),
         Path('gateway/positions.sql').read_text().split('-- Indexed exact')[0],
-        Path('gateway/migrations/0002-position-blocks.sql').read_text()])
+        Path('gateway/migrations/0002-position-blocks.sql').read_text(),
+        Path('gateway/migrations/0003-search-blocks.sql').read_text(),
+        Path('gateway/migrations/0004-watchdog.sql').read_text()])
     result = prepare_compact_gateway(execute, core, f'ddl:{int(time.time())}:1')
     print(json.dumps(result))
     if result['status'] != 'ready':

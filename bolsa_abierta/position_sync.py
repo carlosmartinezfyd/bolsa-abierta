@@ -8,6 +8,8 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+import time
+import random
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qsl, urlsplit
 
@@ -284,7 +286,15 @@ def verify_source(body, source):
 
 def publish(version, read_rows, send, *, resume=False):
     existing = send({'action': 'begin', 'version': version})
+    pending = existing.get('search_pending', [])
+    buckets = existing.get('buckets', [])
+    if any(not isinstance(items, list) or len(items) > 256 or len(set(items)) != len(items)
+           or any(not isinstance(i, str) or not re.fullmatch('[a-f0-9]{2}', i) for i in items)
+           for items in (pending, buckets)):
+        raise ValueError('Invalid private block progress')
     if existing.get('ready'):
+        for bucket in pending:
+            send({'action': 'search-block', 'id': version['id'], 'bucket': bucket})
         if version.get('checked_at') is not None:
             send({'action': 'checked', 'id': version['id'], 'checked_at': version['checked_at']})
         return 'unchanged'
@@ -292,14 +302,20 @@ def publish(version, read_rows, send, *, resume=False):
     if ('row_count' in version and len(rows) != version['row_count']) or len({r['id'] for r in rows}) != len(rows):
         raise ValueError('Incomplete or duplicate local extraction; no rows published')
     if existing.get('storage') == 'blocks-v1':
-        buckets = {}
+        stored_buckets, buckets = set(buckets), {}
         for row in sorted(rows, key=lambda r: r['id']):
             buckets.setdefault(row['id'][:2], []).append(row)
         if any(len(items) > 256 for items in buckets.values()):
             raise ValueError('A private publication block exceeds its row budget')
         for bucket, items in sorted(buckets.items()):
+            # Existing blocks are compared byte-for-byte by the Worker and incur
+            # no writes. An acknowledgement alone cannot prove identical rows.
             send({'action': 'block', 'id': version['id'], 'bucket': bucket, 'rows': items})
+            if 'search_pending' in existing and (bucket not in stored_buckets or bucket in pending):
+                send({'action': 'search-block', 'id': version['id'], 'bucket': bucket})
         send({'action': 'activate', 'id': version['id']})
+        if version.get('checked_at') is not None:
+            send({'action': 'checked', 'id': version['id'], 'checked_at': version['checked_at']})
         return 'published'
     if resume:
         existing_ids, after = set(), None
@@ -372,9 +388,18 @@ def publication_client(base, token):
     session.trust_env = False
 
     def send(body):
-        response = session.post(base + '/internal/positions', json=body,
-            headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'BolsaAbierta-PositionCollector/2.0'},
-            timeout=(5, 30), allow_redirects=False)
+        retryable = body.get('action') in {'begin', 'block', 'search-block', 'checked', 'activate', 'metadata', 'status'}
+        for attempt in range(3 if retryable else 1):
+            try:
+                response = session.post(base + '/internal/positions', json=body,
+                    headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'BolsaAbierta-PositionCollector/2.0'},
+                    timeout=(5, 30), allow_redirects=False)
+                if response.status_code not in (500, 502, 503, 504) or not retryable or attempt == 2:
+                    break
+            except (requests.Timeout, requests.ConnectionError):
+                if not retryable or attempt == 2:
+                    raise RuntimeError('Position publication transport unavailable') from None
+            time.sleep(2 ** attempt + random.random())
         if (body.get('action') == 'metadata' and response.status_code == 409
                 and response.json().get('error') == 'La versión publicada es inmutable.'):
             # The deployed legacy Worker authenticates this request, then rejects

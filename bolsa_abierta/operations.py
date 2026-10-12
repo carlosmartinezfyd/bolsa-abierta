@@ -168,7 +168,7 @@ def public_summary(state):
     }
 
 
-def gateway_status(state, operations):
+def gateway_status(state, operations, recovery=None):
     """Correlate one published request to its run and actual source-check interval."""
     freshness = state.get('freshness', {}) if isinstance(state, dict) else {}
     freshness = freshness if isinstance(freshness, dict) else {}
@@ -190,7 +190,32 @@ def gateway_status(state, operations):
     status = status if status in ('completed', 'partial', 'failed') else 'failed'
     if status == 'completed' and not complete:
         status = 'partial'
-    return {'freshness': {'request_id': request_id if correlated else None,
+    recovery = recovery if isinstance(recovery, dict) else {}
+    restored_at = timestamp(recovery.get('checked_at')) if recovery.get('checked_at') else None
+    restored = bool(recovery.get('status') == 'verified' and restored_at and last
+                    and last['started_at'] and last['ended_at']
+                    and _moment(last['started_at']) <= _moment(restored_at) <= _moment(last['ended_at']))
+    recovery_status = 'verified' if restored else 'failed' if recovery.get('status') == 'failed' else 'unavailable'
+    if status == 'completed' and not restored:
+        status = 'partial'
+    from .coverage import position_summary
+    position = position_summary(state.get('position_status', {}))
+    inventory = state.get('source_inventory', {}).get('status_counts', {})
+    counts = {k: v if type(v) is int and 0 <= v <= 100000 else 0
+              for k, v in inventory.items() if k in ('pending_review', 'unavailable')}
+    health = {'published_at': last['ended_at'] if last else None,
+              'recovery_status': recovery_status,
+              'recovery_checked_at': restored_at,
+              'run_status': last['status'] if last else 'unknown',
+              'vacancy_status': vacancy.get('status', 'unknown'),
+              'position_status': position['status'],
+              **{k: position.get(k) for k in ('active_version', 'checked_at', 'record_count',
+                                             'origin_check_complete', 'cache_status')},
+              'pending_documents': counts.get('pending_review', 0),
+              'coverage_complete': all(state.get('source_inventory', {}).get(k) is True
+                                       for k in ('index_complete', 'downloads_complete', 'review_complete')),
+              'unavailable_documents': counts.get('unavailable', 0)}
+    return {'health': health, 'freshness': {'request_id': request_id if correlated else None,
                           'status': status,
                           'last_attempt_at': attempt if correlated else None}}
 

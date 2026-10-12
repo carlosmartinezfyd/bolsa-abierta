@@ -1,5 +1,6 @@
 // Fixed-destination public gateway. Secrets and dispatch decisions stay in Worker/D1.
 import {positionRoute} from './positions.mjs';
+import {createWatchdog} from './watchdog.mjs';
 const COOLDOWN = 5 * 60_000;
 const ACTIVE_LEASE = 20 * 60_000;
 const POLL_INTERVAL = 10_000;
@@ -155,6 +156,12 @@ export function createGateway(dependencies = {}) {
     const failure = (message, status) => reply({error:message}, status);
     const url = new URL(request.url);
     if (origin && origin !== env.ALLOWED_ORIGIN) return failure('Origen no permitido.', 403);
+    if(url.pathname==='/api/health'&&request.method==='GET'&&!url.search){
+      try{
+        const report=await env.DB.prepare('SELECT observed_at,status,issues,first_failure,last_good,next_retry,retries,day,dispatch_status FROM gateway_watchdog WHERE singleton=1').bind().first();
+        return reply(report?{...report,issues:JSON.parse(report.issues)}:{status:'unobserved'});
+      }catch{return failure('No se puede consultar la supervisión.',503);}
+    }
     if (url.pathname === '/internal/positions' || url.pathname === '/api/positions' || url.pathname.startsWith('/api/positions/')) {
       headers['X-Robots-Tag'] = 'noindex, nofollow, nosnippet';
       if (request.method === 'OPTIONS' && !origin) return failure('Origen no permitido.',403);
@@ -318,4 +325,9 @@ export function createScheduledGateway(dependencies={}){
     return {status};
   };
 }
-export default {fetch:createGateway(),scheduled:createScheduledGateway()};
+const watchdog=createWatchdog({dispatch:async(controller,env,start)=>{
+ const response=await createGateway()(new Request('https://gateway.internal/api/refresh',{method:'POST',headers:{Origin:env.ALLOWED_ORIGIN,'Content-Type':'application/json','X-BA-Refresh':'1'},body:'{}'}),env,
+  {trigger:'worker_cron',scheduled_time:new Date(controller.scheduledTime||start).toISOString(),clock_received_at:new Date(start).toISOString(),dispatch_at:new Date().toISOString()});
+ return response.json();
+}});
+export default {fetch:createGateway(),scheduled:async(controller,env)=>env.WATCHDOG_ENABLED==='true'?watchdog(controller,env):createScheduledGateway()(controller,env)};

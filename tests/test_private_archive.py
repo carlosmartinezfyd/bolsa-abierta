@@ -85,7 +85,13 @@ class PrivateArchiveTests(unittest.TestCase):
                 module.export_bundle(private, root / 'archive', key=KEY)
             with self.assertRaises(ValueError):
                 module.export_bundle(private, root / 'archive', key=KEY, expected_hashes=['b' * 64])
-            good.unlink(); good.symlink_to(root / 'elsewhere')
+            good.unlink()
+            try:
+                good.symlink_to(root / 'elsewhere')
+            except OSError as error:
+                if getattr(error, 'winerror', None) == 1314:
+                    self.skipTest('Windows symlink creation requires privilege; exercised in Linux CI')
+                raise
             with self.assertRaises(ValueError): module.export_bundle(private, root / 'archive', key=KEY)
 
     def test_authenticated_malformed_bundle_never_creates_traversal_or_partial_files(self):
