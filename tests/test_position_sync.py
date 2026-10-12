@@ -8,6 +8,36 @@ from bolsa_abierta import position_sync
 
 
 class SyncTests(unittest.TestCase):
+    def test_legacy_gateway_metadata_conflict_uses_matching_public_active_generation(self):
+        from unittest.mock import Mock
+        for published_id, active in [('a' * 64, True), ('b' * 64, False)]:
+            session = Mock()
+            session.post.return_value = Mock(status_code=409)
+            session.post.return_value.json.return_value = {'error': 'La versión publicada es inmutable.'}
+            session.get.return_value = Mock(status_code=200)
+            session.get.return_value.json.return_value = {'version': {'id': published_id,
+                'row_count': 13045}, 'specialties': [], 'refresh_available': False}
+            with patch.object(position_sync.requests, 'Session', return_value=session):
+                send = position_sync.publication_client(
+                    'https://bolsa-abierta-gateway.cmartinezmtez.workers.dev', 'k' * 40)
+                result = send({'action': 'metadata', 'id': 'a' * 64})
+            self.assertEqual(result['active'], active)
+            self.assertEqual(result['ready'], active)
+            self.assertNotIn('Authorization', session.get.call_args.kwargs['headers'])
+            self.assertFalse(session.get.call_args.kwargs['allow_redirects'])
+
+    def test_legacy_metadata_fallback_never_masks_auth_failures_or_write_conflicts(self):
+        from unittest.mock import Mock
+        for code, action in [(403, 'metadata'), (500, 'metadata'), (409, 'begin')]:
+            session = Mock()
+            session.post.return_value = Mock(status_code=code)
+            with patch.object(position_sync.requests, 'Session', return_value=session):
+                send = position_sync.publication_client(
+                    'https://bolsa-abierta-gateway.cmartinezmtez.workers.dev', 'k' * 40)
+                with self.assertRaises(RuntimeError):
+                    send({'action': action, 'id': 'a' * 64})
+            session.get.assert_not_called()
+
     def test_later_integrity_failure_is_not_hidden_by_first_blocked_document(self):
         from types import SimpleNamespace
         from unittest.mock import Mock

@@ -37,6 +37,8 @@ El Cron Worker sigue desactivado por defecto (`CRON_ENABLED=false`). Su configur
 
 ## GitHub Pages y publicación de código
 
+La pasarela anterior al soporte de `metadata` responde 409 «La versión publicada es inmutable» tras autenticar esa consulta. Solo en ese caso, el captador confirma la misma generación en `GET /api/positions`, que selecciona exclusivamente la generación activa y lista. Esta compatibilidad no se aplica a escrituras, errores de autorización ni otras respuestas 409, y no modifica la fecha de comprobación oficial.
+
 `refresh.yml` se ejecuta por schedule, dispatch y cambios de código/interfaz en `main`. Ese push reconstruye y despliega Pages desde el nuevo SHA. La concurrencia `official-source-publication` serializa las publicaciones. Los cuatro procesos quedan envueltos por el registro de fase, y se vuelve a exportar el resumen después de cerrar el run para que la instantánea contenga el estado final. Un fallo de captura no borra la generación validada ni cambia su fecha de éxito.
 
 Se publica además `data/gateway-status.json`, con solo `freshness.request_id`, `status` y `last_attempt_at`. `completed` exige éxito de inventario, posiciones, vacantes y construcción; cualquier fase parcial, fallida, ausente o pendiente impide confirmar el cambio observado por el Cron. Esto permite confirmar la publicación sin cargar el snapshot grande ni depender de que un visitante consulte el progreso.

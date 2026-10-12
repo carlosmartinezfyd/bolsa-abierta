@@ -365,6 +365,21 @@ def publication_client(base, token):
         response = session.post(base + '/internal/positions', json=body,
             headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'BolsaAbierta-PositionCollector/2.0'},
             timeout=(5, 30), allow_redirects=False)
+        if (body.get('action') == 'metadata' and response.status_code == 409
+                and response.json().get('error') == 'La versión publicada es inmutable.'):
+            # The deployed legacy Worker authenticates this request, then rejects
+            # unknown read actions on ready versions as immutable. Its public
+            # endpoint SELECTs only the active ready generation; it cannot expose
+            # staging. Never use this fallback for writes or authentication errors.
+            current = session.get(base + '/api/positions',
+                headers={'Cache-Control': 'no-cache', 'User-Agent': 'BolsaAbierta-PositionCollector/2.0'},
+                timeout=(5, 30), allow_redirects=False)
+            if current.status_code != 200:
+                raise RuntimeError(f'Position availability check returned HTTP {current.status_code}')
+            version = current.json().get('version', {})
+            active = bool(version.get('id') == body.get('id')
+                          and type(version.get('row_count')) is int and version['row_count'] > 0)
+            return {'version': version, 'active': active, 'ready': active}
         if response.status_code == 429:
             try:
                 limit = response.json()
