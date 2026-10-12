@@ -154,7 +154,11 @@ jobs:
           import json
           from pathlib import Path
           from bolsa_abierta.operations import gateway_status
-          status=gateway_status(json.loads(Path('site/data/state.json').read_text()),json.loads(Path('saved-state/operations.json').read_text()))
+          try:
+              recovery=json.loads(Path('saved-state/recovery-status.json').read_text())
+          except (OSError,ValueError):
+              recovery={}
+          status=gateway_status(json.loads(Path('site/data/state.json').read_text()),json.loads(Path('saved-state/operations.json').read_text()),recovery)
           Path('site/data/gateway-status.json').write_text(json.dumps(status,separators=(',',':'))+'\n')
           PY
           fi

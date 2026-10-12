@@ -150,3 +150,22 @@ test('a single client cannot consume the shared daily search quota',async()=>{
   assert.equal(f.db.prepare('SELECT COUNT(*) n FROM position_client_budget').get().n,0,'no public writes after global admission closes');
  }finally{f.db.close();}
 });
+
+test('a delayed activation retry cannot replace a newer active generation',async()=>{
+ const f=setup();try{
+  await f.ingest({action:'begin',version});
+  await f.ingest({action:'block',id:version.id,bucket:'00',rows:[row(1),row(2)]});
+  const newer={...version,id:'b'.repeat(64),sha256:'b'.repeat(64)};
+  const batch=f.env.DB.batch;
+  f.env.DB.batch=async statements=>{
+   f.env.DB.batch=batch;
+   assert.equal((await f.ingest({action:'activate',id:version.id})).status,200);
+   await f.ingest({action:'begin',version:newer});
+   await f.ingest({action:'block',id:newer.id,bucket:'00',rows:[row(1),row(2)]});
+   assert.equal((await f.ingest({action:'activate',id:newer.id})).status,200);
+   return batch(statements);
+  };
+  assert.equal((await f.ingest({action:'activate',id:version.id})).status,409);
+  assert.equal((await (await f.call('/api/positions')).json()).version.id,newer.id);
+ }finally{f.db.close();}
+});

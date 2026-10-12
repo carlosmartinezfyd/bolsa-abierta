@@ -7,7 +7,14 @@ const now=Date.parse('2026-10-13T10:00:00Z');
 const active={id:'a'.repeat(64),checked_at:'2026-10-13T09:50:00Z',row_count:10};
 const health={published_at:'2026-10-13T09:55:00Z',run_status:'partial',position_status:'verified',
  origin_check_complete:true,checked_at:active.checked_at,active_version:active.id,record_count:10,
- vacancy_status:'partial',pending_documents:29,unavailable_documents:17,cache_status:'ready'};
+ vacancy_status:'partial',pending_documents:29,unavailable_documents:17,cache_status:'ready',recovery_status:'verified'};
+test('ready cached originals cannot hide a failed or missing restore drill',()=>{
+ for(const recovery_status of [undefined,'failed','unavailable']){
+  const report=assessHealth({...health,recovery_status},active,now);
+  assert.ok(report.issues.includes('recovery_unavailable'));
+  assert.equal(report.needs_refresh,false);
+ }
+});
 test('fresh partial coverage remains explicit, without redispatching unchanged unknown documents',()=>{
  const report=assessHealth(health,active,now);
  assert.equal(report.needs_refresh,false);assert.equal(report.status,'partial');

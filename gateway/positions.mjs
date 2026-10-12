@@ -340,9 +340,11 @@ export async function positionRoute(request,env,reply){
         }
         await db.batch([
           db.prepare(`UPDATE position_versions SET ready=1 WHERE id=? AND ready=0 AND (SELECT COUNT(*) FROM ${table} WHERE version_id=?)=? AND COALESCE((SELECT revision FROM position_staging_revisions WHERE version_id=?),0)=? AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1)`).bind(body.id,body.id,v.row_count,body.id,snapshot,body.id),
-          db.prepare('INSERT INTO position_active(singleton,version_id) SELECT 1,? WHERE EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1) ON CONFLICT(singleton) DO UPDATE SET version_id=excluded.version_id').bind(body.id,body.id,body.id)
+          // Both statements share one transaction; only its successful readiness
+          // transition may publish. A delayed retry must not replace newer data.
+          db.prepare('INSERT INTO position_active(singleton,version_id) SELECT 1,? WHERE changes()=1 AND EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1) ON CONFLICT(singleton) DO UPDATE SET version_id=excluded.version_id').bind(body.id,body.id,body.id)
         ]);
-        if(!(await db.prepare('SELECT ready FROM position_versions WHERE id=?').bind(body.id).first())?.ready)return failed('La generación cambió durante la validación. Repite la activación; se conserva la anterior.','concurrent_change');
+        if(!await db.prepare('SELECT 1 FROM position_versions v JOIN position_active a ON a.version_id=v.id WHERE a.singleton=1 AND v.id=? AND v.ready=1').bind(body.id).first())return failed('La generación cambió durante la validación. Repite la activación; se conserva la anterior.','concurrent_change');
         if(blocked)await completeSearchIndex(db,body.id);
         await db.prepare(`UPDATE position_ingest_metrics SET updated_at=?,phase='activated',failure_status=NULL WHERE version_id=?`).bind(new Date().toISOString(),body.id).run();
         return reply({id:body.id,ready:true});

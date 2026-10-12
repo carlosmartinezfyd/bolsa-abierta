@@ -28,9 +28,13 @@ Las operaciones idempotentes reintentan hasta tres veces sólo los fallos de tra
 
 La fecha de verificación se actualiza después de activar y mediante una condición monotónica en D1. La comprobación final del workflow exige que API y Pages coincidan en generación, recuento y fecha real, permitiendo una espera acotada para la propagación de Pages.
 
+La activación queda vinculada a la transición de estado realizada dentro de su propia transacción. Una petición retrasada que encuentre otra generación activa recibe un conflicto y no modifica el puntero público.
+
 `PRIVATE_ARCHIVE_KEY` es una clave AES independiente de la credencial de ingesta. Cada ejecución restaura los paquetes autenticados en un directorio temporal privado y comprueba los hashes de todos los originales actuales. La restauración nunca registra una comprobación de CARM. La retención sólo retira paquetes después de una restauración correcta: conserva todos los originales activos, al menos 90 días, los dos paquetes fechados más recientes y cualquier paquete de fecha desconocida. El historial cifrado anterior de Git no se reescribe. No se publican PDF nominales en claro.
 
 ## Observador independiente
+
+El estado público de recuperación exige un simulacro verificado dentro de la misma ejecución que publica los datos. Un informe ausente, fallido o de una ejecución anterior degrada el diagnóstico aunque existan paquetes cifrados preparados.
 
 `WATCHDOG_ENABLED=true` activa un cron a los minutos 7 y 37. **La variable de GitHub `WORKER_CRON_ENABLED` debe permanecer ausente o ser distinta de `true`**: el watchdog es un respaldo y el horario nativo de GitHub continúa a los minutos 17 y 47.
 

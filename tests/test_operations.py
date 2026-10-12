@@ -187,7 +187,22 @@ class OperationsTests(unittest.TestCase):
         self.assertEqual(result['freshness']['status'], 'partial')
         self.assertNotIn('PRIVATE_NOMINAL_ROW', json.dumps(result))
         evidence['runs'][0]['status'] = 'success'
-        self.assertEqual(operations.gateway_status(state, evidence)['freshness']['status'], 'completed')
+        recovery = {'status': 'verified', 'checked_at': '2026-10-04T00:18:30Z'}
+        self.assertEqual(operations.gateway_status(state, evidence, recovery)['freshness']['status'], 'completed')
+
+    def test_failed_missing_or_stale_restore_is_visible_even_with_ready_cache(self):
+        operations = self.operations()
+        evidence = self.correlated_run(operations)
+        state = {'freshness': {'request_id': 'a' * 32, 'status': 'completed',
+                              'last_attempt_at': '2026-10-04T00:17:30Z'},
+                 'position_status': {'cache_status': 'ready'}}
+        for recovery in (None, {'status': 'failed', 'checked_at': '2026-10-04T00:18:30Z'},
+                         {'status': 'verified', 'checked_at': '2026-10-03T00:18:30Z'},
+                         {'status': 'verified', 'checked_at': '2099-01-01T00:00:00Z'}):
+            with self.subTest(recovery=recovery):
+                result = operations.gateway_status(state, evidence, recovery)
+                self.assertEqual(result['freshness']['status'], 'partial')
+                self.assertNotEqual(result['health']['recovery_status'], 'verified')
 
     def test_native_runs_publish_small_independent_freshness_evidence(self):
         operations = self.operations()

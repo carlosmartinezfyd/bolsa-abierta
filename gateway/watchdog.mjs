@@ -9,7 +9,7 @@ export function assessHealth(health,active,now){
  if(mismatch)issues.push('publication_mismatch');
  if(health.run_status==='failed'||health.vacancy_status==='failed')issues.push('collection_failed');
  if(health.coverage_complete!==true||health.pending_documents||health.unavailable_documents||health.vacancy_status==='partial')issues.push('coverage_partial');
- if(health.cache_status!=='ready')issues.push('recovery_unavailable');
+ if(health.cache_status!=='ready'||health.recovery_status!=='verified')issues.push('recovery_unavailable');
  // A short API -> Pages publication interval is observable, but not retried.
  const actionable=issues.filter(i=>!['coverage_partial','recovery_unavailable'].includes(i)&&
    (i!=='publication_mismatch'||now-Date.parse(health.published_at)>20*60000));
