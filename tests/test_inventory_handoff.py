@@ -11,7 +11,7 @@ from bolsa_abierta import position_sync
 
 
 class InventoryHandoffTests(unittest.TestCase):
-    def collect(self, directory, count=1, changed=False, enabled=True):
+    def collect(self, directory, count=1, changed=False, enabled=True, preserve_inventory=False):
         root = Path(directory)
         bodies = {str(900000+n): b'%PDF-verified-'+str(n).encode() for n in range(count)}
         items = [{'content_id': str(900000 + n), 'kind': 'award',
@@ -20,6 +20,8 @@ class InventoryHandoffTests(unittest.TestCase):
                   'downloaded_at': '2026-10-01T00:00:00Z'} for n in range(count)]
         for name, value in [('source', {}), ('documents', {'documents': []}),
                             ('inventory', {'documents': items})]:
+            if name == 'inventory' and preserve_inventory:
+                continue
             (root / f'{name}.json').write_text(json.dumps(value))
         args = argparse.Namespace(source=str(root / 'source.json'),
             documents=str(root / 'documents.json'), maestros=str(root / 'absent.json'),
@@ -66,3 +68,16 @@ class InventoryHandoffTests(unittest.TestCase):
             self.assertEqual(client.fetch.call_count, 5)
             self.assertEqual(len(source['documents']), 5)
             self.assertEqual(pending, 2)
+
+    def test_failed_newer_originals_do_not_starve_older_candidates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, first, _ = self.collect(directory, count=7, changed=True)
+            (_, _, pending), second, _ = self.collect(directory, count=7, changed=True,
+                                                       preserve_inventory=True)
+            attempted = {call.args[0] for client in (first, second)
+                         for call in client.fetch.call_args_list}
+            self.assertEqual(len(attempted), 7)
+            self.assertEqual(second.fetch.call_count, 5)
+            self.assertEqual(pending, 7)
+            inventory = json.loads((Path(directory) / 'inventory.json').read_text())
+            self.assertTrue(all(item.get('position_attempted_at') for item in inventory['documents']))

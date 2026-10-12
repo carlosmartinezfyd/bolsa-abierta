@@ -30,6 +30,8 @@ el recorrido amplio del inventario se realiza después. Las adjudicaciones nueva
 descubiertas quedan para el siguiente ciclo: `--fetch-missing-inventory` recupera
 como máximo cinco originales cuyos metadatos se conservaron, comprueba el hash
 y ejecuta el lector estricto. Un original cambiado queda pendiente de revisión.
+La fecha de cada intento se conserva para dar turno a los documentos anteriores;
+cinco originales problemáticos no pueden ocupar indefinidamente toda la cuota.
 No se renuevan fechas de comprobación a partir de los metadatos conservados.
 `CARM_MIN_REQUEST_INTERVAL=2` separa el inicio de las
 peticiones a CARM por al menos dos segundos dentro de cada cliente; las consultas

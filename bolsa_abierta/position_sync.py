@@ -408,9 +408,14 @@ def source_collection(args, prior):
         from .position_documents import scan_document
         inventory = json.loads(Path(args.inventory_state).read_text(encoding='utf8'))
         known = {d['content_id'] for d in source['documents']}
-        missing_budget, missing_client = 5, None
-        for item in sorted(inventory.get('documents', []),
-                           key=lambda d: (d.get('published_at') or '', d['content_id']), reverse=True):
+        missing_budget, missing_client, inventory_changed = 5, None, False
+        candidates = sorted(inventory.get('documents', []),
+            key=lambda d: (d.get('published_at') or '', d['content_id']), reverse=True)
+        # Rotate attempts across fresh runners; repeated failures must not starve
+        # older discoveries. Recent publication is only the tie breaker.
+        candidates.sort(key=lambda d: _time_key(_timestamp(d.get('position_attempted_at'))
+                                               or '1970-01-01T00:00:00Z'))
+        for item in candidates:
             if item['content_id'] in known or item.get('kind') != 'award' or not item.get('sha256'):
                 continue
             try:
@@ -428,6 +433,8 @@ def source_collection(args, prior):
                     missing_budget -= 1
                     if missing_client is None:
                         missing_client = OfficialClient(max_seconds=15, retries=0)
+                    item['position_attempted_at'] = datetime.now(timezone.utc).isoformat()
+                    inventory_changed = True
                     fetched = missing_client.fetch(item['source_url'], kind='pdf')
                     verify_source(fetched.body, item)
                     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -447,6 +454,8 @@ def source_collection(args, prior):
                 known.add(item['content_id'])
             except Exception:
                 pending += 1
+        if inventory_changed:
+            atomic_write(Path(args.inventory_state), json.dumps(inventory, ensure_ascii=False).encode('utf8'))
     return source, manifest.get('observation_documents', []), pending
 
 
