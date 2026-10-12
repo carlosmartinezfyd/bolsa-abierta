@@ -25,9 +25,13 @@ probar por primera vez el navegador. Un fallo nuevo del navegador tiene su propi
 espera. Descargar un original no evita la revisión de un hash cambiado o de un
 formato desconocido.
 
-La captura empieza por las vacantes actuales. Después recorre el inventario y
-verifica posiciones, de modo que el descubrimiento de nuevas adjudicaciones
-sigue alimentando esa fase. `CARM_MIN_REQUEST_INTERVAL=2` separa el inicio de las
+La captura empieza por las vacantes actuales y los originales de posiciones;
+el recorrido amplio del inventario se realiza después. Las adjudicaciones nuevas
+descubiertas quedan para el siguiente ciclo: `--fetch-missing-inventory` recupera
+como máximo cinco originales cuyos metadatos se conservaron, comprueba el hash
+y ejecuta el lector estricto. Un original cambiado queda pendiente de revisión.
+No se renuevan fechas de comprobación a partir de los metadatos conservados.
+`CARM_MIN_REQUEST_INTERVAL=2` separa el inicio de las
 peticiones a CARM por al menos dos segundos dentro de cada cliente; las consultas
 a RRHH son independientes. La espera cuenta en el plazo de cada petición y el
 inventario conserva su límite de 240 segundos y su cola persistente. No se reduce
@@ -37,6 +41,9 @@ La primera ejecución de producción con Chromium descargó los siete originales
 revisados al inicio del inventario, pero las descargas repetidas después del
 recorrido amplio recibieron `access_challenge`. Por eso una prueba aislada de PDF
 no basta: se comprueba la secuencia de captación y finalmente el estado publicado.
+Una prueba posterior confirmó que el intervalo de dos segundos por sí solo no
+evita ese bloqueo después de 160 peticiones: los dos procesos de actualización
+deben ejecutarse antes del recorrido amplio.
 Las esperas persistidas siguen vigentes; una verificación manual nueva puede
 limpiar exclusivamente los bloqueos de los originales que acaba de validar.
 No se adelantan plazos indicados por el servidor mediante `Retry-After`.
