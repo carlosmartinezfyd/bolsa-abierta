@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 35
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     env:
       REQUEST_ID: ${{ inputs.request_id }}
       SCHEDULED_TIME: ${{ inputs.scheduled_time }}
@@ -209,8 +209,17 @@ jobs:
       - uses: actions/deploy-pages@v4
         if: steps.build.outcome == 'success'
         id: deployment
+        continue-on-error: true
+      # Retry the same validated artifact once if Pages/OIDC fails. A second
+      # failure remains fatal; collection and encrypted restore are not repeated.
+      - name: Wait before retrying Pages publication
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 15
+      - uses: actions/deploy-pages@v4
+        if: steps.deployment.outcome == 'failure'
+        id: deployment_retry
       - name: Verify public API and Pages convergence
-        if: steps.deployment.outcome == 'success'
+        if: steps.deployment.outcome == 'success' || steps.deployment_retry.outcome == 'success'
         run: python -m bolsa_abierta.publication_check --snapshot site/data/state.json
       - name: Record aggregate operational evidence
         if: always() && steps.restore.outcome == 'success'
