@@ -207,6 +207,17 @@ def split_migration_indexes(source):
 def prepare_gateway_migration(execute, source, reservation_id, *, limit=70000, max_seconds=240):
     """Resume per-index DDL using sqlite_schema as durable progress, never delete rows."""
     core, indexes = split_migration_indexes(source)
+    return _prepare_gateway_schema(execute, core, indexes, reservation_id, limit=limit, max_seconds=max_seconds)
+
+
+def prepare_compact_gateway(execute, source, reservation_id, *, limit=70000):
+    """Add compact storage without rebuilding populated position indexes."""
+    if re.search(r'CREATE\s+(?:VIRTUAL\s+TABLE|(?:UNIQUE\s+)?INDEX).*?position_(?:rows|entries)', source, re.I):
+        raise ValueError('Compact migration must not rebuild historical indexes')
+    return _prepare_gateway_schema(execute, source, [], reservation_id, limit=limit, max_seconds=240)
+
+
+def _prepare_gateway_schema(execute, core, indexes, reservation_id, *, limit, max_seconds):
     deadline = time.monotonic() + max_seconds
     def rows(sql):
         return [row for item in execute(sql) for row in item.get('results', [])]

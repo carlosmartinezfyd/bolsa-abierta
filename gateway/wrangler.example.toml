@@ -13,6 +13,7 @@ CRON_ENABLED = "false"
 OFFICIAL_FEED_URL = "https://www.carm.es/web/pagina?IDCONTENIDO=REPLACE_WITH_REVIEWED_FEED_ID&IDTIPO=100"
 POSITION_DAILY_WRITE_LIMIT = "70000"
 POSITION_ROW_WRITE_ESTIMATE = "32"
+POSITION_STORAGE = "blocks-v1"
 # GITHUB_TOKEN is a Worker secret, NEVER a vars value or frontend setting.
 
 [[d1_databases]]

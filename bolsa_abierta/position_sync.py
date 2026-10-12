@@ -291,6 +291,16 @@ def publish(version, read_rows, send, *, resume=False):
     rows = read_rows()
     if ('row_count' in version and len(rows) != version['row_count']) or len({r['id'] for r in rows}) != len(rows):
         raise ValueError('Incomplete or duplicate local extraction; no rows published')
+    if existing.get('storage') == 'blocks-v1':
+        buckets = {}
+        for row in sorted(rows, key=lambda r: r['id']):
+            buckets.setdefault(row['id'][:2], []).append(row)
+        if any(len(items) > 256 for items in buckets.values()):
+            raise ValueError('A private publication block exceeds its row budget')
+        for bucket, items in sorted(buckets.items()):
+            send({'action': 'block', 'id': version['id'], 'bucket': bucket, 'rows': items})
+        send({'action': 'activate', 'id': version['id']})
+        return 'published'
     if resume:
         existing_ids, after = set(), None
         for _ in range(2501):

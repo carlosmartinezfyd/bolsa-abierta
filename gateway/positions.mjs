@@ -1,4 +1,5 @@
 import {reserveWriteBudget,settleWriteBudget,pendingWriteBudget} from './write-budget.mjs';
+import {reserveReadBudget,settleReadBudget} from './read-budget.mjs';
 /* Dated, immutable published-list ranks. Active availability is not inferred. */
 const HASH=/^[a-f0-9]{64}$/, ID=/^[a-f0-9]{32}$/;
 const fold=value=>value.normalize('NFKD').replace(/\p{M}/gu,'').toUpperCase().replace(/\s+/g,' ').trim();
@@ -163,23 +164,32 @@ export async function positionRoute(request,env,reply){
     if(request.method==='OPTIONS')return reply(null,204);
     if(!env.DB)return reply({error:'La consulta aún no está disponible.'},503);
     const db=env.DB.withSession('first-primary');
+    const compact=env.POSITION_STORAGE==='blocks-v1';
     if(path==='/internal/positions'){
       if(request.method!=='POST')return reply({error:'Método no permitido.'},405);
       const body=await jsonBody(request,1_000_000);
       if(body.action==='begin'){
         const v=validateVersion(body.version);
         await db.prepare('INSERT OR IGNORE INTO position_versions(id,metadata) VALUES(?,?)').bind(v.id,JSON.stringify(v)).run();
-        await db.prepare('INSERT OR IGNORE INTO position_search_status(version_id,ready) VALUES(?,1)').bind(v.id).run();
         const saved=await db.prepare('SELECT metadata,ready FROM position_versions WHERE id=?').bind(v.id).first();
+        await db.prepare('INSERT OR IGNORE INTO position_search_status(version_id,ready) VALUES(?,?)').bind(v.id,compact&&saved.ready?0:1).run();
         const stored=JSON.parse(saved.metadata);
         if(JSON.stringify({...stored,checked_at:null})!==JSON.stringify({...v,checked_at:null}))return reply({error:'Versión incompatible.'},409);
-        return reply({id:v.id,ready:!!saved.ready});
+        if(compact&&!saved.ready){
+          const legacy=v.coverage==='multi_source'?'position_entries':'position_rows';
+          if(await db.prepare(`SELECT 1 FROM ${legacy} WHERE version_id=? LIMIT 1`).bind(v.id).first())return reply({error:'La generación tiene una carga anterior pendiente.'},409);
+          await db.prepare('INSERT OR IGNORE INTO position_block_versions(version_id) VALUES(?)').bind(v.id).run();
+        }
+        const blocked=compact&&!!await db.prepare('SELECT 1 FROM position_block_versions WHERE version_id=?').bind(v.id).first();
+        return reply({id:v.id,ready:!!saved.ready,...(blocked?{storage:'blocks-v1'}:{})});
       }
       if(!HASH.test(body.id))invalid();
       const saved=await db.prepare('SELECT metadata,ready FROM position_versions WHERE id=?').bind(body.id).first();
       if(!saved)return reply({error:'Versión desconocida.'},404);
       const v=JSON.parse(saved.metadata);
-      const table=v.coverage==='multi_source'?'position_entries':'position_rows';
+      const blocked=compact&&!!await db.prepare('SELECT 1 FROM position_block_versions WHERE version_id=?').bind(body.id).first();
+      const table=blocked?'position_block_rows':v.coverage==='multi_source'?'position_entries':'position_rows';
+      if(blocked&&['index','recover','rows'].includes(body.action))return reply({error:'Esta generación utiliza bloques inmutables.'},409);
       if(body.action==='index'){
         const status=await db.prepare('SELECT ready,after_rowid FROM position_search_status WHERE version_id=?').bind(body.id).first();
         if(status?.ready)return reply({id:body.id,index_ready:true,indexed:0});
@@ -219,9 +229,9 @@ export async function positionRoute(request,env,reply){
         return reply({version:v,ready:!!saved.ready,active:!!await db.prepare('SELECT 1 FROM position_active WHERE singleton=1 AND version_id=?').bind(body.id).first(),...progress});
       }
       if(body.action==='rollback'){
-        if(!(await db.prepare('SELECT ready FROM position_search_status WHERE version_id=?').bind(body.id).first())?.ready)return reply({error:'El índice de la generación aún no está preparado. Se conserva la anterior.',index_pending:true},409);
+        if(!compact&&!(await db.prepare('SELECT ready FROM position_search_status WHERE version_id=?').bind(body.id).first())?.ready)return reply({error:'El índice de la generación aún no está preparado. Se conserva la anterior.',index_pending:true},409);
         if(!saved.ready)return reply({error:'Solo puede recuperarse una generación validada.'},409);
-        const changed=await db.prepare('UPDATE position_active SET version_id=? WHERE singleton=1 AND EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1)').bind(body.id,body.id,body.id).run();
+        const changed=await db.prepare('UPDATE position_active SET version_id=? WHERE singleton=1 AND EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND (? OR EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1))').bind(body.id,body.id,compact?1:0,body.id).run();
         if(changed.meta?.changes===0)return reply({error:'La generación no está lista. Se conserva la anterior.',index_pending:true},409);
         return reply({id:body.id,ready:true});
       }
@@ -238,6 +248,25 @@ export async function positionRoute(request,env,reply){
         return reply({id:body.id,ready:false,restart:!remaining,more:remaining});
       }
       if(saved.ready)return reply({error:'La versión publicada es inmutable.'},409);
+      if(body.action==='block'&&blocked){
+        if(!/^[a-f0-9]{2}$/.test(body.bucket)||!Array.isArray(body.rows)||!body.rows.length||body.rows.length>256)invalid();
+        const rows=body.rows.map(r=>validateRow(r,v));
+        if(rows.some((r,i)=>!r.id.startsWith(body.bucket)||(i&&r.id<=rows[i-1].id)))invalid();
+        const payload=JSON.stringify(rows.map(r=>({...r,search_name:fold(r.name)})));
+        if(new TextEncoder().encode(payload).length>512000)invalid();
+        const previous=await db.prepare('SELECT payload FROM position_blocks WHERE version_id=? AND bucket=?').bind(body.id,body.bucket).first();
+        if(previous)return previous.payload===payload?reply({accepted:rows.length,unchanged:true}):reply({error:'El bloque de esta generación es inmutable.'},409);
+        const reservation=await reserveWriteBudget(db,env,1,8);
+        if(!reservation)return reply({error:'La publicación espera al presupuesto diario.',...await pendingWriteBudget(db)},429);
+        const written=await db.prepare(`INSERT OR IGNORE INTO position_blocks(version_id,bucket,payload)
+          SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=0)
+          AND EXISTS(SELECT 1 FROM position_write_reservations r JOIN position_write_reservation_leases l ON l.id=r.id WHERE r.id=? AND r.settled=0 AND l.expires_at>unixepoch('now'))`)
+          .bind(body.id,body.bucket,payload,body.id,reservation.id).run();
+        const write_budget=await settleWriteBudget(db,reservation,[written]);
+        const stored=await db.prepare('SELECT payload FROM position_blocks WHERE version_id=? AND bucket=?').bind(body.id,body.bucket).first();
+        if(write_budget.expired||stored?.payload!==payload)return reply({error:'La carga ha cambiado. Repite la operación.'},409);
+        return reply({accepted:rows.length,write_budget});
+      }
       if(body.action==='rows'){
         if(!Array.isArray(body.rows) || !body.rows.length || body.rows.length>40)invalid();
         const rows=body.rows.map(r=>validateRow(r,v));
@@ -256,10 +285,14 @@ export async function positionRoute(request,env,reply){
           ON CONFLICT(version_id) DO UPDATE SET updated_at=excluded.updated_at,phase=excluded.phase,failure_status=NULL,rows_written=position_ingest_metrics.rows_written+excluded.rows_written`).bind(body.id,new Date().toISOString(),new Date().toISOString(),'staging',actual).run();
         return reply({accepted:rows.length,write_budget});
       }
-      if(body.action==='activate'){
+      if(body.action==='activate'||(blocked&&body.action==='validate')){
         if(!(await db.prepare('SELECT ready FROM position_search_status WHERE version_id=?').bind(body.id).first())?.ready)return reply({error:'El índice de la generación aún no está preparado. Se conserva la anterior.',index_pending:true},409);
         const failed=async(message,code)=>{await db.prepare(`INSERT INTO position_ingest_metrics(version_id,started_at,updated_at,phase,failure_status) VALUES(?,?,?,?,?) ON CONFLICT(version_id) DO UPDATE SET updated_at=excluded.updated_at,phase=excluded.phase,failure_status=excluded.failure_status`).bind(body.id,new Date().toISOString(),new Date().toISOString(),'validation_failed',code).run();return reply({error:message},409);};
         const snapshot=(await db.prepare('SELECT revision FROM position_staging_revisions WHERE version_id=?').bind(body.id).first())?.revision||0;
+        if(blocked){
+          const duplicates=await db.prepare(`SELECT 1 FROM ${table} WHERE version_id=? GROUP BY specialty,rank HAVING rank IS NOT NULL AND COUNT(*)>1 LIMIT 1`).bind(body.id).first();
+          if(duplicates)return failed('Hay puestos duplicados. Se conserva la anterior.','duplicate_ranks');
+        }
         const counts=v.ranked_specialties||v.specialties;
         const groups=(await db.prepare(`SELECT specialty,COUNT(*) AS n,MIN(rank) AS first,MAX(rank) AS last FROM ${table} WHERE version_id=? AND rank IS NOT NULL AND json_extract(payload,'$.roster_id') IS NULL GROUP BY specialty`).bind(body.id).all()).results;
         if(groups.length!==counts.length || counts.some(s=>!groups.some(g=>g.specialty===s.code && g.n===s.count && g.first===1 && g.last===s.count)))
@@ -274,6 +307,10 @@ export async function positionRoute(request,env,reply){
             !evidence.some(g=>g.source_id===d.content_id&&g.specialty===s.code&&g.n===s.count))))
             return failed('Faltan registros de documentos revisados. Se conserva la anterior.','document_counts');
         }
+        if(body.action==='validate'){
+          const valid=await db.prepare(`SELECT 1 FROM position_versions WHERE id=? AND ready=0 AND (SELECT COUNT(*) FROM ${table} WHERE version_id=?)=? AND COALESCE((SELECT revision FROM position_staging_revisions WHERE version_id=?),0)=?`).bind(body.id,body.id,v.row_count,body.id,snapshot).first();
+          return valid?reply({id:body.id,validated:true,ready:false,revision:snapshot}):failed('La generación cambió durante la validación.','concurrent_change');
+        }
         await db.batch([
           db.prepare(`UPDATE position_versions SET ready=1 WHERE id=? AND ready=0 AND (SELECT COUNT(*) FROM ${table} WHERE version_id=?)=? AND COALESCE((SELECT revision FROM position_staging_revisions WHERE version_id=?),0)=? AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1)`).bind(body.id,body.id,v.row_count,body.id,snapshot,body.id),
           db.prepare('INSERT INTO position_active(singleton,version_id) SELECT 1,? WHERE EXISTS(SELECT 1 FROM position_versions WHERE id=? AND ready=1) AND EXISTS(SELECT 1 FROM position_search_status WHERE version_id=? AND ready=1) ON CONFLICT(singleton) DO UPDATE SET version_id=excluded.version_id').bind(body.id,body.id,body.id)
@@ -287,16 +324,19 @@ export async function positionRoute(request,env,reply){
     const active=await db.prepare('SELECT v.metadata,COALESCE(s.ready,0) AS search_ready FROM position_versions v JOIN position_active a ON a.version_id=v.id LEFT JOIN position_search_status s ON s.version_id=v.id WHERE a.singleton=1 AND v.ready=1').bind().first();
     if(!active)return reply({error:'La consulta aún no está disponible.'},503);
     const version=JSON.parse(active.metadata), specialties=version.specialties;
-    const table=version.coverage==='multi_source'?'position_entries':'position_rows';
+    const blocked=compact&&!!await db.prepare('SELECT 1 FROM position_block_versions WHERE version_id=?').bind(version.id).first();
+    const table=blocked?'position_block_rows':version.coverage==='multi_source'?'position_entries':'position_rows';
+    // Existing immutable generations remain searchable during the additive rollout.
+    const scanSearch=blocked||(compact&&!active.search_ready);
     delete version.specialties;
-    if(path==='/api/positions' && request.method==='GET')return reply({version,specialties,search_ready:!!active.search_ready,refresh_available:!!env.GITHUB_TOKEN});
+    if(path==='/api/positions' && request.method==='GET')return reply({version,specialties,search_ready:!!active.search_ready||scanSearch,refresh_available:!!env.GITHUB_TOKEN});
     if(path==='/api/positions/search' && request.method==='POST'){
       const body=await jsonBody(request,2048);
       const offset=body.offset??0;
       if(!Number.isInteger(offset)||offset<0||offset>=100000||offset%20)invalid();
       if(offset&&body.version_id!==version.id)return reply({error:'Las publicaciones han cambiado. Repite la búsqueda.'},409);
       if(!validText(body.query,100) || (body.specialty!==undefined && body.specialty!=='' && !specialties.some(s=>s.code===body.specialty)))invalid();
-      if(!active.search_ready&&!/^\d{7,8}$/.test(fold(body.query)))return reply({error:'El índice de búsqueda se está preparando. Puedes consultar por número completo de lista.',index_pending:true},503);
+      if(!active.search_ready&&!scanSearch&&!/^\d{7,8}$/.test(fold(body.query)))return reply({error:'El índice de búsqueda se está preparando. Puedes consultar por número completo de lista.',index_pending:true},503);
       const query=fold(body.query), tokens=query.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
       if(query.replace(/[^\p{L}\p{N}]/gu,'').length<3 || tokens.length>6 || /[%_\\]/.test(query))invalid();
       const numeric=/^\d{7,8}$/.test(query);
@@ -324,19 +364,21 @@ export async function positionRoute(request,env,reply){
       // CROSS JOIN keeps FTS as the outer loop across SQLite versions; NOT INDEXED
       // prevents a generation index from replacing the candidate's rowid lookup.
       const match='version_id : "'+version.id.slice(0,16)+'" AND '+longTokens.map(t=>'search_name : "'+t+'"').join(' AND ');
-      const candidateSQL=numeric?`SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND list_number=? LIMIT ${cap+1}`:
+      const candidateSQL=numeric?`SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND list_number=? LIMIT ${cap+1}`:scanSearch?
+        `SELECT * FROM ${table} WHERE version_id=? ${scoped?'AND specialty=?':''} AND ${longTokens.map(()=> 'search_name LIKE ?').join(' AND ')} LIMIT ${cap+1}`:
         `SELECT p.* FROM ${fts} CROSS JOIN ${table} p NOT INDEXED ON p.rowid=${fts}.rowid WHERE ${fts} MATCH ? AND p.version_id=? ${scoped?'AND p.specialty=?':''} LIMIT ${cap+1}`;
-      const candidateArgs=numeric?[version.id,...(scoped?[body.specialty]:[]),query]:[match,version.id,...(scoped?[body.specialty]:[])];
+      const candidateArgs=numeric?[version.id,...(scoped?[body.specialty]:[]),query]:scanSearch?[version.id,...(scoped?[body.specialty]:[]),...longTokens.map(t=>'%'+t+'%')]:[match,version.id,...(scoped?[body.specialty]:[])];
       const keyCondition=after?`AND (${order}) > (${after.k.map(()=>'?').join(',')})`:'';
-      const sql=`WITH candidates AS MATERIALIZED (${candidateSQL}), bounded AS (SELECT COUNT(*) AS n FROM candidates)
+      const sql=`WITH candidates AS MATERIALIZED (${candidateSQL}), bounded AS (SELECT COUNT(*) AS n FROM candidates), page AS (
         SELECT payload,search_name,specialty,rank,id FROM candidates WHERE (SELECT n FROM bounded)<=${cap} AND ${numeric?'1':condition}
-        ${keyCondition} ORDER BY ${order} LIMIT 21 OFFSET ?`;
-      const results=(await db.prepare(sql).bind(...candidateArgs,...(numeric?[]:values),...(after?after.k:[]),after?0:offset).all()).results;
-      // A separate bounded count runs only for an empty page, never a full COUNT of names.
-      if(!results.length){
-        const count=await db.prepare(`SELECT COUNT(*) AS n FROM (${candidateSQL})`).bind(...candidateArgs).first();
-        if(count.n>cap)return reply({error:'La búsqueda es demasiado amplia. Añade otro apellido, el nombre o elige una lista.',search_limit:cap},422);
-      }
+        ${keyCondition} ORDER BY ${order} LIMIT 21 OFFSET ?)
+        SELECT *,0 AS oversized FROM page UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,1 FROM bounded WHERE n>${cap}`;
+      const allowance=scanSearch?await reserveReadBudget(db,6*version.row_count+30000):null;
+      if(scanSearch&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy. Vuelve a intentarlo mañana.',pending_budget:true},429);
+      const report=await db.prepare(sql).bind(...candidateArgs,...(numeric?[]:values),...(after?after.k:[]),after?0:offset).all();
+      if(allowance)await settleReadBudget(db,allowance,[report]);
+      const results=report.results;
+      if(results[0]?.oversized)return reply({error:'La búsqueda es demasiado amplia. Añade otro apellido, el nombre o elige una lista.',search_limit:cap},422);
       const more=results.length>20, page=results.slice(0,20), last=page.at(-1);
       const next=more?{v:1,g:version.id,q:query,s:body.specialty||'',k:scoped?[last.rank??2147483647,last.id]:[last.search_name,last.specialty,last.rank??2147483647,last.id]}:null;
       const next_cursor=next?btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(next)))):null;
@@ -344,7 +386,11 @@ export async function positionRoute(request,env,reply){
     }
     const match=path.match(/^\/api\/positions\/([a-f0-9]{32})$/);
     if(match && request.method==='GET'){
-      const row=await db.prepare(`SELECT payload FROM ${table} WHERE version_id=? AND id=?`).bind(version.id,match[1]).first();
+      const allowance=blocked?await reserveReadBudget(db,3000):null;
+      if(blocked&&!allowance)return reply({error:'Se ha alcanzado el presupuesto gratuito de consultas de hoy.',pending_budget:true},429);
+      const report=await db.prepare(`SELECT payload FROM ${table} WHERE version_id=? ${blocked?'AND bucket=?':''} AND id=?`).bind(version.id,...(blocked?[match[1].slice(0,2)]:[]),match[1]).all();
+      if(allowance)await settleReadBudget(db,allowance,[report]);
+      const row=report.results[0];
       return row?reply({version,person:JSON.parse(row.payload)}):reply({error:'Esta persona no figura en la publicación consultada.'},404);
     }
     return reply({error:'Recurso o método no permitido.'},404);
