@@ -1,0 +1,29 @@
+name: Diagnose production source sequence
+on:
+  push:
+    branches: [fix/refresh-source-order]
+    paths: ['.github/workflows/source-sequence-probe.yml']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OFFICIAL_SOURCE_TRANSPORT: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[browser]'
+      - run: python -m playwright install --with-deps chromium
+      - name: Check vacancies before broad discovery
+        run: xvfb-run -a python -m bolsa_abierta --data-dir .runtime/vacancies refresh
+      - name: Verify positions before broad discovery
+        run: xvfb-run -a python -m bolsa_abierta.position_sync --validate-only
+      - name: Bounded discovery
+        continue-on-error: true
+        run: xvfb-run -a python -m bolsa_abierta.source_inventory --state .runtime/source-inventory.json --documents .runtime/source-documents.json --private-dir .runtime/inventory --max-requests 40 --max-seconds 180
+      - name: Check vacancies after discovery
+        run: xvfb-run -a python -m bolsa_abierta --data-dir .runtime/vacancies refresh
