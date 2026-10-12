@@ -113,6 +113,7 @@ class ParserTests(unittest.TestCase):
             'María del Mar Sánchez Rodríguez']
         self.assertEqual(self.parse(template_pdf([1], signatures={1: signature}))['row_count'], 1)
         for block in (signature[:-1], signature + ['Contenido sin interpretar'],
+                      signature[:-1] + ['Firmante diferente'],
                       ['Murcia, a 29 de septiembre de 2026'] + signature[1:]):
             with self.subTest(block=block), self.assertRaises(self.parser.ParseError):
                 self.parse(template_pdf([1], signatures={1: block}))

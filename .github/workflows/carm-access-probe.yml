@@ -17,6 +17,7 @@ jobs:
       - run: pip install -e '.[browser]'
       - run: python -m playwright install --with-deps chromium
       - run: python -m unittest tests.test_browser_source tests.test_sources tests.test_parser
+      - run: xvfb-run -a env RUN_BROWSER_TESTS=1 python -m unittest tests.test_browser_runtime
       - name: Check bounded source transport on hosted runner
         env:
           OFFICIAL_SOURCE_TRANSPORT: chromium
@@ -43,3 +44,11 @@ jobs:
                   raise SystemExit(1)
           PY
           xvfb-run -a python /tmp/probe.py
+      - name: Validate every reviewed position original
+        env:
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+        run: xvfb-run -a python -m bolsa_abierta.position_sync --validate-only --validation-report .runtime/positions-validation.json
+      - name: Exercise complete vacancy collection
+        env:
+          OFFICIAL_SOURCE_TRANSPORT: chromium
+        run: xvfb-run -a python -m bolsa_abierta --data-dir .runtime/vacancies refresh

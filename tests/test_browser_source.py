@@ -7,6 +7,24 @@ from tests.test_sources import public_dns, response, PDF_URL
 
 
 class BrowserTransportTests(unittest.TestCase):
+    def test_browser_denies_subresources_navigations_and_other_origins(self):
+        from bolsa_abierta.browser_source import Browser
+        browser = Browser.__new__(Browser)
+        browser.bootstrapping = False
+        for url, method, resource, navigation in (
+            ('https://127.0.0.1/secret', 'GET', 'fetch', False),
+            ('https://evil.example/', 'GET', 'fetch', False),
+            ('https://www.carm.es/script.js', 'GET', 'script', False),
+            ('https://www.carm.es/', 'POST', 'fetch', False),
+            ('https://www.carm.es/', 'GET', 'document', True),
+        ):
+            route = Mock()
+            route.request = Mock(url=url, method=method, resource_type=resource,
+                                 is_navigation_request=Mock(return_value=navigation))
+            browser.route(route)
+            route.abort.assert_called_once()
+            route.continue_.assert_not_called()
+
     def test_browser_is_explicit_and_still_validates_pdf(self):
         session = Mock()
         with patch.dict('os.environ', {'OFFICIAL_SOURCE_TRANSPORT': 'chromium'}), \
