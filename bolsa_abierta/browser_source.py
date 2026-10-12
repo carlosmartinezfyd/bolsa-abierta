@@ -110,7 +110,7 @@ class Browser:
                 timeout=remaining(deadline), args=['--no-proxy-server',
                     f'--host-resolver-rules=MAP www.carm.es {pin}, MAP * ~NOTFOUND'],
                 env={key: value for key, value in os.environ.items() if key in {
-                    'DISPLAY', 'PATH', 'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TEMP', 'TMP',
+                    'DISPLAY', 'XAUTHORITY', 'PATH', 'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TEMP', 'TMP',
                     'LANG', 'LC_ALL', 'XDG_RUNTIME_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME',
                     'SYSTEMROOT', 'WINDIR', 'LOCALAPPDATA', 'APPDATA', 'COMSPEC', 'PATHEXT'}})
             self.context = self.browser.new_context(service_workers='block', accept_downloads=False)
