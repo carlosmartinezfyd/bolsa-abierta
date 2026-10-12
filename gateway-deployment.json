@@ -1,9 +1,9 @@
 {
-  "code_sha": "0ff20aa3b57d8c7a67e4fc8998951bad9db76851",
+  "code_sha": "67f317de130494895a5b54ff68cb17241b2709c8",
   "daily_resumption": true,
   "reason": "missing_configuration",
   "status": "pending",
-  "updated_at": "2026-10-12T16:41:24.254452+00:00",
+  "updated_at": "2026-10-12T20:31:39.484786+00:00",
   "version": 1,
   "worker": "bolsa-abierta-gateway"
 }
