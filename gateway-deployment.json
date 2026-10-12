@@ -1,9 +1,13 @@
 {
-  "code_sha": "67f317de130494895a5b54ff68cb17241b2709c8",
-  "daily_resumption": true,
-  "reason": "missing_configuration",
-  "status": "pending",
-  "updated_at": "2026-10-12T20:31:39.484786+00:00",
   "version": 1,
-  "worker": "bolsa-abierta-gateway"
+  "worker": "bolsa-abierta-gateway",
+  "code_sha": "0e4d0bca749d5706f732eae6f9adacd19af233dd",
+  "status": "deployed",
+  "reason": "verified_local_wrangler_deployment",
+  "updated_at": "2026-10-12T21:56:59.435399+00:00",
+  "worker_version": "e437d2c8-9f22-44c4-93e2-7d45c0ca0150",
+  "position_storage": "blocks-v1",
+  "daily_resumption": false,
+  "candidate_validation_run": "38312631115",
+  "validated_records": 22393
 }
