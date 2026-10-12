@@ -6,6 +6,7 @@ from email.utils import parsedate_to_datetime
 import hashlib
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -98,7 +99,7 @@ class OfficialClient:
     """
     def __init__(self, session=None, *, resolver=None, sleep=None, max_html_bytes=2_000_000,
                  max_pdf_bytes=12_000_000, timeout=(4, 8), max_seconds=30,
-                 max_redirects=4, retries=1, retry_state=None, clock=None):
+                 max_redirects=4, retries=1, retry_state=None, clock=None, carm_interval=None):
         self.session = session if session is not None else requests.Session()
         self.session.trust_env = False
         self.resolver = resolver or socket.getaddrinfo
@@ -111,6 +112,22 @@ class OfficialClient:
         self.retries = min(max(retries, 0), 2)
         self.retry_state = retry_state or os.environ.get('SOURCE_RETRY_STATE')
         self.clock = clock or time.time
+        self.carm_interval = float(os.environ.get('CARM_MIN_REQUEST_INTERVAL', '0')
+                                   if carm_interval is None else carm_interval)
+        if not math.isfinite(self.carm_interval) or not 0 <= self.carm_interval <= 10:
+            raise ValueError('Invalid CARM request interval')
+        self._next_carm_request = 0
+
+    def _pace_request(self, url, deadline):
+        if _allowed_url(url).hostname != 'www.carm.es' or not self.carm_interval:
+            return
+        now = time.monotonic()
+        delay = max(0, self._next_carm_request - now)
+        if now + delay >= deadline:
+            raise SourceError('Official request pacing exceeded time budget', 'time_limit')
+        if delay:
+            self.sleep(delay)
+        self._next_carm_request = time.monotonic() + self.carm_interval
 
     def _browser_transport(self, url):
         value = _allowed_url(url)
@@ -216,6 +233,7 @@ class OfficialClient:
                     if time.monotonic() >= deadline:
                         raise SourceError('Official request exceeded time budget', 'time_limit')
                     self._validate_dns(current)
+                    self._pace_request(current, deadline)
                     remaining = max(0.1, deadline - time.monotonic())
                     # A validator belongs to one URL, including its pagination
                     # query; even an official redirect cannot transfer it.

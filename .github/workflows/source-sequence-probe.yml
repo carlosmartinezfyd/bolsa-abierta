@@ -11,6 +11,7 @@ jobs:
     timeout-minutes: 15
     env:
       OFFICIAL_SOURCE_TRANSPORT: chromium
+      CARM_MIN_REQUEST_INTERVAL: '2'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,12 +19,18 @@ jobs:
           python-version: '3.12'
       - run: pip install -e '.[browser]'
       - run: python -m playwright install --with-deps chromium
+      - name: Restore production inventory metadata
+        run: |
+          mkdir -p .runtime
+          git fetch origin data-state
+          git show FETCH_HEAD:source-inventory.json > .runtime/source-inventory.json
+          git show FETCH_HEAD:source-documents.json > .runtime/source-documents.json
       - name: Check vacancies before broad discovery
         run: xvfb-run -a python -m bolsa_abierta --data-dir .runtime/vacancies refresh
-      - name: Verify positions before broad discovery
-        run: xvfb-run -a python -m bolsa_abierta.position_sync --validate-only
-      - name: Bounded discovery
+      - name: Paced production discovery
         continue-on-error: true
-        run: xvfb-run -a python -m bolsa_abierta.source_inventory --state .runtime/source-inventory.json --documents .runtime/source-documents.json --private-dir .runtime/inventory --max-requests 40 --max-seconds 180
+        run: xvfb-run -a python -m bolsa_abierta.source_inventory --state .runtime/source-inventory.json --documents .runtime/source-documents.json --private-dir .runtime/inventory --max-requests 160 --max-seconds 240
+      - name: Verify positions after production discovery
+        run: xvfb-run -a python -m bolsa_abierta.position_sync --state .runtime/source-documents.json --inventory-state .runtime/source-inventory.json --inventory-dir .runtime/inventory --validate-only
       - name: Check vacancies after discovery
         run: xvfb-run -a python -m bolsa_abierta --data-dir .runtime/vacancies refresh
