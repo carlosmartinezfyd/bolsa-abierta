@@ -127,7 +127,10 @@ class OfficialClient:
             raise SourceError('Official request pacing exceeded time budget', 'time_limit')
         if delay:
             self.sleep(delay)
-        self._next_carm_request = time.monotonic() + self.carm_interval
+        now = time.monotonic()
+        if now >= deadline:
+            raise SourceError('Official request pacing exceeded time budget', 'time_limit')
+        self._next_carm_request = now + self.carm_interval
 
     def _browser_transport(self, url):
         value = _allowed_url(url)

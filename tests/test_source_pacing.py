@@ -44,3 +44,17 @@ class SourcePacingTests(unittest.TestCase):
         for interval in (-1, 11, float('nan'), float('inf'), 'bad'):
             with self.subTest(interval=interval), self.assertRaises(ValueError):
                 OfficialClient(carm_interval=interval)
+
+    def test_delayed_wakeup_cannot_start_an_expired_request(self):
+        now = [1000.0]
+        def delayed_wakeup(seconds):
+            now[0] += seconds + 40
+        session = Mock(get=Mock(return_value=response(b'%PDF-ok',
+                       headers={'Content-Type': 'application/pdf'})))
+        with patch('bolsa_abierta.sources.time.monotonic', side_effect=lambda: now[0]):
+            client = OfficialClient(session=session, resolver=public_dns,
+                                    carm_interval=2, sleep=delayed_wakeup)
+            client.fetch(PDF_URL, kind='pdf')
+            with self.assertRaises(SourceError):
+                client.fetch(PDF_URL, kind='pdf')
+        self.assertEqual(session.get.call_count, 1)

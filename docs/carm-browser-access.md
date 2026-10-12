@@ -25,6 +25,22 @@ probar por primera vez el navegador. Un fallo nuevo del navegador tiene su propi
 espera. Descargar un original no evita la revisión de un hash cambiado o de un
 formato desconocido.
 
+La captura empieza por las vacantes actuales. Después recorre el inventario y
+verifica posiciones, de modo que el descubrimiento de nuevas adjudicaciones
+sigue alimentando esa fase. `CARM_MIN_REQUEST_INTERVAL=2` separa el inicio de las
+peticiones a CARM por al menos dos segundos dentro de cada cliente; las consultas
+a RRHH son independientes. La espera cuenta en el plazo de cada petición y el
+inventario conserva su límite de 240 segundos y su cola persistente. No se reduce
+el conjunto de fuentes para simular una cobertura completa.
+
+La primera ejecución de producción con Chromium descargó los siete originales
+revisados al inicio del inventario, pero las descargas repetidas después del
+recorrido amplio recibieron `access_challenge`. Por eso una prueba aislada de PDF
+no basta: se comprueba la secuencia de captación y finalmente el estado publicado.
+Las esperas persistidas siguen vigentes; una verificación manual nueva puede
+limpiar exclusivamente los bloqueos de los originales que acaba de validar.
+No se adelantan plazos indicados por el servidor mediante `Retry-After`.
+
 El original del [anuncio del 7 de octubre](https://rrhheducacion.carm.es/07-10-2026-relacion-de-vacantes-sin-cubrir-secundaria-y-otros-cuerpos/)
 se conserva como fixture público `tests/fixtures/carm-2026-10-07.pdf`, con SHA-256
 `b668022511f140042b3422f1ed045a2d3be46a31d265fff63790b05e744d65c7`.
