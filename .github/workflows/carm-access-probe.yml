@@ -27,7 +27,7 @@ jobs:
                   browser=p.chromium.launch(headless=headless,channel='chromium')
                   page=browser.new_page()
                   try:
-                      response=page.goto('https://www.carm.es/web/pagina?IDCONTENIDO=24219&IDTIPO=100',timeout=25000)
+                      response=page.goto('https://www.carm.es/web/pagina?IDCONTENIDO=24219&IDTIPO=100',timeout=20000,wait_until="domcontentloaded")
                       print(json.dumps({'headless':headless,'index_status':response.status,'index_title':page.title()}),flush=True)
                       result=page.evaluate('''async url => {const r=await fetch(url,{signal:AbortSignal.timeout(25000)}); const b=new Uint8Array(await r.arrayBuffer()); return {status:r.status,type:r.headers.get('content-type'),size:b.length,pdf:new TextDecoder().decode(b.slice(0,5))==='%PDF-',sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('')};}''',target)
                       print(json.dumps(result),flush=True)
@@ -44,4 +44,4 @@ jobs:
       - run: /tmp/browser-probe/node_modules/.bin/betterwright setup --cloak-only
       - name: Check managed browser with a fresh profile
         run: |
-          /tmp/browser-probe/node_modules/.bin/betterwright run --approve-downloads -c "await page.goto('https://www.carm.es/web/pagina?IDCONTENIDO=24219&IDTIPO=100'); return await page.evaluate(async () => {const r=await fetch('https://www.carm.es/web/descarga?ARCHIVO=ADJVACANTESSEC_SINCUBRIR-894862.pdf&ALIAS=ARCH&IDCONTENIDO=209571&IDTIPO=60');const b=new Uint8Array(await r.arrayBuffer());return {status:r.status,type:r.headers.get('content-type'),size:b.length,pdf:new TextDecoder().decode(b.slice(0,5))==='%PDF-',sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('')};});" --note 'Check official public PDF; metadata only'
+          /tmp/browser-probe/node_modules/.bin/betterwright run --close --approve-downloads -c "await page.goto('https://www.carm.es/web/pagina?IDCONTENIDO=24219&IDTIPO=100',{waitUntil:'domcontentloaded',timeout:15000}); console.log({indexTitle:await page.title()}); return await page.evaluate(async () => {const r=await fetch('https://www.carm.es/web/descarga?ARCHIVO=ADJVACANTESSEC_SINCUBRIR-894862.pdf&ALIAS=ARCH&IDCONTENIDO=209571&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4254',{signal:AbortSignal.timeout(10000)});const b=new Uint8Array(await r.arrayBuffer());return {status:r.status,type:r.headers.get('content-type'),size:b.length,pdf:new TextDecoder().decode(b.slice(0,5))==='%PDF-',sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('')};});" --note 'Check official public PDF; metadata only'
