@@ -3,6 +3,22 @@ const P=require('../web/position.js');
 const version={id:'a'.repeat(64),sha256:'a'.repeat(64),scope:'published_list',coverage:'baseline_only',published_at:'2026-07-22',checked_at:'2026-10-02T12:00:00Z',source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=208095'};
 const person={id:'1'.repeat(32),name:'PRUEBA, ANA',specialty:'0590001',specialty_name:'FILOSOFIA',body_name:'SECUNDARIA',block:'68',block_name:'Bloque 1',list_number:'25000010',rank:7,page:2};
 const catalog={version,specialties:[{code:'0590001',name:'FILOSOFIA',body:'SECUNDARIA',count:10}],refresh_available:false};
+test('forgetting in the mounted search updates preference controls and keeps the live input',async()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let markup='',nodes={},input={id:'position-query',value:'',focus(){this.focused=true;}};
+ const root={querySelector(selector){if(selector==='#position-form')return markup.includes('id="position-form"')?{}:null;return nodes[selector]||null;}};
+ Object.defineProperty(root,'innerHTML',{get:()=>markup,set:html=>{markup=html;nodes={};for(const selector of ['#position-feedback','#position-specialty-label','.position-search-date','#position-source-information','[data-position="clear-query"]'])nodes[selector]={innerHTML:'',textContent:''};for(const id of ['position-remembered','position-preference-status']){const match=html.match(new RegExp('<div id="'+id+'"[^>]*>(.*?)</div>','s'));if(match)nodes['#'+id]={innerHTML:match[1],textContent:''};}}});
+ const saved=new Map([['bolsa-abierta:position:v1',person.id]]),storage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
+ const document={getElementById:id=>id==='position-root'?root:id==='position-query'?input:nodes['#'+id]||null};
+ const sandbox={window:{localStorage:storage},document,URL,AbortSignal,setTimeout,clearTimeout,fetch:async path=>({ok:true,json:async()=>String(path).endsWith(person.id)?{version,person}:catalog})};
+ vm.createContext(sandbox);vm.runInContext(fs.readFileSync(require.resolve('../web/position.js'),'utf8'),sandbox);sandbox.window.BAPosition.mount();await new Promise(resolve=>setImmediate(resolve));
+ const click=action=>root.onclick({target:{closest:()=>({dataset:{position:action},disabled:false})}});
+ await click('change');input.value='consulta pendiente';root.oninput({target:input,isComposing:true});
+ const sameInput=input;await click('forget');
+ const preferences=nodes['#position-remembered']?.innerHTML??markup;
+ assert.doesNotMatch(preferences,/data-position="restore"|data-position="forget"/);assert.equal(saved.size,0);
+ assert.equal(document.getElementById('position-query'),sameInput);assert.equal(input.value,'consulta pendiente');
+ assert.match(nodes['#position-preference-status']?.textContent||'',/Se ha dejado de recordar/);
+});
 
 test('exact-name results can continue across publications and changing query cancels paging',async()=>{
   let finish;
@@ -244,6 +260,24 @@ function maestroGeneration(){
   const fullCatalog={...catalog,version:fresh,specialties:[...catalog.specialties,{code:'0597',name:'Lista única de Maestros',body:'CUERPO DE MAESTROS',count:10},{code:'0595508',name:'DIBUJO TÉCNICO',body:'ARTES PLÁSTICAS',count:4}]};
   return {fresh,row,fullCatalog};
 }
+test('a new query or scope resets filters from a disjoint result body',async()=>{
+ const {fresh,row,fullCatalog}=maestroGeneration();
+ const m=P.createModel({request:async(path,body)=>path.endsWith('/search')?{version:fresh,results:[body.query==='Maestro'?row:person]}:fullCatalog});
+ await m.init();await m.search('','Maestro');m.state.resultBody=row.body_name;m.state.resultType='list';
+ await m.search('','Prueba');assert.equal(m.state.error,'');
+ assert.deepEqual(P.filterMatches(m.state.results,m.state.resultType,m.state.resultBody).map(p=>p.id),[person.id]);
+ m.state.resultBody=row.body_name;m.editQuery('Otra');assert.equal(m.state.resultBody,'');
+});
+test('a document without course never borrows the base list course',()=>{
+ const {fresh,row,fullCatalog}=maestroGeneration();
+ for(const kind of ['maestros_roster','award']){
+  const d={...fresh.documents[0],kind},v={...fresh,course:'2026-2027',documents:[d]};
+  const p=kind==='award'?{...row,record_type:'award',rank:null,destination:'IES PRUEBA · MURCIA',workload:'Completa'}:row;
+  const html=P.render({catalog:fullCatalog,version:v,person:p,results:[]});
+  assert.match(html,/Curso no consignado/);assert.doesNotMatch(html,/2026-2027/);
+  d.course='2025-2026';assert.match(P.render({catalog:fullCatalog,version:v,person:p,results:[]}),/2025-2026/);
+ }
+});
 test('a new Maestros generation refreshes the full catalog before accepting a newly added scope',async()=>{
   const {fresh,row,fullCatalog}=maestroGeneration();let catalogs=0;
   const model=P.createModel({request:async path=>path.endsWith('/search')?{version:fresh,results:[row],more:false}:++catalogs===1?catalog:fullCatalog});

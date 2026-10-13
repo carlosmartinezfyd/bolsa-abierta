@@ -479,6 +479,24 @@ test("personal position opens directly even when the vacancy snapshot fails", as
   assert.match(c.app.innerHTML, /id="position-root"/);
   assert.doesNotMatch(c.app.innerHTML, /No se pudo cargar la consulta/);
 });
+test('home retry recovers after initial failure with and without a configured API',async()=>{
+ for(const config of [{},{apiBase:'https://example.org'}]){
+  let online=false,calls=0;
+  const c=await controller(async()=>{calls++;if(!online)throw Error('offline');return {ok:true,json:async()=>seed};},config,'#home');
+  assert.match(c.app.innerHTML,/No se han podido cargar/);const failedCalls=calls;online=true;await c.click();
+  assert.ok(calls>failedCalls);assert.doesNotMatch(c.app.innerHTML,/No se han podido cargar/);assert.match(c.app.innerHTML,/Consultar esta publicación/);
+ }
+});
+test('removing a saved vacancy updates its group without replacing the functions search',async()=>{
+ const c=await controller(async()=>({ok:true,json:async()=>seed}));const id=seed.documents[0].rows[0].id;
+ const click=action=>c.listeners.click({target:{closest:selector=>selector==='[data-action]'?{dataset:{action,id}}:null}});
+ click('favorite');c.navigate('profile');assert.match(c.app.innerHTML,/1 registro guardado/);
+ const saved={innerHTML:c.app.innerHTML},input={value:'informatica'};
+ const original=c.document.getElementById;c.document.getElementById=key=>key==='saved-publications'?saved:key==='profile-search'?input:original(key);
+ click('detail');click('favorite');c.dialog.close();
+ assert.match(saved.innerHTML,/0 registros guardados/);assert.doesNotMatch(saved.innerHTML,/class="saved-items"/);
+ assert.equal(input.value,'informatica');assert.equal(c.document.getElementById('profile-search'),input);
+});
 test("home links create history and returning to the root restores the introduction", async () => {
   const c = await controller(
     async () => ({ ok: true, json: async () => seed }),

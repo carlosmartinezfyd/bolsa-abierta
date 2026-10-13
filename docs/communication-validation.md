@@ -39,7 +39,7 @@ Fecha de comprobación local: 13 de octubre de 2026. La implementación conserva
 
 ## Evidencia de verificación
 
-- Node: 155 pruebas superadas. Incluyen cantidades duplicadas, incompatibilidad y dirección de comparaciones, históricos sin PDF, metadatos desconocidos, filtros, contacto, persistencia de fichas, llegada tardía de metadatos y ciclo de foco.
+- Node: 160 pruebas superadas. Incluyen cantidades duplicadas, incompatibilidad y dirección de comparaciones, históricos sin PDF, metadatos desconocidos, filtros, contacto, persistencia de fichas, llegada tardía de metadatos y ciclo de foco.
 - Python: 295 pruebas, resultado OK; cuatro omitidas por disponibilidad del entorno o navegador. La ejecución específica del navegador de extracción se comprueba además en CI.
 - `designmd lint DESIGN.md`: cero errores y cero advertencias.
 - Navegador real integrado de Codex: siete vistas por cuatro anchuras (320, 390, 768 y 1440), 28 mediciones sin desbordamiento horizontal del documento. También se abrió el inventario técnico a 320 px.
@@ -53,6 +53,10 @@ Fecha de comprobación local: 13 de octubre de 2026. La implementación conserva
 Contrastes calculados con los colores usados: texto principal/fondo 12,29:1; secundario/fondo 4,98:1; acción o foco/blanco 6,67:1; aviso/fondo de aviso 6,44:1; borde de control/blanco 3,18:1. Son pares medidos, no una auditoría exhaustiva de toda combinación de estados.
 
 El navegador integrado no aplicó zoom con el atajo enviado; no se atribuye una prueba al 200 % que no ocurrió. La comprobación a 320 px acredita reflujo a esa anchura, pero no sustituye una prueba de ampliación de texto. Tampoco se ha ejecutado NVDA/VoiceOver ni una sesión en dispositivo físico.
+
+## Revisión independiente y correcciones
+
+La revisión completa de la rama encontró cuatro problemas funcionales y un control obsoleto tras olvidar una ficha. Los cinco se reprodujeron con pruebas fallidas y se corrigieron: reintento de la primera carga, filtros de cuerpo de una búsqueda anterior, curso heredado de otra fuente, eliminación inmediata de guardados y controles/confirmación de olvido. La suite completa termina con 160 pruebas superadas. En navegador se confirmó que quitar un guardado conserva la búsqueda de funciones y devuelve el foco; olvidar conserva el texto de búsqueda y retira los controles; la adjudicación sin curso muestra «Curso no consignado».
 
 ## Protocolo de validación con participantes
 

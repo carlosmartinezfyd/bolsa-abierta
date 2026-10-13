@@ -189,6 +189,8 @@
     else model.prefs.favorites.splice(index, 1);
     const persisted = save();
     renderResults();
+    const saved = document.getElementById('saved-publications');
+    if (saved) saved.innerHTML = V.savedPublications(model);
     if (activeDetail) {
       const refocus = document.activeElement?.dataset?.action === "favorite";
       detail(activeDetail);
@@ -273,6 +275,11 @@
     busy(button, "Comprobando…");
     render();
     try {
+      if (!model.state) {
+        await reload();
+        void loadPositionCatalog();
+        return;
+      }
       const reconnect =
         window.BA_CONFIG?.apiBase && model.state.mode !== "server";
       if (reconnect) await reload();
