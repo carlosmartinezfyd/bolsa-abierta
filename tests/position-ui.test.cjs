@@ -62,8 +62,31 @@ test('one matching person still requires confirmation before saving or showing a
   const {model,saved}=setup();await model.init();await model.search('0590001','PRUEBA');
   assert.equal(model.state.person,null);assert.equal(saved.size,0);
   model.choose(person.id);assert.equal(model.state.person,null);
-  await model.confirm();assert.equal(model.state.person.rank,7);assert.equal(saved.size,1);
-  const html=P.render(model.state);assert.match(html,/7/);assert.match(html,/lista publicada/);assert.doesNotMatch(html,/disponibles: 7/);
+  await model.confirm({remember:true});assert.equal(model.state.person.rank,7);assert.equal(saved.size,1);
+  const html=P.render(model.state);assert.match(html,/7/);assert.match(html,/orden publicado/);assert.doesNotMatch(html,/disponibles: 7/);
+});
+
+test('viewing another result does not overwrite a remembered identity and search is reversible',async()=>{
+  const f=setup();await f.model.init();await f.model.search('','Prueba');f.model.choose(person.id);
+  await f.model.confirm();assert.equal(f.saved.size,0);assert.equal(f.model.state.person.id,person.id);
+  f.model.remember();assert.equal(f.saved.size,1);
+  f.model.beginSearch();assert.equal(f.saved.size,1);assert.equal(f.model.state.person,null);
+  await f.model.restoreRemembered();assert.equal(f.model.state.person.id,person.id);
+  f.model.forget();assert.equal(f.saved.size,0);assert.equal(f.model.state.person.id,person.id);
+});
+
+test('temporary missing row preserves the remembered identifier for a later retry',async()=>{
+  const f=setup();await f.model.init();await f.model.search('','Prueba');f.model.choose(person.id);
+  await f.model.confirm({remember:true});f.setMissing();await f.model.refresh();
+  assert.equal(f.model.state.person,null);assert.equal(f.saved.size,1);
+  assert.match(P.render(f.model.state),/Volver a la ficha recordada/);
+});
+
+test('ordinal limitation and source evidence are visible without opening details',()=>{
+  const html=P.render({catalog,version,person,results:[],busy:false});
+  const card=html.split('<details')[0];
+  assert.match(card,/No es la posición actual entre disponibles/);
+  assert.match(card,/page=2/);assert.match(card,/14:00/);
 });
 
 test('a name can be searched without choosing a specialty and each match identifies its specialty',async()=>{
@@ -171,10 +194,11 @@ test('provisional award reservation and incorporation remain separate dated fact
   assert.throws(()=>P.validateResponse({version:v,person:{...p,appointment_status:'final'}}));
   assert.throws(()=>P.validateResponse({version:v,person:{...p,incorporation_at:'2026-13-32'}}));
 });
-test('explicit confirmation explains browser storage and selected ficha offers deletion',async()=>{
+test('explicit view confirmation is separate from the optional browser preference',async()=>{
   const f=setup();await f.model.init();await f.model.search('','Prueba');f.model.choose(person.id);
-  assert.match(P.render(f.model.state),/Al confirmar.*este navegador/);assert.match(P.render(f.model.state),/Confirmar y recordar/);
-  await f.model.confirm();assert.match(P.render(f.model.state),/Borrar ficha guardada/);f.model.clear();assert.equal(f.saved.size,0);
+  assert.match(P.render(f.model.state),/Ver ficha/);assert.doesNotMatch(P.render(f.model.state),/Confirmar y recordar/);
+  await f.model.confirm();assert.match(P.render(f.model.state),/Recordar esta ficha en este navegador/);assert.equal(f.saved.size,0);
+  f.model.remember();assert.match(P.render(f.model.state),/Dejar de recordar esta ficha/);f.model.forget();assert.equal(f.saved.size,0);
 });
 
 test('source coverage counts records instead of unique people and escapes verified habilitation labels',()=>{
@@ -203,7 +227,7 @@ test('pending search index guides complete numeric lookup without retrying names
 
 test('a null conservative origin-check date preserves published evidence without inventing freshness',()=>{
   const v={...version,checked_at:null};assert.doesNotThrow(()=>P.validateResponse({version:v,person}));
-  const html=P.render({catalog:{...catalog,version:v},version:v,person,busy:false});assert.match(html,/Última comprobación de la generación.*Sin fecha acreditada/s);assert.match(html,/22 jul 2026/);assert.doesNotMatch(html,/1970|4 oct 2026/);
+  const html=P.render({catalog:{...catalog,version:v},version:v,person,busy:false});assert.match(html,/Comprobación del conjunto.*Sin fecha acreditada/s);assert.match(html,/22 jul 2026/);assert.doesNotMatch(html,/1970|4 oct 2026/);
   assert.throws(()=>P.validateResponse({version:{...v,checked_at:'invalid'},person}));
 });
 

@@ -23,7 +23,7 @@ typography:
   h2:
     {
       fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-      fontSize: "19px",
+      fontSize: "22px",
       fontWeight: "600",
       lineHeight: "1.3",
       letterSpacing: "-0.2px",
@@ -31,7 +31,7 @@ typography:
   body:
     {
       fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-      fontSize: "14px",
+      fontSize: "16px",
       fontWeight: "400",
       lineHeight: "1.5",
       letterSpacing: "0px",
@@ -39,7 +39,7 @@ typography:
   label:
     {
       fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-      fontSize: "12px",
+      fontSize: "14px",
       fontWeight: "500",
       lineHeight: "1.4",
       letterSpacing: "0px",
@@ -96,37 +96,45 @@ Deep green for actions and active navigation; warm grey-green background and whi
 
 ## Typography
 
-Self-hosted IBM Plex Sans in Regular, Medium and SemiBold, with its original OFL license. No external font requests. Body and row labels are 14px, secondary text and field labels at least 12px. Headings use weight 600. Codes use a system monospace; numbers use tabular figures. At very wide viewports increase the scale, not the gaps. Text wraps instead of being permanently truncated.
+Self-hosted IBM Plex Sans; 16px body/forms, 14–15px dense desktop rows, 13–14px secondary labels, 28–32px h1 (24–28px mobile), 20–24px h2, 48–64px ordinal. Essential limitations are normal body text. Text wraps; original spelling stays available. Preserve acronym and Roman numeral casing without inventing missing words or accents.
 
 ## Layout
 
-Desktop: 208px sidebar and a centred working area capped at 1680px. One sticky toolbar contains title, publication date, refresh, search, function, municipality and workload. Secondary filters, saved-only and followed functions live under More filters, with an active count and removable chips. Remove decorative headline totals and redundant status bands. Keep the toolbar and table headings visible at all scroll positions; derive offsets from measured heights, including mobile navigation and refresh feedback. Rows show function, destination, workload and places. Codes, cupo and extraction metadata belong to the record detail. Use comfortable readable rows without a density toggle. At widths up to 900px or heights up to 600px, only navigation stays fixed; filters scroll with the page so they cannot occupy most of the results viewport. The secondary panel is positioned within the viewport and scrolls internally.
+208px desktop sidebar; working area max 1680px, personal card 780px, home 1200px. Spacing 4/8/16/24/32px, mobile margins 16–20px. Main navigation: Mi ficha, Vacantes, Publicaciones, Guardados, Fuentes y cobertura. Comparison is a Vacantes subview; old hashes remain valid. Mobile shows primary links plus a menu naming the selected secondary section. Sticky toolbar only when width and height leave room; no page-wide horizontal overflow at 320px.
 
 ## Elevation & Depth
 
-Use borders and pale surface changes for hierarchy. Shadows belong to modal dialogs and toasts. Table headings stay visible while scrolling desktop results. Respect reduced motion and keyboard focus; preserve focus when results are replaced.
+Borders and subtle surface changes for hierarchy; shadows reserved for dialogs. Visible keyboard focus, reduced motion, focus restoration after updates and Escape dismissal.
 
 ## Shapes
 
-Buttons and fields have a 5px radius, panels 10px. Small, restrained pills carry semantic labels. No decorative gradients, glass effects or large metric cards.
+Buttons/fields radius 5px; panels 10px. Restrained semantic pills. No decorative gradients, metric gauges, motivational banners or tiny text for density.
 
 ## Components
 
-Source-specific results: the search includes reviewed lists and definitive awards, including bilingual functions. Each match states its publication type and date. An award card shows the dated destination and workload, with one short sentence when a list position is unavailable; never show an ordinal from an award's priority column. The official document and page remain under Ver detalle. Keep records from separate documents distinct and preserve saved ordinary-list identities.
+Every result distinguishes document type, publication date, origin-check scope and time, incorporation, retained evidence, coverage and availability. Unknown metadata remains unknown. API loading/failure is separate from no results. Failed reload preserves the dated result; missing current identity preserves the remembered opaque ID for retry.
 
-Mi posición: first sidebar item and primary landing action. Centre a working area of at most 780px. Start with a name/list-number search and one submit action. Show suggestions after a short typing pause while retaining the input, caret and keyboard. Specialty is optional: open a searchable modal picker with names, teaching bodies and codes. Show each match with its specialty and provide an all-specialties search from scoped empty results. On mobile, keep a compact sticky header with Mi posición, Vacantes and Más; the latter contains secondary routes. Require explicit confirmation even for a single match. Then show one white card with the person, specialty, a large green ordinal and the date, labelled “Puesto en la lista publicada”. Keep the official list identifier secondary. Store only the chosen opaque row identifier in localStorage. Do not auto-merge people with the same name or number. Source page, calculation, baseline-only coverage and current-availability limitation belong to “Ver detalle”. No fake rank, predicted call date, generic verified badge or available-candidate count. Refresh must distinguish a real source check from reloading the published reference. An unavailable service cannot display an undated cached rank.
+Mi ficha: type/body/course → identity → rank or dated destination → visible limitation → block/habilitations or workload/incorporation → PDF/page and scoped check date → optional methodology. Ordinal counts the document order, never current availability. Maestros belongs to its unique list. Search another, view, remember and forget are separate actions; no identity merging or personal telemetry.
 
-Home: a short introductory page at the root URL and `#home`, with a separate horizontal header and no workspace sidebar. State the product plainly: consulting a published-list position and vacancies in Murcia for Secundaria and other bodies. One main action opens Mi posición; three short sections introduce personal lookup, publication comparison and vacancy search. Show a sample drawn only from the current approved publication, with its date and a clear availability limitation; never invent example vacancies or combine dates. Explain official provenance and the independent status once. Use the existing palette and IBM Plex Sans, a balanced 36–60px introductory heading, a 1200px outer width and a single publication panel. Direct links to working views remain available; the brand returns to Home and browser Back works. Do not add explanatory copy to the search workspace.
+Home: “Listas y vacantes docentes de Murcia”, two immediate actions Buscar mi ficha and Ver vacantes; partial coverage note. Latest incorporated vacancy publication has date, places and records, not arbitrary sample rows. Loading must never claim no documents exist.
 
-Vacancies: a persistent search toolbar, one result count, simple sorting and a four-column data table. Municipality and centre share Destination; technical codes remain in the detail. Sort direction is labelled Ascendente/Descendente when applicable. Favorites remain grouped by source document. Refresh feedback stays visible until dismissed and explicitly distinguishes an unchanged official check, a new list, a partial check, a failure and a snapshot-only reload. Never imply a source check happened when the gateway is unavailable.
+Vacantes publicadas: document selector and historical/PDF warning follow the selected document; search/function/municipality/workload plus secondary filters. Centre first, municipality second. Places and records have explicit units. Empty results hide ordering/export/pagination. Detail prioritizes workload and quantity, then evidence, with raw values/codes expandable. Unknown duration is “No extraída; consulta el documento”.
 
-Changes: dates and process identifiers anchor the comparison; filter counts sit inside the category buttons. Acts separate incorporated copies from official announcements. Following leads with saved rows and selected functions; links to the published position and official Educarm consultation are secondary. Page headings stand alone: no explanatory subtitle, marketing copy or repeated scope in the sidebar. Notices state only what affects the interpretation of the data. Sources lead with last attempt, last full success, missing publications and documents; technical logs and hashes are expandable. Archived PDF and official origin links are always distinct.
+Comparison: compatible earlier/later publications, scoped filters, semantic table with both sources. Disappearance never means adjudication. Preserve duplicate multiplicity. Dates and units are explicit.
+
+Publicaciones: searchable/filterable archive by type, body, course and date, with bounded pagination. Author and portal host are separate. Act/publication dates separately labelled. Calendar is orientative, never a convocatoria.
+
+Guardados: saved rows grouped by publication and followed functions. Useful empty action. Local scope and export contents explicit; no promised external alerts or unsupported restoration.
+
+Fuentes y cobertura: consultable sets and their dates first, gaps by effect, document evidence, then folded technical inventory/versions/hashes/logs. Zero pending always names its scope. Mobile inventory becomes label/value cards. Inventory size is never an official completeness denominator.
+
+Corrections: offer a channel only when the real private destination and responsible party are configured. Never request nominal data in public GitHub issues.
 
 ## Do's and Don'ts
 
-- Keep the publication date, limitation on current availability, partial/failure state and missing-document count visible.
-- Keep search, function, municipality and workload visible; move secondary filters under More filters and expose their active count.
-- Preserve every original record, duplicate and source reference; display changes never change the source data.
-- Avoid totals that combine vacancies from different publications.
-- Do not claim a snapshot reload checks official sources.
-- Do not use tiny text to gain density, or add analytics, remote assets or paid dependencies.
+- Preserve every source record, duplicate, identifier and date; display formatting never modifies raw data.
+- Display the selected document's limitations beside its result, not only in a collapsed panel.
+- Distinguish checking an official source from reloading a retained publication.
+- Keep technical evidence accessible without letting it dominate the main reading order.
+- Avoid invented availability, probabilities, coverage percentages, dates, authors or administrative conclusions.
+- No analytics, remote fonts, paid dependencies or fabricated participant tests.

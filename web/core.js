@@ -430,7 +430,21 @@
       .replace(/\bIes\b/g, "IES")
       .replace(/\bEoi\b/g, "EOI")
       .replace(/\bCifppu\b/g, "CIFP")
-      .replace(/\bCpeibas\b/g, "CPEIBas");
+      .replace(/\bCpeibas\b/g, "CPEIBas")
+      .replace(/\b(Ceip|Cee|Cifp|Eso|Fp|Ii|Iii|Iv|Vi|Vii|Viii|Ix|Xi|Xii|Xiii|Xiv|Xv|Xvi)\b/g, (s) => s.toUpperCase());
+  function publicationContext(doc, currentId) {
+    return {
+      historical: !!doc && doc.id !== currentId,
+      pdfAvailable: !!doc?.artifact_url && doc.evidence_status !== 'original_unavailable',
+      publishedAt: doc?.published_at || null,
+      checkedAt: doc?.origin_checked_at || null,
+      limit: 'Disponibilidad actual sin confirmar.',
+    };
+  }
+  function durationLabel(row) {
+    return row.duration || (row.duration_status === 'absent'
+      ? 'No indicada en el documento' : 'No extraída; consulta el documento');
+  }
   function unique(rows, key, label = key) {
     return [...new Map(rows.map((r) => [r[key], r[label]])).entries()].sort(
       (a, b) => String(a[1]).localeCompare(String(b[1]), "es"),
@@ -456,5 +470,7 @@
     date,
     title,
     unique,
+    publicationContext,
+    durationLabel,
   };
 });
