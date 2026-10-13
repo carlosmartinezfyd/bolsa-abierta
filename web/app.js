@@ -216,13 +216,21 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
   async function loadPositionCatalog() {
-    if(!window.BA_CONFIG?.apiBase)return;
+    if(!window.BA_CONFIG?.apiBase&&!model.state?.position_status)return;
     try {
       const response=await fetch(BA.composeAPIURL('positions',window.BA_CONFIG),{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(20000)});
       if(!response.ok)throw Error('metadata');
       model.positionCatalog=window.BAPosition.validateResponse(await response.json());model.positionCatalogError=false;
     } catch {model.positionCatalogError=true;}
-    if(['sources','acts'].includes(model.view))render();
+    if(['sources','acts'].includes(model.view)){
+      const query=document.getElementById('archive-query')?.value,focusId=document.activeElement?.id,scroll=window.scrollY;
+      const opened=Array.from(document.querySelectorAll?.('details[open]')||[]).map(d=>d.querySelector('summary')?.textContent);
+      render();
+      for(const d of document.querySelectorAll?.('details')||[])if(opened.includes(d.querySelector('summary')?.textContent))d.open=true;
+      const input=document.getElementById('archive-query');if(input&&query!==undefined)input.value=query;
+      if(focusId)document.getElementById(focusId)?.focus({preventScroll:true});
+      if(Number.isFinite(scroll))window.scrollTo({top:scroll});
+    }
   }
   async function reload(snapshotOnly = false, requireAPI = false) {
     const state = await BA.loadState(
@@ -313,7 +321,7 @@
     activeDetail = null;
     show(
       dialogHeader("Bolsa Abierta") +
-        `<div class="dialog-body"><h3>Listas y vacantes docentes de Murcia</h3><p>Consulta ordinales de listas publicadas, adjudicaciones fechadas y vacantes incorporadas. La cobertura por fuente y curso se detalla en Fuentes; un resultado vacío no acredita exclusión o ausencia de una lista.</p><h3 class="mt18">Privacidad</h3><p>Las preferencias se guardan en este navegador; la ficha personal solo se recuerda tras confirmar expresamente y puede borrarse desde su tarjeta. La consulta del servicio es pública y no requiere autenticación. El almacén del servicio no constituye una barrera de acceso a las consultas. No se muestran DNI, puntuaciones ni datos médicos. No se incorporan nombres a telemetría ni a ficheros públicos locales. Sin analítica ni cookies de seguimiento.</p><h3 class="mt18">Licencia</h3><p>Código bajo GNU AGPLv3. La publicación de un PDF oficial no acredita una licencia para cualquier reutilización de sus datos. Los documentos conservan su procedencia y condiciones de uso.</p><h3 class="mt18">Solicitar una corrección</h3><p>Contrasta la ficha con su documento y página oficiales. Para comunicar datos personales hace falta un canal privado del responsable, que aún no está publicado aquí. No envíes nombres, números de lista ni otros datos personales a incidencias públicas de GitHub. Las rectificaciones de la publicación oficial corresponden al organismo.</p></div><div class="dialog-footer"><div class="buttons">${U.external("https://github.com/carlosmartinezfyd/bolsa-abierta", "Código fuente")}${U.external("https://www.gnu.org/licenses/agpl-3.0.html", "AGPLv3")}</div>${U.button("close-dialog", "Cerrar")}</div>`,
+        `<div class="dialog-body"><h3>Listas y vacantes docentes de Murcia</h3><p>Consulta ordinales de listas publicadas, adjudicaciones fechadas y vacantes incorporadas. La cobertura por fuente y curso se detalla en Fuentes; un resultado vacío no acredita exclusión o ausencia de una lista.</p><h3 class="mt18">Privacidad</h3><p>Las preferencias se guardan en este navegador; la ficha personal solo se recuerda tras confirmar expresamente y puede borrarse desde su tarjeta. La consulta del servicio es pública y no requiere autenticación. El almacén del servicio no constituye una barrera de acceso a las consultas. No se muestran DNI, puntuaciones ni datos médicos. No se incorporan nombres a telemetría ni a ficheros públicos locales. Sin analítica ni cookies de seguimiento.</p><h3 class="mt18">Licencia</h3><p>Código bajo GNU AGPLv3. La publicación de un PDF oficial no acredita una licencia para cualquier reutilización de sus datos. Los documentos conservan su procedencia y condiciones de uso.</p><h3 class="mt18">Solicitar una corrección</h3>${U.correctionContact(window.BA_CONTACT)}</div><div class="dialog-footer"><div class="buttons">${U.external("https://github.com/carlosmartinezfyd/bolsa-abierta", "Código fuente")}${U.external("https://www.gnu.org/licenses/agpl-3.0.html", "AGPLv3")}</div>${U.button("close-dialog", "Cerrar")}</div>`,
     );
   }
   function clearFilters() {
@@ -494,7 +502,16 @@
     true,
   );
   document.addEventListener("keydown", (event) => {
-    if (document.querySelector?.('dialog[open]')) return;
+    const modal = document.querySelector?.('dialog[open]');
+    if (modal) {
+      if (event.key === 'Tab') {
+        const controls = Array.from(modal.querySelectorAll('a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex]:not([tabindex="-1"])')).filter(el => el.getClientRects().length);
+        const first = controls[0], last = controls[controls.length - 1];
+        if (first && event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (last && !event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+      return;
+    }
     const menu = document.querySelector?.('.mobile-more[open]');
     if (event.key === "Escape" && menu && !dialog.open) {
       event.preventDefault();

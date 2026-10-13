@@ -7,7 +7,7 @@
 .position-search .field{display:grid;gap:8px;font-size:14px;color:var(--ink)}
 .position-search input,.position-picker input{width:100%;min-width:0;min-height:48px;font-size:16px;border:1px solid var(--border);border-radius:5px;padding:10px 12px;background:var(--surface)}
 .position-search .button{min-height:44px;padding:10px 18px}
-.position-search-date{margin:18px 0 0;color:var(--muted);font-size:12px}
+.position-search-date{margin:18px 0 0;color:var(--muted);font-size:14px}
 .position-search label{font-weight:500;font-size:16px}
 .position-query-row{display:flex;gap:8px}
 .position-query-wrap{position:relative;flex:1;min-width:0}
@@ -15,7 +15,7 @@
 .position-query-wrap input::-webkit-search-cancel-button{display:none}
 .position-clear{position:absolute;right:0;top:0;width:40px;height:100%;font-size:23px;color:var(--muted)}
 .position-clear[hidden]{display:none}
-.position-specialty-button{display:flex;align-items:center;gap:8px;max-width:100%;min-height:44px;padding:6px 0;text-align:left;font-size:13px}
+.position-specialty-button{display:flex;align-items:center;gap:8px;max-width:100%;min-height:44px;padding:6px 0;text-align:left;font-size:14px}
 .position-specialty-button>span:first-child{color:var(--muted)}
 .position-specialty-button strong{font-weight:500;color:var(--accent);overflow-wrap:anywhere}
 .position-specialty-button>span:last-child{margin-left:2px;color:var(--accent)}
@@ -28,32 +28,32 @@
 .position-specialty-options button{display:grid;gap:4px;width:100%;text-align:left;padding:12px 10px;border-radius:5px;min-height:44px}
 .position-specialty-options button[aria-pressed=true]{color:var(--accent);background:var(--accent-soft)}
 .position-specialty-options button:hover{background:var(--bg)}
-.position-specialty-options span{font-size:12px;color:var(--muted)}
+.position-specialty-options span{font-size:14px;color:var(--muted)}
 .position-specialty-options p{padding:12px;color:var(--muted)}
 .position-empty{border-top:1px solid var(--border);padding-top:16px}
 .position-empty p{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .position-empty .buttons{margin-top:14px;align-items:center;gap:16px}
-.position-empty a{font-size:13px}
-.position-refine{font-size:13px;color:var(--muted);margin-top:14px}
+.position-empty a{font-size:14px}
+.position-refine{font-size:14px;color:var(--muted);margin-top:14px}
 .position-person{display:flex;justify-content:space-between;align-items:start;gap:20px}
 .position-person h2,.position-confirm h2{font-size:23px;line-height:1.3;margin:6px 0;letter-spacing:-.3px;overflow-wrap:anywhere}
 .position-eyebrow{font-size:14px;color:var(--muted);margin:0}
 .position-text-button{border:0;background:none;color:var(--accent);padding:4px 0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.position-rank{display:flex;flex-direction:column;align-items:center;padding:44px 0;color:var(--muted)}
-.position-rank strong{font-size:clamp(64px,10vw,100px);font-weight:500;color:var(--accent);letter-spacing:-5px;line-height:1.2;margin:4px 0 12px}
+.position-rank{display:flex;flex-direction:column;align-items:center;padding:24px 0;color:var(--muted)}
+.position-rank strong{font-size:clamp(48px,8vw,64px);font-weight:500;color:var(--accent);letter-spacing:-2px;line-height:1.2;margin:4px 0 12px}
 .position-rank small{font-size:.4em;vertical-align:super;letter-spacing:0;margin-left:5px}
 .position-rank time{font-size:14px}
 .position-award{padding:26px 0;overflow-wrap:anywhere}
 .position-award h3{font-size:21px;line-height:1.4;margin:14px 0 8px}
 .position-award p{margin:8px 0}
-.position-card-footer{border-top:1px solid var(--border);padding-top:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:13px}
+.position-card-footer{border-top:1px solid var(--border);padding-top:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:14px}
 .position-card-footer .button{min-height:42px}
 .position-status{font-size:14px;color:var(--muted);margin:18px 0 12px}
 .position-status:empty{display:none}
 .position-details{border-top:1px solid var(--border);padding:18px 0;background:none}
 .position-details summary{color:var(--accent);cursor:pointer;font-size:14px;width:fit-content}
 .position-details>div{padding-top:10px;max-width:650px;color:var(--muted)}
-.position-details dl{display:grid;grid-template-columns:190px 1fr;gap:10px 16px;font-size:13px}
+.position-details dl{display:grid;grid-template-columns:190px 1fr;gap:10px 16px;font-size:14px}
 .position-details dd{margin:0;color:var(--ink)}
 .position-matches h2{font-size:18px}
 .position-matches ul{list-style:none;padding:0;margin:0;border-top:1px solid var(--border)}
@@ -62,7 +62,7 @@
 .position-matches button:hover{background:var(--accent-soft)}
 .position-match-main{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
 .position-match-main strong{font-size:16px;font-weight:500;color:var(--ink)}
-.position-match-main>span,.position-match-main small{font-size:13px;color:var(--muted)}
+.position-match-main>span,.position-match-main small{font-size:14px;color:var(--muted)}
 .position-matches .position-select-label{color:var(--accent);font-size:23px}
 .position-confirm .buttons{margin-top:26px}
 #position-person{scroll-margin-top:calc(var(--nav-height) + 20px)}
@@ -71,6 +71,17 @@
 .position-qualifiers h3{font-size:15px;font-weight:500;margin:0 0 10px}
 .position-qualifiers ul{padding-left:20px;margin:0;color:var(--muted);font-size:14px}
 .position-qualifiers li+li{margin-top:6px}
-.position-source-information{margin-top:16px;padding-bottom:0;font-size:13px}
+.position-source-information{margin-top:16px;padding-bottom:0;font-size:14px}
 .position-source-information ul{padding-left:20px;overflow-wrap:anywhere}
 .position-source-information li+li{margin-top:8px}
+
+.position-evidence{margin:24px 0;padding-top:20px;border-top:1px solid var(--border);font-size:14px;overflow-wrap:anywhere}
+.position-evidence p{margin:10px 0;color:var(--muted)}
+.position-evidence a{display:inline-block;min-height:32px;padding:4px 0}
+.position-preference{margin:16px 0}
+.position-text-button{min-height:44px;text-align:left;font-size:14px}
+.position-person>.position-text-button{flex-shrink:0}
+.position-picker>.field{margin:12px 0}
+.position-result-filters{margin-bottom:12px}
+.position-picker select{width:100%;min-width:0;min-height:44px}
+@media(max-width:600px){.position-person{flex-direction:column}.position-card-footer .button{width:100%}.position-eyebrow{line-height:1.5}.position-specialty-button{flex-wrap:wrap}.position-result-filters{grid-template-columns:1fr 1fr}}

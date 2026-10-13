@@ -6,6 +6,14 @@ vm.runInContext(fs.readFileSync(require.resolve('../web/ui.js'),'utf8'),context)
 context.BAUI=context.window.BAUI;
 vm.runInContext(fs.readFileSync(require.resolve('../web/views.js'),'utf8'),context);
 const U=context.window.BAUI,V=context.window.BAV;
+test('corrections require an identified private contact and reject unsafe or prefilled personal links',()=>{
+ assert.match(U.correctionContact({}),/canal privado.*aún no está publicado/);
+ assert.doesNotMatch(U.correctionContact({url:'https://example.org/form'}),/href=/);
+ for(const url of ['javascript:alert(1)','http://example.org','mailto:test@example.org?body=nombre','https://user:pass@example.org'])assert.doesNotMatch(U.correctionContact({responsible:'Equipo',url}),/href=/);
+ const html=U.correctionContact({responsible:'Equipo <prueba>',url:'https://example.org/form'});
+ assert.match(html,/Equipo &lt;prueba&gt;/);assert.match(html,/href="https:\/\/example.org\/form"/);
+ assert.match(U.correctionContact({responsible:'Equipo',url:'mailto:test@example.org'}),/href="mailto:test@example.org"/);
+});
 test('public metadata endpoint uses the configured API origin without accepting personal query paths',()=>{
  assert.equal(BA.composeAPIURL('positions',{apiBase:'https://example.org'}),'https://example.org/api/positions');
  assert.throws(()=>BA.composeAPIURL('positions?query=Ana',{apiBase:'https://example.org'}));
@@ -50,6 +58,12 @@ test('sources exposes scope-specific pending counts before its folded technical 
  assert.match(html,/Qué puedes consultar/);assert.match(html,/publicaciones de vacantes pendientes/);
  assert.ok(html.indexOf('Documentos y procedencia')<html.indexOf('Inventario técnico'));
 });
+test('document cards never attribute the whole multi-source record count or course to one source',()=>{
+ const catalog={version:{id:'v',source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=1',row_count:150,course:'2026-2027',published_at:'2026-07-22',documents:[{content_id:'2',kind:'award',source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=2',row_count:50,published_at:'2026-09-30'}]}};
+ const entries=BA.publicationEntries(model().state,catalog);
+ assert.equal(entries.find(e=>e.id==='personal-1').personal.row_count,undefined);
+ assert.equal(entries.find(e=>e.id==='personal-2').course,'');
+});
 test('duration distinguishes unextracted, absent and explicit source values',()=>{
  assert.equal(BA.durationLabel({}),'No extraída; consulta el documento');
  assert.equal(BA.durationLabel({duration_status:'absent'}),'No indicada en el documento');
@@ -59,5 +73,7 @@ test('display casing preserves published roman numerals and acronyms without com
  assert.equal(BA.title('IES CARLOS III'),'IES Carlos III');
  assert.equal(BA.title('CEIP PRUEBA'),'CEIP Prueba');
  assert.equal(BA.title('POLITÉCN'),'Politécn');
+ assert.equal(BA.title('CONSTRUCCIONES CIVILES Y EDIFICACION'),'Construcciones Civiles y Edificación');
+ assert.equal(BA.title('SISTEMAS Y APLICACIONES INFORMATICAS'),'Sistemas y Aplicaciones Informáticas');
 });
 

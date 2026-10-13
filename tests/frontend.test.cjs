@@ -396,8 +396,10 @@ async function controller(fetcher, config = {}, hash = "#vacancies") {
     },
     setTimeout: () => 1,
     clearTimeout() {},
+    AbortSignal,
     window: {
       BA_CONFIG: config,
+      BAPosition: {validateResponse:require('../web/position.js').validateResponse,mount(){}},
       BOOTSTRAP: { documents: [] },
       addEventListener(kind, handler) {
         windowListeners[kind] = handler;
@@ -459,6 +461,18 @@ test("root entry introduces the project while direct links keep opening the requ
   const direct = await controller(fetcher, {}, "#vacancies");
   assert.match(direct.app.innerHTML, /id="workspace-toolbar"/);
   assert.doesNotMatch(direct.app.innerHTML, /class="landing-hero"/);
+});
+
+test('late publication metadata retains an unsubmitted query, keyboard focus and open evidence',async()=>{
+  let finish;const metadata=new Promise(resolve=>finish=resolve);
+  const c=await controller(async url=>String(url).endsWith('/positions')?metadata:{ok:true,json:async()=>seed},{apiBase:'https://example.org'},'#acts');
+  const input={id:'archive-query',value:'consulta aún sin enviar',focus(){this.focused=true;}},summary={textContent:'Evidencia'},details={open:true,querySelector:()=>summary};
+  const original=c.document.getElementById;c.document.getElementById=id=>id==='archive-query'?input:original(id);
+  c.document.activeElement=input;c.document.querySelectorAll=selector=>selector==='details[open]'?[details]:selector==='details'?[details]:[];
+  let html=c.app.innerHTML;Object.defineProperty(c.app,'innerHTML',{get:()=>html,set:value=>{html=value;input.value='';details.open=false;}});
+  finish({ok:true,json:async()=>({version:{id:'a'.repeat(64),sha256:'a'.repeat(64),scope:'published_list',coverage:'baseline_only',published_at:'2026-07-22',checked_at:null,source_url:'https://www.carm.es/web/descarga?IDCONTENIDO=1'}})});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(input.value,'consulta aún sin enviar');assert.equal(input.focused,true);assert.equal(details.open,true);
 });
 test("personal position opens directly even when the vacancy snapshot fails", async () => {
   const c = await controller(async () => { throw Error('vacancy service offline'); }, {}, '#position');
@@ -572,7 +586,7 @@ test("controller reconnects the configured gateway after an initial static fallb
   );
   assert.match(c.app.innerHTML, /Recargar datos/);
   await c.click();
-  assert.deepEqual(calls, [
+  assert.deepEqual(calls.filter(([url])=>!url.endsWith('/positions')), [
     ["https://gateway.example/api/state", "GET"],
     ["data/state.json", "GET"],
     ["https://gateway.example/api/state", "GET"],
@@ -885,6 +899,17 @@ test('Escape in the specialty modal is not intercepted by previously open vacanc
   let prevented=false;
   c.listeners.keydown({key:'Escape',preventDefault(){prevented=true;}});
   assert.equal(prevented,false);
+});
+test('Tab and Shift+Tab wrap between visible controls in an open modal',async()=>{
+  const c=await controller(async()=>({ok:true,json:async()=>seed}));
+  const control=()=>({getClientRects:()=>[{}],focus(){c.document.activeElement=this;}});
+  const first=control(),last=control(),hidden={getClientRects:()=>[]};
+  c.document.querySelector=()=>({querySelectorAll:()=>[first,hidden,last]});
+  let prevented=0;c.document.activeElement=last;
+  c.listeners.keydown({key:'Tab',preventDefault(){prevented++;}});
+  assert.equal(c.document.activeElement,first);
+  c.listeners.keydown({key:'Tab',shiftKey:true,preventDefault(){prevented++;}});
+  assert.equal(c.document.activeElement,last);assert.equal(prevented,2);
 });
 
 test('closing About opened from the mobile menu restores focus to its visible summary',async()=>{

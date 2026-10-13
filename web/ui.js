@@ -41,6 +41,20 @@
   function button(action, label, ico = "", classes = "", extra = "") {
     return `<button class="button ${classes}" data-action="${E(action)}" ${extra}>${ico ? icon(ico) : ""}${E(label)}</button>`;
   }
+  function correctionContact(config = {}) {
+    let url = "";
+    if (typeof config.responsible === "string" && config.responsible.trim() && typeof config.url === "string") {
+      try {
+        const parsed = new URL(config.url);
+        if ((parsed.protocol === "https:" && parsed.hostname && !parsed.username && !parsed.password && !parsed.search && !parsed.hash) ||
+            (parsed.protocol === "mailto:" && /^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(parsed.pathname) && !parsed.search && !parsed.hash)) url = parsed.href;
+      } catch (_) { /* Unconfigured or malformed contact keeps the honest fallback. */ }
+    }
+    const channel = url
+      ? `<p>Responsable de este canal: ${E(config.responsible.trim())}.</p><p><a class="button" href="${E(url)}" rel="noopener noreferrer">Solicitar una corrección</a></p><p>Indica la publicación, la página y el dato que debe revisarse. Envía solo la información necesaria para identificar el error.</p>`
+      : '<p>Para comunicar datos personales hace falta un canal privado del responsable, que aún no está publicado aquí.</p>';
+    return `<p>Contrasta la ficha con su documento y página oficiales.</p>${channel}<p>No envíes nombres, números de lista ni otros datos personales a incidencias públicas de GitHub. Las rectificaciones de la publicación oficial corresponden al organismo.</p>`;
+  }
   function pdfUrl(doc, page = 1) {
     let url = BA.safeURL(doc?.artifact_url);
     if (!url) return "";
@@ -112,6 +126,7 @@
     icon,
     external,
     button,
+    correctionContact,
     pdfUrl,
     pdfLink,
     select,
