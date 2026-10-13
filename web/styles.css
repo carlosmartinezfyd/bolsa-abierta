@@ -34,7 +34,7 @@
   --nav-width: 208px;
   --radius: 10px;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   color: var(--ink);
   background: var(--bg);
@@ -202,7 +202,7 @@ small,
   white-space: nowrap;
 }
 .brand-subtitle {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
   line-height: 1.35;
   margin-top: 5px;
@@ -258,7 +258,7 @@ small,
   margin: 30px 12px 24px;
   display: grid;
   gap: 5px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .sidebar-context strong {
@@ -266,14 +266,14 @@ small,
   color: var(--ink);
 }
 .sidebar-context .eyebrow {
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 4px;
 }
 .sidebar-bottom {
   margin-top: auto;
   border-top: 1px solid var(--border);
   padding: 16px 10px 0;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .sidebar-bottom .about {
@@ -281,7 +281,7 @@ small,
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink);
   margin-bottom: 10px;
   min-height: 32px;
@@ -1551,7 +1551,7 @@ dialog::backdrop {
     font-size: 20px;
   }
   .brand-subtitle {
-    font-size: 12px;
+    font-size: 14px;
   }
   .topbar {
     padding: 0 32px;
@@ -1651,7 +1651,7 @@ dialog::backdrop {
     font-size: 16px;
   }
   .brand-subtitle {
-    font-size: 10px;
+    font-size: 14px;
   }
   .brand-symbol {
     width: 30px;
@@ -1696,7 +1696,7 @@ dialog::backdrop {
     gap: 14px;
   }
   .top-status {
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 @media (max-width: 900px) {
@@ -1743,7 +1743,7 @@ dialog::backdrop {
     flex-direction: column;
     gap: 4px;
     padding: 8px 2px;
-    font-size: 12px;
+    font-size: 14px;
     border-radius: 5px 5px 0 0;
     justify-content: center;
     min-width: 0;
@@ -1772,7 +1772,7 @@ dialog::backdrop {
     margin: 0;
   }
   .sidebar-bottom .about {
-    font-size: 12px;
+    font-size: 14px;
     margin: 0;
     min-height: 28px;
   }
@@ -1792,14 +1792,14 @@ dialog::backdrop {
     gap: 8px;
   }
   .breadcrumb {
-    font-size: 11px;
+    font-size: 14px;
     gap: 7px;
   }
   .breadcrumb strong {
     white-space: nowrap;
   }
   .top-status {
-    font-size: 11px;
+    font-size: 14px;
     gap: 5px;
     white-space: nowrap;
   }
@@ -1850,7 +1850,7 @@ dialog::backdrop {
   .publication-select {
     display: block;
     width: 100%;
-    font-size: 12px;
+    font-size: 14px;
   }
   .publication-select > span {
     display: block;
@@ -1866,7 +1866,7 @@ dialog::backdrop {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     width: 100%;
-    font-size: 11px;
+    font-size: 14px;
   }
   .stats > span {
     display: grid;
@@ -1879,7 +1879,7 @@ dialog::backdrop {
   .coverage {
     padding: 11px 12px;
     margin-bottom: 14px;
-    font-size: 12px;
+    font-size: 14px;
   }
   .coverage-summary {
     gap: 6px 10px;
@@ -1896,7 +1896,7 @@ dialog::backdrop {
     border: 0;
     padding: 0;
     width: 100%;
-    font-size: 12px;
+    font-size: 14px;
   }
   .coverage-summary .inline-link {
     margin: 2px 0 0;
@@ -1904,7 +1904,7 @@ dialog::backdrop {
   }
   .coverage-details {
     margin: 5px 0 0;
-    font-size: 12px;
+    font-size: 14px;
   }
   .coverage-details summary {
     min-height: 28px;
@@ -1921,7 +1921,7 @@ dialog::backdrop {
     justify-content: space-between;
   }
   .freshness-grid dt {
-    font-size: 12px;
+    font-size: 14px;
     margin: 0;
   }
   .freshness-grid dd {
@@ -1954,7 +1954,7 @@ dialog::backdrop {
   }
   .search-row .button {
     padding: 7px;
-    font-size: 12px;
+    font-size: 14px;
     align-self: end;
   }
   .search-input .icon {
@@ -1978,7 +1978,7 @@ dialog::backdrop {
     grid-column: 1/-1;
   }
   .filter-grid label.field {
-    font-size: 12px;
+    font-size: 14px;
   }
   .filter-grid .field:nth-child(2),
   .filter-grid .field:nth-child(3) {
@@ -2002,7 +2002,7 @@ dialog::backdrop {
     font-size: 16px;
   }
   .result-caption {
-    font-size: 12px;
+    font-size: 14px;
   }
   .result-tools {
     width: 100%;
@@ -2010,7 +2010,7 @@ dialog::backdrop {
   }
   .sort-label {
     flex: 1;
-    font-size: 12px;
+    font-size: 14px;
   }
   .sort-label select {
     flex: 1;
@@ -2020,14 +2020,14 @@ dialog::backdrop {
   }
   .result-tools .direction {
     min-height: 44px;
-    font-size: 12px;
+    font-size: 14px;
     min-width: 107px;
   }
   .density-switch {
     display: none;
   }
   .filter-chip {
-    font-size: 12px;
+    font-size: 14px;
     min-height: 36px;
   }
   .data-table thead {
@@ -2098,7 +2098,7 @@ dialog::backdrop {
   }
   .quantity-label {
     display: inline;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 400;
   }
   .data-table .detail-cell {
@@ -2114,7 +2114,7 @@ dialog::backdrop {
   .data-table .cupo-cell {
     grid-column: 2;
     grid-row: 4;
-    font-size: 12px;
+    font-size: 14px;
     color: var(--muted);
     padding-top: 9px !important;
   }
@@ -2126,7 +2126,7 @@ dialog::backdrop {
   }
   .row-secondary,
   .row-secondary.mono {
-    font-size: 12px;
+    font-size: 14px;
   }
   .data-table .municipality-cell .row-primary {
     font-weight: 500;
@@ -2136,14 +2136,14 @@ dialog::backdrop {
     color: var(--muted);
   }
   .pill {
-    font-size: 11px;
+    font-size: 14px;
     padding: 4px 6px;
   }
   .data-table .row-link {
     min-height: 24px;
   }
   .pagination {
-    font-size: 12px;
+    font-size: 14px;
     gap: 12px;
   }
   .pagination > .buttons {
@@ -2165,7 +2165,7 @@ dialog::backdrop {
     font-size: 16px;
   }
   .footnote {
-    font-size: 12px;
+    font-size: 14px;
   }
   .two-col {
     grid-template-columns: 1fr;
@@ -2196,7 +2196,7 @@ dialog::backdrop {
     flex-wrap: wrap;
   }
   .act-top .pill {
-    font-size: 12px;
+    font-size: 14px;
   }
   .document-card > .buttons {
     padding-top: 14px;
@@ -2219,10 +2219,10 @@ dialog::backdrop {
     margin: 0;
   }
   .comparison-bar p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .comparison-note {
-    font-size: 12px;
+    font-size: 14px;
   }
   .tabs {
     display: grid;
@@ -2230,13 +2230,13 @@ dialog::backdrop {
     gap: 4px;
   }
   .tab {
-    font-size: 12px;
+    font-size: 14px;
     padding: 9px 5px;
     min-height: 44px;
     justify-content: space-between;
   }
   .tab span {
-    font-size: 12px;
+    font-size: 14px;
   }
   .change-row {
     grid-template-columns: 1fr 65px;
@@ -2305,7 +2305,7 @@ dialog::backdrop {
   .source-status {
     grid-column: 1;
     grid-row: 2;
-    font-size: 12px;
+    font-size: 14px;
   }
   .source-external {
     grid-column: 2;
@@ -2322,10 +2322,10 @@ dialog::backdrop {
     font-size: 13px;
   }
   .source-role {
-    font-size: 12px;
+    font-size: 14px;
   }
   .technical-details {
-    font-size: 12px;
+    font-size: 14px;
   }
   .technical-details summary {
     min-height: 28px;
@@ -2337,11 +2337,11 @@ dialog::backdrop {
     font-size: 13px;
   }
   .event time {
-    font-size: 12px;
+    font-size: 14px;
   }
   .hash,
   .resource-id {
-    font-size: 12px;
+    font-size: 14px;
   }
   .technical-log > summary,
   .schedule summary {
@@ -2376,7 +2376,7 @@ dialog::backdrop {
     font-size: 14px;
   }
   .detail-grid dt {
-    font-size: 12px;
+    font-size: 14px;
   }
   .dialog-body p {
     font-size: 13px;
@@ -2389,7 +2389,7 @@ dialog::backdrop {
     padding: 8px 5px;
   }
   .table-small th {
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 @media (max-width: 900px) {
@@ -2491,10 +2491,10 @@ dialog::backdrop {
     display: none;
   }
   .nav-button {
-    font-size: 11px;
+    font-size: 14px;
   }
   .sidebar-bottom .about {
-    font-size: 11px;
+    font-size: 14px;
   }
   .sidebar-bottom .icon {
     display: none;
@@ -2503,7 +2503,7 @@ dialog::backdrop {
     font-size: 16px;
   }
   .page-header .button {
-    font-size: 12px;
+    font-size: 14px;
     padding: 8px;
   }
   .data-table tr {
@@ -2522,7 +2522,7 @@ dialog::backdrop {
   }
   .result-tools .direction {
     min-width: 100px;
-    font-size: 11px;
+    font-size: 14px;
   }
   .publication-select select {
     font-size: 16px;
@@ -2633,7 +2633,7 @@ dialog::backdrop {
   transform: rotate(-90deg);
 }
 #extra-filter-count {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 .extra-filter-panel {
@@ -2841,10 +2841,10 @@ dialog::backdrop {
     font-size: 16px;
   }
   .primary-filters .field {
-    font-size: 12px;
+    font-size: 14px;
   }
   .source-line {
-    font-size: 12px;
+    font-size: 14px;
   }
   .result-tools {
     width: auto;
@@ -2875,7 +2875,7 @@ dialog::backdrop {
     font-size: 13px;
   }
   .workload-label {
-    font-size: 12px;
+    font-size: 14px;
   }
   .results-head {
     align-items: center;
@@ -2914,7 +2914,7 @@ dialog::backdrop {
     grid-column: 1/3;
   }
   .primary-filters > .field {
-    font-size: 12px;
+    font-size: 14px;
     gap: 3px;
   }
   .primary-filters > .field select {
@@ -2934,10 +2934,10 @@ dialog::backdrop {
     gap: 0;
   }
   .source-line > span {
-    font-size: 12px;
+    font-size: 14px;
   }
   .source-line .inline-link {
-    font-size: 12px;
+    font-size: 14px;
   }
   .secondary-filters .field select {
     font-size: 16px;
@@ -2953,7 +2953,7 @@ dialog::backdrop {
     margin-left: auto;
   }
   .sort-label {
-    font-size: 12px;
+    font-size: 14px;
     gap: 2px;
   }
   .sort-label select {
@@ -2963,7 +2963,7 @@ dialog::backdrop {
   .result-tools .direction {
     min-height: 36px;
     min-width: auto;
-    font-size: 12px;
+    font-size: 14px;
   }
   .result-tools .direction .icon {
     display: none;
@@ -3020,3 +3020,91 @@ dialog::backdrop {
 }
 
 @media(max-width:380px){.sidebar .nav-button{font-size:13px;gap:6px;padding:10px 6px}}
+
+/* Communication contract: document context, archive and evidence hierarchy. */
+.main,.content,.panel,.document-card,.source-row,.source-row>div {min-width:0}
+.page-header h1,.workspace-heading h1 {font-size:clamp(26px,2.2vw,32px);line-height:1.2}
+.main h2 {font-size:22px;line-height:1.35}
+.main p {max-width:75ch}
+.field {font-size:14px}
+.field select,.field input,.archive-search input {min-width:0;max-width:100%;width:100%;min-height:44px;padding:8px 12px;border:1px solid #81958b;border-radius:5px;background:var(--surface);font-size:16px}
+.button,.icon-button,.tab {min-height:44px}
+.icon-button {min-width:44px}
+.button:not(.primary):not(.text):not(.danger),.copy-label select,.input {border-color:#81958b}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible {outline:3px solid var(--accent);outline-offset:3px}
+.data-limit {font-size:16px;line-height:1.5;padding:12px 16px;border-left:3px solid var(--warn-ink);background:var(--warn-bg);color:var(--warn-ink);margin:16px 0}
+.publication-context {padding:12px 0 4px;font-size:14px}
+.publication-context p {margin:0 0 6px}
+.publication-context .data-limit {margin:8px 0}
+.view-tabs {display:flex;gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:12px 0 20px}
+.view-tabs a {padding:12px 0;min-height:44px;text-decoration:none;border-bottom:3px solid transparent}
+.view-tabs a[aria-current] {border-color:var(--accent);font-weight:600}
+.workspace-toolbar .view-tabs {margin-bottom:0}
+.comparison-selectors {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin:24px 0 16px}
+.comparison-provenance {margin-bottom:24px;color:var(--muted);font-size:14px}
+.archive-filters {display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin:16px 0 24px}
+.archive-filters .field {display:grid;gap:6px;align-content:start}
+.archive-search {max-width:680px;margin:24px 0 16px}
+.archive-search label {display:block;margin-bottom:8px;font-weight:500}
+.archive-search input {flex:1;width:auto}
+.publication-archive {display:grid;gap:16px}
+.publication-entry {padding:24px}
+.publication-entry h2 {max-width:65ch;font-size:20px;overflow-wrap:anywhere}
+.publication-entry .eyebrow {font-size:13px;margin-bottom:8px}
+.publication-entry p {margin:12px 0;font-size:14px}
+.publication-entry .pill {white-space:normal;flex-shrink:0;max-width:260px}
+.comparison-scroll {max-width:100%;overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.comparison-table {width:100%;min-width:760px;border-collapse:collapse;font-size:15px}
+.comparison-table caption {text-align:left;padding:16px;font-weight:500}
+.comparison-table th,.comparison-table td {text-align:left;padding:16px;vertical-align:top;border-top:1px solid var(--border)}
+.comparison-table thead th {background:#edf1ed;font-size:14px}
+.comparison-table tbody th {font-weight:500;min-width:220px}
+.comparison-table .button {font-size:14px;padding:8px}
+.comparison-scroll-hint {margin-top:8px}
+.coverage-gaps {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:20px 0}
+.coverage-gaps h3 {font-size:16px}
+.coverage-gaps p {font-size:14px;margin:8px 0}
+.source-overview .freshness-grid {margin-top:16px}
+.source-overview,.source-row,.technical-log,.document-card {overflow-wrap:anywhere}
+.technical-log>summary {min-height:44px;cursor:pointer;font-size:16px;padding:8px 0}
+.technical-log .table-small {table-layout:fixed;width:100%}
+.technical-log .table-small td {vertical-align:top}
+[id^=sources-],[id^=source-document-] {scroll-margin-top:calc(var(--nav-height,0px) + 24px)}
+.saved-items {list-style:none;padding:0;margin:16px 0 0}
+.saved-items li {display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--border)}
+.saved-items span {font-size:14px;color:var(--muted)}
+.data-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:16px 0}
+.data-actions .muted {font-size:14px}
+.source-line {font-size:14px}
+@media(max-width:900px) {
+ .sidebar .nav-button {white-space:normal;font-size:14px}
+ .mobile-more summary {max-width:190px;line-height:1.2}
+ .coverage-gaps {grid-template-columns:1fr;gap:12px}
+ .coverage-gaps>div+div {border-top:1px solid var(--border);padding-top:12px}
+ .technical-log .table-small,.technical-log .table-small tbody,.technical-log .table-small tr,.technical-log .table-small td {display:block;width:100%;min-width:0}
+ .technical-log .table-small thead {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .technical-log .table-small tr {padding:16px 0;border-top:1px solid var(--border)}
+ .technical-log .table-small td {border:0;padding:8px 12px;font-size:14px}
+ .technical-log .table-small td::before {content:attr(data-label);display:block;font-weight:600;color:var(--ink);margin-bottom:6px}
+ .technical-log .data-table-wrap {overflow:visible}
+ .publication-entry .act-top {flex-direction:column;gap:12px;align-items:start}
+ .comparison-selectors {gap:16px}
+}
+@media(max-width:600px) {
+ .main {padding-left:16px;padding-right:16px}
+ .main h2 {font-size:20px}
+ .page-header h1,.workspace-heading h1 {font-size:26px}
+ .comparison-selectors,.archive-filters {grid-template-columns:1fr}
+ .archive-search .buttons {flex-wrap:nowrap}
+ .archive-search input {width:0}
+ .panel,.publication-entry {padding:20px 16px}
+ .view-tabs {gap:16px}
+ .source-row {grid-template-columns:1fr;gap:12px}
+ .source-status {justify-self:start}
+ .freshness-grid {grid-template-columns:1fr;gap:16px}
+ .source-line {display:grid;gap:8px}
+ .sidebar .nav-button {gap:4px;padding:10px 6px}
+ .mobile-more summary {max-width:140px}
+ .mobile-more summary>span:first-child {display:none}
+}
+:root {font-size:16px}.dialog-body{font-size:16px}.detail-grid dd{font-size:16px}

@@ -220,7 +220,7 @@
   }
   function composeAPIURL(path, config = {}) {
     if (
-      !/^(?:state|refresh(?:\/[a-zA-Z0-9_-]+)?|documents\/[a-zA-Z0-9._-]+\.pdf)$/.test(
+      !/^(?:state|positions|refresh(?:\/[a-zA-Z0-9_-]+)?|documents\/[a-zA-Z0-9._-]+\.pdf)$/.test(
         path,
       )
     )
@@ -423,14 +423,92 @@
         }).format(d)
       : "Sin fecha";
   };
+  // Closed editorial dictionary: display only; never expands truncated names or
+  // changes source values, matching keys, exports, counts or person identities.
+  const editorialAccents = Object.fromEntries([
+    'Árabe','Asesoría','Biología','Clínicos','Composición','Construcción',
+    'Diagnósticos','Dirección','Edificación','Educación','Eléctricas',
+    'Electrónicos','Electrotecnia','Electrotécnicos','Energéticos',
+    'Escénicas','Fabricación','Filosofía','Física','Francés','Geografía',
+    'Geología','Informática','Informáticas','Inglés','Instalación','Latín',
+    'Máquinas','Matemáticas','Mecánica','Música','Operación','Organización',
+    'Ortoprotésicos','Plásticas','Producción','Química','Químicos',
+    'Automáticos','Técnicas','Técnicos','Tecnología','Vehículos',
+  ].filter(word => !word.includes(' ')).map(word => [norm(word),word]));
   const title = (s) =>
     String(s ?? "")
       .toLocaleLowerCase("es")
       .replace(/(^|[\s/(])\p{L}/gu, (m) => m.toLocaleUpperCase("es"))
+      .replace(/\p{L}+/gu, word => editorialAccents[norm(word)] || word)
+      .replace(/\s(Y|De|Del|La|Las|Los|El)\s/g, word => word.toLocaleLowerCase('es'))
       .replace(/\bIes\b/g, "IES")
       .replace(/\bEoi\b/g, "EOI")
       .replace(/\bCifppu\b/g, "CIFP")
-      .replace(/\bCpeibas\b/g, "CPEIBas");
+      .replace(/\bCpeibas\b/g, "CPEIBas")
+      .replace(/\b(Ceip|Cee|Cifp|Eso|Fp|Ii|Iii|Iv|Vi|Vii|Viii|Ix|Xi|Xii|Xiii|Xiv|Xv|Xvi)\b/g, (s) => s.toUpperCase());
+  function publicationContext(doc, currentId) {
+    return {
+      historical: !!doc && doc.id !== currentId,
+      pdfAvailable: !!doc?.artifact_url && doc.evidence_status !== 'original_unavailable',
+      publishedAt: doc?.published_at || null,
+      checkedAt: doc?.origin_checked_at || null,
+      limit: 'Disponibilidad actual sin confirmar.',
+    };
+  }
+  function durationLabel(row) {
+    return row.duration || (row.duration_status === 'absent'
+      ? 'No indicada en el documento' : 'No extraída; consulta el documento');
+  }
+  function compatiblePublications(a,b) {
+    const scope=d=>norm(d?.title).includes('vacantes sin cubrir') && norm(d?.title).includes('secundaria');
+    return !!(a && b && a.id!==b.id && ['approved','superseded'].includes(a.status) && ['approved','superseded'].includes(b.status)
+      && scope(a) && scope(b) && (!a.course || !b.course || a.course===b.course)
+      && Number.isFinite(Date.parse(a.published_at)) && Date.parse(a.published_at)<Date.parse(b.published_at));
+  }
+  function comparison(previous,later) {
+    if(!compatiblePublications(previous,later))throw Error('Selecciona dos publicaciones compatibles en orden cronológico.');
+    const group=doc=>{const groups=new Map();for(const row of doc.rows){
+      const key=JSON.stringify(['center_code','function_code','cupo','itinerant','jornada'].map(k=>row[k]??''));
+      if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);
+    }return groups;};
+    const before=group(previous),after=group(later),result=[];
+    for(const key of [...new Set([...before.keys(),...after.keys()])].sort()){
+      const beforeRows=before.get(key)||[],afterRows=after.get(key)||[],old=places(beforeRows),current=places(afterRows);
+      if(old===current)continue;
+      result.push({kind:!old?'appeared':!current?'disappeared':'quantity_changed',before:old,after:current,
+        row:(afterRows.length?afterRows:beforeRows)[0],beforeRows,afterRows});
+    }return result;
+  }
+  function publicationEntries(state, catalog) {
+    const host=url=>{try{return new URL(url).hostname;}catch{return 'Portal no consignado';}};
+    const entries=(state.documents||[]).map(d=>({id:'document-'+d.id,document:d,type:'vacancies',title:d.title||'Vacantes sin cubrir',
+      date:d.published_at,actDate:d.act_date,url:d.source_url,host:host(d.source_url),author:'CARM · documento administrativo',
+      bodies:[...new Set((d.rows||[]).map(r=>r.body_code))],course:d.course||'',status:'Datos incorporados'}));
+    const version=catalog?.version;
+    if(version){
+      const baseCount=version.ranked_specialties?.every(s=>Number.isInteger(s.count))?version.ranked_specialties.reduce((sum,s)=>sum+s.count,0):undefined;
+      const personal=[{...version,row_count:baseCount,kind:'roster',content_id:new URL(version.source_url).searchParams.get('IDCONTENIDO')},...(version.documents||[])];
+      for(const d of personal){
+        const type=d.kind==='award'?'award':'list';
+        entries.push({id:'personal-'+d.content_id,type,title:d.title||(d.kind==='maestros_roster'?'Lista única de Maestros':type==='award'?'Adjudicaciones publicadas':'Listas de Secundaria y otros cuerpos'),
+          date:d.published_at,url:d.source_url,host:host(d.source_url),author:'CARM · documento administrativo',
+          bodies:d.kind==='maestros_roster'?['0597']:d.kind==='roster'?[...new Set((version.ranked_specialties||[]).map(s=>s.code.slice(0,4)))]:[],course:d.course||'',status:'Datos incorporados',personal:d});
+        for(const a of d.amendments||[])entries.push({id:'personal-'+a.content_id,type:'amendment',title:'Corrección de '+(d.kind==='maestros_roster'?'la lista única de Maestros':'las listas publicadas'),
+          date:null,signedAt:a.signed_at,url:a.source_url,host:host(a.source_url),author:'CARM · documento administrativo',
+          bodies:d.kind==='maestros_roster'?['0597']:d.kind==='roster'?[...new Set((version.ranked_specialties||[]).map(s=>s.code.slice(0,4)))]:[],course:d.course||'',status:'Corrección incorporada',personal:a});
+      }
+    }
+    for(const n of state.catalog?.notices||[])entries.push({id:'notice-'+n.id,type:'notice',title:n.title||'Aviso',date:n.date,url:n.url,host:host(n.url),
+      author:n.author||'Autoría no consignada',bodies:n.body_code?[n.body_code]:[],course:n.course||'',notice:n,
+      status:n.kind==='vacancies'?(isPendingNotice(n,state.documents,state.history_documents)?'Documento pendiente de incorporar':'Documento vinculado a datos incorporados'):'Aviso enlazado; contenido sin incorporar'});
+    return entries.sort((a,b)=>(Date.parse(b.date||b.signedAt)||0)-(Date.parse(a.date||a.signedAt)||0)||a.id.localeCompare(b.id));
+  }
+  function filterPublications(entries,f={}) {
+    const words=norm(f.q).trim().split(/\s+/).filter(Boolean);
+    return entries.filter(e=>words.every(w=>norm(e.title+' '+e.author).includes(w))&&(!f.type||e.type===f.type)
+      &&(!f.body||(f.body==='unknown'?!e.bodies.length:e.bodies.includes(f.body)))&&(!f.course||(f.course==='unknown'?!e.course:e.course===f.course))
+      &&(!f.from||!!e.date&&e.date.slice(0,10)>=f.from)&&(!f.to||!!e.date&&e.date.slice(0,10)<=f.to));
+  }
   function unique(rows, key, label = key) {
     return [...new Map(rows.map((r) => [r[key], r[label]])).entries()].sort(
       (a, b) => String(a[1]).localeCompare(String(b[1]), "es"),
@@ -456,5 +534,11 @@
     date,
     title,
     unique,
+    publicationContext,
+    durationLabel,
+    compatiblePublications,
+    comparison,
+    publicationEntries,
+    filterPublications,
   };
 });

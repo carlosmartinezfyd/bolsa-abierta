@@ -2,6 +2,7 @@
   'use strict';
   const KEY='bolsa-abierta:position:v1';
   const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dateTime=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('es',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}).format(new Date(value)):'Sin fecha acreditada';
   const date=value=>value&&Number.isFinite(Date.parse(value))?new Intl.DateTimeFormat('es',{day:'numeric',month:'short',year:'numeric',timeZone:'Europe/Madrid'}).format(new Date(value)):'Sin fecha acreditada';
   const name=value=>String(value).toLocaleLowerCase('es').replace(/(^|[\s,(/-])\p{L}/gu,c=>c.toLocaleUpperCase('es'));
   const fold=value=>String(value).normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase('es');
@@ -42,7 +43,7 @@
   }
   const searchFailure=error=>error.status===503&&error.code==='index_pending'?'El índice de búsqueda se está preparando. Puedes consultar por número completo de lista.':null;
   function createModel({request,storage,requestRefresh}={}){
-    const state={catalog:null,version:null,person:null,draft:null,results:[],searched:false,busy:false,error:'',message:'',specialty:'',query:'',more:false};
+    const state={catalog:null,version:null,person:null,draft:null,results:[],searched:false,busy:false,error:'',message:'',specialty:'',query:'',more:false,rememberedId:null};
     let notify=()=>{},sequence=0;const emit=()=>notify(state);
     async function readCatalog(){
       const data=validateResponse(await request('/api/positions'));
@@ -53,13 +54,13 @@
     async function loadPerson(id){const data=validateResponse(await request('/api/positions/'+id));if(!data.person||data.person.id!==id)throw Error('Persona no válida.');state.person=data.person;state.version=data.version;}
     async function init(){
       state.busy=true;state.error='';emit();
-      try{await catalog();let id;try{id=storage?.getItem(KEY);}catch{}if(/^[a-f0-9]{32}$/.test(id||''))await loadPerson(id);}
+      try{await catalog();let id;try{id=storage?.getItem(KEY);}catch{}if(/^[a-f0-9]{32}$/.test(id||'')){state.rememberedId=id;await loadPerson(id);}}
       catch(e){state.error=e.status===404?'Esta ficha no se ha encontrado en la generación consultada. Vuelve a buscarla; esto no acredita una exclusión.':'No se ha podido cargar la lista. Inténtalo de nuevo.';}
       finally{state.busy=false;emit();}
     }
     async function search(specialty,query){
       query=query.trim();specialty=specialty||'';
-      const ticket=++sequence;Object.assign(state,{specialty,query,results:[],draft:null,error:'',message:'',searched:false,busy:true});emit();
+      const ticket=++sequence;Object.assign(state,{specialty,query,results:[],draft:null,error:'',message:'',searched:false,busy:true,resultBody:'',resultType:''});emit();
       if(!canSearch(query)){state.busy=false;state.error='Escribe al menos tres letras o tu número de lista.';emit();return;}
       try{const data=validateResponse(await request('/api/positions/search',{specialty,query}));if(ticket!==sequence)return;
         let currentCatalog=state.catalog;
@@ -72,7 +73,7 @@
       }catch(e){if(ticket===sequence)state.error=searchFailure(e)||(e.status===409?'Las publicaciones han cambiado. Vuelve a pulsar Buscar.':'No se ha podido consultar la lista. Vuelve a intentarlo.');}
       finally{if(ticket===sequence){state.busy=false;emit();}}
     }
-    function editQuery(query){++sequence;Object.assign(state,{query,results:[],draft:null,error:'',message:'',searched:false,busy:false,more:false});emit();}
+    function editQuery(query){++sequence;Object.assign(state,{query,results:[],draft:null,error:'',message:'',searched:false,busy:false,more:false,resultBody:'',resultType:''});emit();}
     async function loadMore(){
       if(state.busy||!state.more||!Number.isInteger(state.nextOffset))return;
       const ticket=++sequence;state.busy=true;state.error='';emit();
@@ -86,13 +87,17 @@
       finally{if(ticket===sequence){state.busy=false;emit();}}
     }
     function choose(id){state.draft=state.results.find(p=>p.id===id)||null;state.error='';emit();}
-    async function confirm(){
+    async function confirm({remember:shouldRemember=false}={}){
       if(!state.draft)return;state.busy=true;state.error='';emit();
-      try{await loadPerson(state.draft.id);state.draft=null;try{storage?.setItem(KEY,state.person.id);}catch{state.message='La selección no se podrá recordar al cerrar el navegador.';}}
+      try{await loadPerson(state.draft.id);state.draft=null;if(shouldRemember)remember();}
       catch{state.error='No se ha podido confirmar la persona. Vuelve a intentarlo.';}
       finally{state.busy=false;emit();}
     }
-    function clear(){++sequence;Object.assign(state,{person:null,version:null,draft:null,results:[],searched:false,error:'',message:''});try{storage?.removeItem(KEY);}catch{}emit();}
+    function beginSearch(){++sequence;Object.assign(state,{person:null,version:null,draft:null,results:[],searched:false,error:'',message:'',more:false,busy:false});emit();}
+    function remember(){if(!state.person)return;try{if(!storage)throw Error('storage');storage.setItem(KEY,state.person.id);state.rememberedId=state.person.id;state.message='Ficha recordada en este navegador.';}catch{state.message='No se ha podido guardar la preferencia en este navegador.';}emit();}
+    function forget(){try{storage?.removeItem(KEY);state.rememberedId=null;state.message='Se ha dejado de recordar la ficha en este navegador.';}catch{state.error='No se ha podido borrar la preferencia. Inténtalo de nuevo.';}emit();}
+    async function restoreRemembered(){if(!state.rememberedId||state.busy)return;state.busy=true;state.error='';emit();try{await loadPerson(state.rememberedId);}catch{state.error='No se ha podido recuperar la ficha recordada. Puedes reintentar o buscarla en las publicaciones incorporadas.';}finally{state.busy=false;emit();}}
+    function clear(){forget();beginSearch();}
     async function refresh(){
       if(state.busy)return;state.busy=true;state.error='';state.message='';emit();const id=state.person?.id,previous=state.version?.checked_at;let jobStarted=NaN;
       try{if(state.catalog?.refresh_available&&requestRefresh){state.message='Consultando las fuentes…';emit();const job=await requestRefresh();jobStarted=Date.parse(job.created_at);if(job.status!=='completed'||!Number.isFinite(jobStarted))throw Error('Comprobación incompleta.');}
@@ -100,11 +105,11 @@
         const checked=Date.parse(state.version?.checked_at || state.catalog.version.checked_at);
         if(state.catalog.refresh_available && !(checked>=jobStarted && checked>Date.parse(previous || state.catalog.version.checked_at)))throw Error('No se ha confirmado una nueva comprobación de esta lista.');
         state.message=state.catalog.refresh_available&&state.version?.checked_at!==previous?'Comprobación recibida.':'Consulta recargada. La fecha de la publicación no ha cambiado.';
-      }catch(e){state.message='';if(e.status===404){state.person=null;state.version=null;try{storage?.removeItem(KEY);}catch{}}
+      }catch(e){state.message='';if(e.status===404){state.person=null;state.version=null;}
         state.error=e.status===404?'Esta ficha no se ha encontrado en la generación consultada. Vuelve a buscarla; esto no acredita una exclusión.':e.message==='No se ha confirmado una nueva comprobación de esta lista.'?e.message:'No se ha podido completar la consulta. Se conserva el resultado anterior.';
       }finally{state.busy=false;emit();}
     }
-    return {state,init,search,loadMore,editQuery,choose,confirm,clear,refresh,subscribe(fn){notify=fn;}};
+    return {state,init,search,loadMore,editQuery,choose,confirm,clear,beginSearch,remember,forget,restoreRemembered,refresh,subscribe(fn){notify=fn;}};
   }
   function specialtyLabel(s){const selected=s.catalog.specialties.find(x=>x.code===s.specialty);return selected?name(selected.name):'Todas las listas y funciones';}
   function awardDestination(value){
@@ -116,44 +121,48 @@
   function searchDate(s){const v=s.searched&&s.searchVersion||s.catalog.version;return v.coverage==='multi_source'?'Listas y adjudicaciones incorporadas · cobertura parcial':`Lista del ${date(v.published_at)}${v.coverage==='reviewed_amendments'?' · con correcciones':''}`;}
   function matchEvidence(p,v){
     const {document,amendment,published_at}=rowEvidence(p,v);
-    const label=document?.kind==='award'?`Adjudicación${p.appointment_status==='provisional'?' · reserva provisional':''}`:document?.kind==='maestros_roster'?`Lista única de Maestros · ordinal ${p.rank.toLocaleString('es')}`:`N.º ${p.list_number} · ${p.block_name}`;
+    const label=document?.kind==='award'?`Adjudicación${p.appointment_status==='provisional'?' · reserva provisional':''}`:document?.kind==='maestros_roster'?`Lista única de Maestros · ordinal ${p.rank.toLocaleString('es')}`:`Lista publicada · N.º ${p.list_number} · ${p.block_name}`;
     return `${label} · ${date(published_at)}${amendment?` · corrección ${date(amendment.signed_at)}`:''} · pág. ${p.page}`;
   }
   function sourceInformation(s){
     const v=s.searched&&s.searchVersion||s.catalog.version;
     const records=Number.isInteger(v.row_count)?v.row_count:s.catalog.specialties.reduce((n,x)=>n+(Number.isInteger(x.count)?x.count:0),0);
     const docs=v.documents||[],courses=[...new Set([v.course,...docs.map(d=>d.course)].filter(Boolean))];
-    return `<details class="position-details position-source-information"><summary>Fuentes y alcance de la consulta</summary><div><p>${records.toLocaleString('es')} registros incorporados; una persona puede tener varios registros. Los códigos del filtro incluyen listas y funciones de adjudicación.</p><p>Cursos: ${E(courses.length?courses.join(' · '):'no consignados en metadatos')}. No se acredita la cobertura completa de listas ordinarias, urgentes, extraordinarias, abiertas, habilitaciones y sus correcciones.</p><dl><dt>Comprobación de la generación</dt><dd>${E(date(v.checked_at))}</dd></dl><ul><li>Lista de referencia · ${E(date(v.published_at))} · <a href="${E(officialURL(v.source_url))}" target="_blank" rel="noopener noreferrer">PDF oficial ↗</a></li>${docs.map(d=>`<li>${d.kind==='maestros_roster'?'Lista única de Maestros':'Adjudicaciones'} · ${E(date(d.published_at))}${Number.isInteger(d.row_count)?` · ${d.row_count.toLocaleString('es')} registros`:''} · <a href="${E(officialURL(d.source_url))}" target="_blank" rel="noopener noreferrer">PDF oficial ↗</a></li>`).join('')}</ul><p>Los documentos incorporados son una parte del corpus. Consulta <a href="#sources" data-view="sources">Fuentes</a> para el recorrido por fuente, familia y curso y el trabajo pendiente.</p></div></details>`;
+    return `<details class="position-details position-source-information"><summary>Fuentes y alcance de la consulta</summary><div><p>${records.toLocaleString('es')} registros incorporados; una persona puede tener varios registros. Los códigos del filtro incluyen listas y funciones de adjudicación.</p><p>Cursos: ${E(courses.length?courses.join(' · '):'no consignados en metadatos')}. No se acredita la cobertura completa de listas ordinarias, urgentes, extraordinarias, abiertas, habilitaciones y sus correcciones.</p><dl><dt>Comprobación del conjunto de listas y adjudicaciones</dt><dd>${E(dateTime(v.checked_at))}</dd></dl><ul><li>Lista de referencia · ${E(date(v.published_at))} · <a href="${E(officialURL(v.source_url))}" target="_blank" rel="noopener noreferrer">PDF oficial ↗</a></li>${docs.map(d=>`<li>${d.kind==='maestros_roster'?'Lista única de Maestros':'Adjudicaciones'} · ${E(date(d.published_at))}${Number.isInteger(d.row_count)?` · ${d.row_count.toLocaleString('es')} registros`:''} · <a href="${E(officialURL(d.source_url))}" target="_blank" rel="noopener noreferrer">PDF oficial ↗</a></li>`).join('')}</ul><p>Los documentos incorporados son una parte de las publicaciones oficiales. Consulta <a href="#sources" data-view="sources">Fuentes</a> para el recorrido por fuente, familia y curso y el trabajo pendiente.</p></div></details>`;
   }
   function specialtyOptions(s,query=''){
-    const items=filterSpecialties(s.catalog.specialties,query);
+    const items=filterSpecialties(s.catalog.specialties,query).filter(x=>!s.pickerBody||x.body===s.pickerBody);
     return `<button type="button" data-position="select-specialty" data-specialty="" aria-pressed="${!s.specialty}">Todas las listas y funciones</button>${items.map(x=>`<button type="button" data-position="select-specialty" data-specialty="${x.code}" aria-pressed="${s.specialty===x.code}"><strong>${E(name(x.name))}</strong><span>${E(name(x.body))} · ${x.code}</span></button>`).join('')}${items.length?'':'<p>No hay listas o funciones con ese nombre.</p>'}`;
   }
+  function filterMatches(rows,type='',body=''){return rows.filter(p=>(!type||(p.record_type||'list')===type)&&(!body||p.body_name===body));}
   function searchFeedback(s){
     const message=s.error||(s.busy?'Buscando…':s.searched?(s.results.length?`${s.more?`${s.results.length}+`:s.results.length} ${s.results.length===1?'coincidencia':'coincidencias'}`:(s.specialty?`No hay coincidencias en ${specialtyLabel(s)}`:(s.catalog.version.coverage==='multi_source'?'No hay coincidencias en las publicaciones incorporadas':'No hay coincidencias en esta publicación'))):'');
     const status=`<p class="position-status" role="status" aria-live="polite">${E(message)}</p>`;
     if(!s.searched)return status;
     if(!s.results.length)return `${status}<div class="position-empty"><p>La búsqueda solo cubre las publicaciones incorporadas. No encontrar una ficha no acredita ausencia ni exclusión de una lista.</p>${s.specialty?'':'<p>Prueba con un apellido o con tu número de lista.</p>'}<div class="buttons">${s.specialty?'<button class="button" data-position="all-specialties">Buscar en todas las listas y funciones</button>':'<button class="button" data-position="edit">Editar búsqueda</button>'}<a href="https://www.educarm.es/consultalistainterinos" target="_blank" rel="noopener noreferrer">Consultar en Educarm ↗</a></div></div>`;
-    return `${status}<section class="position-matches" aria-label="Coincidencias"><ul>${s.results.map(p=>`<li><button data-position="choose" data-person="${p.id}"><span class="position-match-main"><strong>${E(name(p.name))}</strong><span>${E(name(p.specialty_name))} · ${E(name(p.body_name))}</span><small>${E(matchEvidence(p,s.searchVersion||s.catalog.version))}</small></span><span class="position-select-label" aria-hidden="true">→</span></button></li>`).join('')}</ul>${s.more?`<button class="button position-refine" data-position="more" ${s.busy?'disabled':''}>Ver más coincidencias</button>`:''}</section>`;
+    const matches=filterMatches(s.results,s.resultType,s.resultBody);
+    const filters=`<div class="archive-filters position-result-filters"><label class="field">Tipo de resultado<select id="position-result-type"><option value="">Todos</option><option value="list" ${s.resultType==='list'?'selected':''}>Listas</option><option value="award" ${s.resultType==='award'?'selected':''}>Adjudicaciones</option></select></label><label class="field">Cuerpo<select id="position-result-body"><option value="">Todos</option>${[...new Set(s.results.map(p=>p.body_name))].map(body=>`<option value="${E(body)}" ${s.resultBody===body?'selected':''}>${E(name(body))}</option>`).join('')}</select></label></div><p>${matches.length} de ${s.results.length} coincidencias cargadas${s.more?'; hay más por consultar':''}.</p>`;
+    return `${status}${filters}${!matches.length?'<p>Ninguna coincidencia cargada pasa estos filtros. Amplía el tipo o el cuerpo, o carga más coincidencias.</p>':''}<section class="position-matches" aria-label="Coincidencias"><ul>${matches.map(p=>`<li><button data-position="choose" data-person="${p.id}"><span class="position-match-main"><strong>${E(name(p.name))}</strong><span>${E(name(p.specialty_name))} · ${E(name(p.body_name))}</span><small>${E(matchEvidence(p,s.searchVersion||s.catalog.version))}</small></span><span class="position-select-label" aria-hidden="true">→</span></button></li>`).join('')}</ul>${s.more?`<button class="button position-refine" data-position="more" ${s.busy?'disabled':''}>Ver más coincidencias</button>`:''}</section>`;
   }
+  function rememberedControls(s){return `${s.rememberedId?'<p><button class="position-text-button" data-position="restore">Volver a la ficha recordada</button> · <button class="position-text-button" data-position="forget">Dejar de recordarla</button></p>':''}`;}
   function render(s){
     const disabled=s.busy?'disabled':'';
     const status=`<div class="position-status" role="status" aria-live="polite">${E(s.error||s.message||(s.busy?'Consultando…':''))}</div>`;
     if(!s.catalog)return `<div class="position-loading"><p>${s.error?E(s.error):'Cargando lista…'}</p>${s.error?'<button class="button" data-position="retry">Reintentar</button>':''}</div>`;
     if(s.person){
       const p=s.person,v=s.version,{document:d,amendment,source,published_at}=rowEvidence(p,v),maestros=d?.kind==='maestros_roster';
-      const heading=`<div class="position-person"><div><p class="position-eyebrow">${E(name(p.specialty_name))}</p><h2 id="position-person" tabindex="-1">${E(name(p.name))}</h2></div><button class="position-text-button" data-position="change" ${disabled}>Borrar ficha guardada</button></div>`;
-      const footer=`<div class="position-card-footer"><span>N.º de lista ${E(p.list_number)}</span><button class="button primary" data-position="refresh" ${disabled}>${s.busy?'Consultando…':s.catalog.refresh_available?'Actualizar':'Volver a consultar'}</button></div>`;
-      const evidence=`<dl><dt>Fecha de publicación</dt><dd>${E(date(published_at))}</dd>${amendment?`<dt>Corrección firmada</dt><dd>${E(date(amendment.signed_at))}</dd>`:''}<dt>Página del PDF de evidencia</dt><dd>${p.page}</dd><dt>Última comprobación de la generación</dt><dd>${E(date(v.checked_at))}</dd></dl><a href="${E(officialURL(source.source_url))}#page=${p.page}" target="_blank" rel="noopener noreferrer">Abrir documento oficial ↗</a>`;
+      const heading=`<div class="position-person"><div><p class="position-eyebrow">${p.record_type==='award'?'Adjudicación':'Lista publicada'} · ${E(name(p.body_name))} · ${E((d?d.course:v.course)||'Curso no consignado')}</p><p>${E(name(p.specialty_name))}</p><h2 id="position-person" tabindex="-1">${E(name(p.name))}</h2></div><button class="position-text-button" data-position="change" ${disabled}>Buscar otra ficha</button></div>`;
+      const footer=`<div class="position-preference"><button class="position-text-button" data-position="${s.rememberedId===p.id?'forget':'remember'}" ${disabled}>${s.rememberedId===p.id?'Dejar de recordar esta ficha':'Recordar esta ficha en este navegador'}</button></div><div class="position-card-footer"><span>N.º de lista ${E(p.list_number)}</span><button class="button primary" data-position="refresh" ${disabled}>${s.busy?'Consultando…':s.catalog.refresh_available?'Actualizar':'Volver a consultar'}</button></div>`;
+      const evidence=`<div class="position-evidence"><a href="${E(officialURL(source.source_url))}#page=${p.page}" target="_blank" rel="noopener noreferrer">Ver página ${p.page} del PDF ↗</a><p>Publicación: ${E(date(published_at))}${amendment?` · Corrección firmada: ${E(date(amendment.signed_at))}`:''}</p><p>Comprobación del conjunto de listas y adjudicaciones: ${E(dateTime(v.checked_at))} (hora de Madrid).</p><a href="#sources" data-view="sources" data-source-anchor="sources-positions">Fuentes y cobertura de estas publicaciones</a></div>`;
       if(p.record_type==='award'){
         const destination=awardDestination(p.destination);
-        return `<section class="position-card" aria-labelledby="position-person">${heading}<div class="position-award"><p>Adjudicación publicada · <time datetime="${E(published_at)}">${E(date(published_at))}</time></p>${p.appointment_status==='provisional'?'<p><strong>Reserva provisional</strong></p>':p.appointment_status==='definitive'?'<p>Nombramiento definitivo acreditado</p>':''}<h3>${E(destination.center)}</h3><p>${E(destination.municipality)}</p><p>${E(p.workload)}</p>${p.incorporation_at?`<p>Incorporación: <time datetime="${E(p.incorporation_at)}">${E(date(p.incorporation_at))}</time></p>`:''}</div>${footer}</section>${status}<details class="position-details"><summary>Ver detalle</summary><div><p>El destino corresponde a esta publicación. La adjudicación no se resta del ordinal de una lista ni confirma la disponibilidad de hoy.</p>${p.appointment_status?'':'<p>El documento no acredita aquí el carácter definitivo o provisional del nombramiento. El título de una publicación definitiva no resuelve por sí solo ese estado.</p>'}${evidence}</div></details>`;
+        return `<section class="position-card" aria-labelledby="position-person">${heading}<div class="position-award"><p>Adjudicación publicada · <time datetime="${E(published_at)}">${E(date(published_at))}</time></p>${p.appointment_status==='provisional'?'<p><strong>Reserva provisional</strong></p>':p.appointment_status==='definitive'?'<p>Nombramiento definitivo acreditado</p>':''}<h3>${E(destination.center)}</h3><p>${E(destination.municipality)}</p><p>${E(p.workload)}</p>${p.incorporation_at?`<p>Incorporación: <time datetime="${E(p.incorporation_at)}">${E(date(p.incorporation_at))}</time></p>`:''}</div><p class="data-limit">El destino corresponde a esta publicación; no confirma la disponibilidad de hoy.</p>${evidence}${footer}</section>${status}<details class="position-details"><summary>Cómo se obtiene este dato</summary><div><p>La adjudicación no se resta del ordinal de una lista.</p>${p.appointment_status?'':'<p>El documento no acredita aquí el carácter definitivo o provisional del nombramiento. El título de una publicación definitiva no resuelve por sí solo ese estado.</p>'}</div></details>`;
       }
       const amendments=d?.amendments||v.amendments||[];
-      return `<section class="position-card" aria-labelledby="position-person">${heading}<div class="position-rank"><span>${maestros?'Ordinal en la lista única de Maestros':'Puesto en la lista publicada'}</span><strong>${p.rank.toLocaleString('es')}<small>º</small></strong><time datetime="${E(published_at)}">${E(date(published_at))}${amendments.length?' · con correcciones':''}</time></div>${maestros?`<div class="position-qualifiers"><h3>Habilitaciones acreditadas</h3>${p.habilitations.length?`<ul>${p.habilitations.map(h=>`<li>${E(name(h.name))} · ${E(h.code)}</li>`).join('')}</ul>`:'<p>Sin habilitaciones consignadas en esta ficha.</p>'}</div>`:''}${footer}</section>${status}<details class="position-details"><summary>Ver detalle</summary><div><p>${maestros?'El ordinal pertenece a la lista única del cuerpo de Maestros (0597). Las habilitaciones son cualificaciones separadas y no definen listas con un ordinal propio.':'El puesto cuenta los registros que aparecen antes en esta especialidad, siguiendo el orden y los bloques del documento.'} No es la posición actual entre disponibles.</p><dl><dt>Curso de la lista</dt><dd>${E(d?.course||v.course||'No consignado en metadatos')}</dd><dt>Bloque</dt><dd>${E(p.block_name)}</dd></dl>${evidence}${amendments.length?`<p>Correcciones incorporadas:</p><ul>${amendments.map(a=>`<li><a href="${E(officialURL(a.source_url))}" target="_blank" rel="noopener noreferrer">Orden firmada el ${E(date(a.signed_at))} ↗</a></li>`).join('')}</ul>`:'<p>Esta ficha solo refleja la publicación incorporada. No se acredita la cobertura de todas las correcciones ni de los cambios de disponibilidad.</p>'}</div></details>`;
+      return `<section class="position-card" aria-labelledby="position-person">${heading}<div class="position-rank"><span>${maestros?'Ordinal en la lista única de Maestros':'Puesto en el orden publicado'}</span><strong>${p.rank.toLocaleString('es')}<small>º</small></strong><time datetime="${E(published_at)}">${E(date(published_at))}${amendments.length?' · con correcciones':''}</time></div><p class="data-limit">No es la posición actual entre disponibles.</p>${!maestros?`<p>${E(p.block_name)}</p>`:''}${maestros?`<div class="position-qualifiers"><h3>Habilitaciones acreditadas</h3>${p.habilitations.length?`<ul>${p.habilitations.map(h=>`<li>${E(name(h.name))} · ${E(h.code)}</li>`).join('')}</ul>`:'<p>Sin habilitaciones consignadas en esta ficha.</p>'}</div>`:''}${evidence}${footer}</section>${status}<details class="position-details"><summary>Cómo se obtiene este dato</summary><div><p>${maestros?'El ordinal pertenece a la lista única del cuerpo de Maestros (0597). Las habilitaciones son cualificaciones separadas y no definen listas con un ordinal propio.':'El puesto cuenta los registros que aparecen antes en esta especialidad, siguiendo el orden y los bloques del documento.'} El ordinal cuenta registros en el orden del documento; no supone un número de puesto impreso.</p><dl><dt>Curso de la lista</dt><dd>${E((d?d.course:v.course)||'No consignado en metadatos')}</dd><dt>Bloque</dt><dd>${E(p.block_name)}</dd></dl>${amendments.length?`<p>Correcciones incorporadas:</p><ul>${amendments.map(a=>`<li><a href="${E(officialURL(a.source_url))}" target="_blank" rel="noopener noreferrer">Orden firmada el ${E(date(a.signed_at))} ↗</a></li>`).join('')}</ul>`:'<p>Esta ficha solo refleja la publicación incorporada. No se acredita la cobertura de todas las correcciones ni de los cambios de disponibilidad.</p>'}</div></details>`;
     }
-    if(s.draft){const p=s.draft;return `<section class="position-card position-confirm"><p class="position-eyebrow">Confirma tu selección</p><h2 tabindex="-1" id="position-person">${E(name(p.name))}</h2><p>${E(name(p.specialty_name))}</p><p class="muted">${E(matchEvidence(p,s.searchVersion||s.catalog.version))}</p><p class="muted">Al confirmar, recuerdas el identificador de esta ficha en este navegador. Puedes borrarlo con «Borrar ficha guardada».</p><div class="buttons"><button class="button primary" data-position="confirm" ${disabled}>Confirmar y recordar</button><button class="button" data-position="back" ${disabled}>Volver</button></div></section>${status}`;}
-    return `<section class="position-search" aria-label="Buscar mi ficha"><form id="position-form" role="search"><label for="position-query">Tu nombre o número de lista</label><div class="position-query-row"><div class="position-query-wrap"><input id="position-query" name="query" type="search" required minlength="3" maxlength="100" autocomplete="off" spellcheck="false" enterkeyhint="search" value="${E(s.query)}" placeholder="Nombre y apellidos"/><button type="button" class="position-clear" data-position="clear-query" aria-label="Borrar búsqueda" ${s.query?'':'hidden'}>×</button></div><button class="button primary" type="submit">Buscar</button></div><div class="position-filter-row"><button type="button" class="position-specialty-button" data-position="specialties" aria-haspopup="dialog"><span>Lista o función</span><strong id="position-specialty-label">${E(specialtyLabel(s))}</strong><span aria-hidden="true">⌄</span></button></div></form><p class="position-search-date">${E(searchDate(s))}</p><div id="position-feedback">${searchFeedback(s)}</div><div id="position-source-information">${sourceInformation(s)}</div></section><dialog id="position-specialty-dialog" class="position-picker" aria-labelledby="position-picker-title"><div class="position-picker-head"><h2 id="position-picker-title">Lista o función</h2><button type="button" data-position="close-specialties" aria-label="Cerrar listas y funciones">×</button></div><label for="position-specialty-query" class="sr-only">Buscar lista o función</label><input id="position-specialty-query" type="search" placeholder="Buscar lista o función…" autocomplete="off"/><div id="position-specialty-options" class="position-specialty-options">${specialtyOptions(s)}</div></dialog>`;
+    if(s.draft){const p=s.draft;return `<section class="position-card position-confirm"><p class="position-eyebrow">Confirma tu selección</p><h2 tabindex="-1" id="position-person">${E(name(p.name))}</h2><p>${E(name(p.specialty_name))}</p><p class="muted">${E(matchEvidence(p,s.searchVersion||s.catalog.version))}</p><p class="muted">Comprueba el nombre, el tipo y la fecha antes de abrir la ficha. Puedes recordarla después si lo deseas.</p><div class="buttons"><button class="button primary" data-position="confirm" ${disabled}>Ver ficha</button><button class="button" data-position="back" ${disabled}>Volver</button></div></section>${status}`;}
+    return `<div id="position-remembered">${rememberedControls(s)}</div><div id="position-preference-status" role="status">${E(s.message)}</div><section class="position-search" aria-label="Buscar mi ficha"><form id="position-form" role="search"><label for="position-query">Tu nombre o número de lista</label><div class="position-query-row"><div class="position-query-wrap"><input id="position-query" name="query" type="search" required minlength="3" maxlength="100" autocomplete="off" spellcheck="false" enterkeyhint="search" value="${E(s.query)}" placeholder="Nombre y apellidos"/><button type="button" class="position-clear" data-position="clear-query" aria-label="Borrar búsqueda" ${s.query?'':'hidden'}>×</button></div><button class="button primary" type="submit">Buscar</button></div><div class="position-filter-row"><button type="button" class="position-specialty-button" data-position="specialties" aria-haspopup="dialog"><span>Lista o función</span><strong id="position-specialty-label">${E(specialtyLabel(s))}</strong><span aria-hidden="true">⌄</span></button></div></form><p class="position-search-date">${E(searchDate(s))}</p><div id="position-feedback">${searchFeedback(s)}</div><div id="position-source-information">${sourceInformation(s)}</div></section><dialog id="position-specialty-dialog" class="position-picker" aria-labelledby="position-picker-title"><div class="position-picker-head"><h2 id="position-picker-title">Lista o función</h2><button type="button" data-position="close-specialties" aria-label="Cerrar listas y funciones">×</button></div><label class="field">Cuerpo<select id="position-picker-body"><option value="">Todos los cuerpos</option>${[...new Set(s.catalog.specialties.map(x=>x.body))].map(body=>`<option value="${E(body)}" ${s.pickerBody===body?'selected':''}>${E(name(body))}</option>`).join('')}</select></label><label for="position-specialty-query" class="sr-only">Buscar lista o función</label><input id="position-specialty-query" type="search" placeholder="Buscar lista o función…" autocomplete="off"/><div id="position-specialty-options" class="position-specialty-options">${specialtyOptions(s)}</div></dialog>`;
   }
   let browserModel,searchTimer,started=false;
   function mount(){
@@ -163,6 +172,8 @@
       // Preserve the live input node, caret and mobile keyboard while suggestions arrive.
       if(root.querySelector('#position-form')&&s.catalog&&!s.person&&!s.draft){
         root.querySelector('#position-feedback').innerHTML=searchFeedback(s);
+        root.querySelector('#position-remembered').innerHTML=rememberedControls(s);
+        root.querySelector('#position-preference-status').textContent=s.message;
         root.querySelector('#position-specialty-label').textContent=specialtyLabel(s);
         root.querySelector('.position-search-date').textContent=searchDate(s);
         root.querySelector('#position-source-information').innerHTML=sourceInformation(s);
@@ -186,6 +197,11 @@
       if(!event.isComposing&&canSearch(event.target.value))searchTimer=setTimeout(()=>{if(document.getElementById('position-form'))void browserModel.search(browserModel.state.specialty,browserModel.state.query);},450);
     }
     function closePicker(){document.getElementById('position-specialty-dialog')?.close();document.querySelector('[data-position="specialties"]')?.focus({preventScroll:true});}
+    target.onchange=event=>{
+      const el=event.target,s=browserModel.state;
+      if(el.id==='position-picker-body'){s.pickerBody=el.value;document.getElementById('position-specialty-options').innerHTML=specialtyOptions(s,document.getElementById('position-specialty-query').value);}
+      if(el.id==='position-result-type'||el.id==='position-result-body'){s[el.id==='position-result-type'?'resultType':'resultBody']=el.value;paint();document.getElementById(el.id)?.focus({preventScroll:true});}
+    };
     paint();target.oninput=scheduleSearch;target.oncompositionend=scheduleSearch;
     target.onclick=async event=>{
       const button=event.target.closest('[data-position]');if(!button||button.disabled)return;const action=button.dataset.position;
@@ -201,12 +217,13 @@
       if(action==='clear-query'){const input=document.getElementById('position-query');input.value='';browserModel.editQuery('');input.focus({preventScroll:true});}
       if(action==='choose'){browserModel.choose(button.dataset.person);document.getElementById('position-person')?.focus({preventScroll:true});}
       if(action==='confirm'){await browserModel.confirm();document.getElementById('position-person')?.focus();}
-      if(action==='change'){browserModel.clear();document.getElementById('position-query')?.focus({preventScroll:true});}
+      if(action==='change'){browserModel.beginSearch();document.getElementById('position-query')?.focus({preventScroll:true});}
+      if(action==='remember')browserModel.remember();if(action==='forget'){browserModel.forget();(document.getElementById('position-query')||document.querySelector('[data-position="remember"]'))?.focus({preventScroll:true});}if(action==='restore')await browserModel.restoreRemembered();
       if(action==='back'){browserModel.choose(null);document.getElementById('position-query')?.focus();}
       if(action==='retry')await browserModel.init();if(action==='refresh'){await browserModel.refresh();document.querySelector('[data-position="refresh"]')?.focus();}
     };
     target.onsubmit=async event=>{if(event.target.id!=='position-form')return;event.preventDefault();cancelSearch();const form=new FormData(event.target);await browserModel.search(browserModel.state.specialty,form.get('query'));};
     if(!started){started=true;void browserModel.init();}
   }
-  return {createModel,validateResponse,readResponse,render,filterSpecialties,awardDestination,mount};
+  return {createModel,validateResponse,readResponse,render,filterSpecialties,filterMatches,awardDestination,mount};
 });

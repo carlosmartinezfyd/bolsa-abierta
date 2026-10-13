@@ -72,16 +72,16 @@
         approved: "Incorporado",
         pending: "Pendiente",
         blocked: "Acceso bloqueado",
-        skipped: "Omitido por presupuesto",
+        skipped: "Trabajo aplazado",
         verified: "Documento verificado",
         incorporated: "Incorporado",
         pending_review: "Pendiente de revisión",
         unavailable: "Acceso sin resolver",
         not_applicable: "Fuera del ámbito",
-        budget_deferred: "Pendiente por presupuesto",
+        budget_deferred: "Trabajo aplazado",
         queued: "En cola",
         removed: "Enlace no observado",
-        deferred: "Pendiente por presupuesto",
+        deferred: "Trabajo aplazado",
       }[value] ||
       value ||
       "Sin comprobación"
@@ -133,7 +133,7 @@
       Number(!!m.onlySaved) +
       Number(!!m.onlyProfile);
     return `<section class="workspace-toolbar" id="workspace-toolbar" aria-label="Consulta de vacantes">
-      <div class="workspace-heading"><h1>Vacantes sin cubrir</h1><div class="publication-actions"><label for="copy-select" class="copy-label">Publicación<select id="copy-select" aria-label="Publicación consultada" ${m.onlySaved ? "disabled" : ""}>${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}</option>`).join("")}</select></label>${refreshButton(m)}</div></div>
+      <div class="workspace-heading"><h1>Vacantes publicadas</h1><div class="publication-actions"><label for="copy-select" class="copy-label">Publicación<select id="copy-select" aria-label="Publicación consultada" ${m.onlySaved ? "disabled" : ""}>${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}</option>`).join("")}</select></label>${refreshButton(m)}</div></div>
       <div class="primary-filters" aria-label="Filtros de vacantes"><label class="search-input"><span class="sr-only">Buscar vacantes</span>${U.icon("search")}<input class="input" id="search" type="search" value="${E(m.filters.q || "")}" placeholder="Buscar centro o código…"></label>
       ${U.select("function_code", "Función", BA.unique(rows, "function_code", "function"), m.filters.function_code, "Todas las funciones")}
       ${U.select("municipality", "Municipio", BA.unique(rows, "municipality"), m.filters.municipality, "Todos")}
@@ -152,7 +152,7 @@
       ${U.select("language", "Bilingüe", BA.unique(rows, "language"), m.filters.language, "Todas")}
       ${U.select(
         "cupo",
-        "Cupo",
+        "Cupo (código publicado)",
         [
           ["VP", "VP"],
           ["VS", "VS"],
@@ -170,9 +170,9 @@
         m.filters.itinerant,
         "Todas",
       )}</div>
-      <div class="secondary-checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Solo guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""}>Mis funciones</label></div><div class="extra-filter-footer">${U.button("clear-filters", "Limpiar filtros", "", "text")}${U.button("close-filters", "Ver resultados", "", "primary")}</div></div></details></div>
-      ${coverage(m)}${refreshFeedback(m)}</section>
-      <section id="results" class="results comfortable" aria-label="Resultados">${results(m)}</section><div class="data-actions">${U.button("export-csv", "Exportar CSV", "download", "text")}</div>`;
+      <div class="secondary-checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Solo guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""} ${m.prefs.functions.length?"":"disabled"}>Mis funciones</label>${m.prefs.functions.length?'':'<a href="#profile" data-view="profile">Seleccionar funciones</a>'}</div><div class="extra-filter-footer">${U.button("clear-filters", "Limpiar filtros", "", "text")}${U.button("close-filters", "Ver resultados", "", "primary")}</div></div></details></div>
+      ${m.onlySaved?'':publicationNotice(doc,m.state.current_id)}${coverage(m)}${refreshFeedback(m)}${vacancyTabs(m.view)}</section>
+      <section id="results" class="results comfortable" aria-label="Resultados">${results(m)}</section>`;
   }
   function filterChips(m) {
     const labels = {
@@ -182,7 +182,7 @@
       municipality: "Municipio",
       workload: "Jornada",
       language: "Bilingüe",
-      cupo: "Cupo",
+      cupo: "Cupo (código publicado)",
       itinerant: "Itinerancia",
     };
     const rows = m.onlySaved ? allRows(m) : current(m)?.rows || [];
@@ -223,7 +223,7 @@
       : `<strong>${U.count(BA.places(rows), "plaza")} <span class="muted">en ${U.count(rows.length, "registro")}</span></strong>`;
     const head =
       filterChips(m) +
-      `<div class="results-head"><div id="result-count" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${summary}</div>${resultTools(m)}</div>`;
+      `<div class="results-head"><div id="result-count" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${summary}</div>${rows.length?resultTools(m):""}</div>`;
     let content;
     if (m.onlySaved) {
       const groups = m.state.documents
@@ -256,100 +256,64 @@
             U.button("clear-filters", "Restablecer filtros"),
           );
     return (
-      head + content + U.pagination(m.page, rows.length, size, "page", true)
+      head + content + U.pagination(m.page, rows.length, size, "page", true) + (rows.length?`<div class="data-actions">${U.button("export-csv", "Exportar estos resultados (CSV)", "download", "text")}<span class="muted">Incluye fecha, documento y fuente de cada registro.</span></div>`:"")
     );
+  }
+  function vacancyTabs(view) {
+    return `<nav class="view-tabs" aria-label="Vistas de vacantes"><a href="#vacancies" data-view="vacancies" ${view==='vacancies'?'aria-current="page"':''}>Listado</a><a href="#changes" data-view="changes" ${view==='changes'?'aria-current="page"':''}>Comparar publicaciones</a></nav>`;
+  }
+  function publicationNotice(doc,currentId) {
+    if(!doc)return '';
+    const c=BA.publicationContext(doc,currentId);
+    return `<div class="publication-context"><p><strong>${c.historical?'Publicación histórica':'Más reciente incorporada'}</strong> · Publicada: ${E(BA.date(c.publishedAt))}${doc.act_date&&doc.act_date!==doc.published_at?.slice(0,10)?` · Acto: ${E(BA.date(doc.act_date))}`:''}</p>${!c.pdfAvailable?'<p class="data-limit">PDF no conservado. Estos datos históricos no se han contrastado con el original.</p>':''}<a href="#sources" data-view="sources" data-source-anchor="source-document-${E(doc.id)}">Documento y procedencia</a></div>`;
   }
   function changes(m) {
-    const prev = m.state.documents.find((d) => d.id === m.state.previous_id),
-      latest = m.state.documents.find((d) => d.id === m.state.current_id),
-      all = m.state.changes;
-    const filtered = all.filter(
-        (c) => !m.changeKind || c.kind === m.changeKind,
-      ),
-      names = {
-        appeared: "Figuran ahora",
-        disappeared: "Ya no figuran",
-        quantity_changed: "Cambia la cantidad",
-      };
-    const size = 25;
-    m.changePage = Math.min(
-      Math.max(1, m.changePage),
-      Math.max(1, Math.ceil(filtered.length / size)),
-    );
-    return (
-      header("Cambios entre publicaciones") +
-      U.notice(
-        "Los cambios entre listados no confirman adjudicaciones.",
-        "",
-        "neutral",
-      ) +
-      (prev && latest
-        ? `<section class="comparison-bar"><div><span class="eyebrow">Publicación anterior</span><h2>${E(BA.date(prev.published_at))}</h2><p>Proceso ${E(prev.process_id)} · ${E(prev.places)} plazas</p></div>${U.icon("arrow")}<div><span class="eyebrow">Publicación más reciente</span><h2>${E(BA.date(latest.published_at))}</h2><p>Proceso ${E(latest.process_id)} · ${E(latest.places)} plazas</p></div><span class="pill observed">Comparación histórica</span></section><details class="technical-details comparison-note"><summary>Procedencia de los listados</summary><p>Anterior: ${E(U.provenance(prev))} Actual: ${E(U.provenance(latest))}</p></details>
- <div class="tabs" role="group" aria-label="Tipo de cambio"><button class="tab ${!m.changeKind ? "active" : ""}" data-action="change-kind" aria-pressed="${!m.changeKind}" data-kind="">Todos <span>${all.length}</span></button>${Object.entries(
-   names,
- )
-   .map(
-     ([k, v]) =>
-       `<button class="tab ${m.changeKind === k ? "active" : ""}" data-action="change-kind" aria-pressed="${m.changeKind === k}" data-kind="${k}">${v} <span>${all.filter((c) => c.kind === k).length}</span></button>`,
-   )
-   .join("")}</div>
- <div class="data-table-wrap"><div class="change-row change-heading" aria-hidden="true"><span>Cambio observado</span><span>Función</span><span>Destino</span><span>Plazas</span></div>${
-   filtered
-     .slice((m.changePage - 1) * size, m.changePage * size)
-     .map(
-       (c) =>
-         `<div class="change-row"><div class="change-type"><span class="pill ${c.kind === "appeared" ? "full" : c.kind === "disappeared" ? "pending" : "observed"}">${names[c.kind]}</span></div><div><div class="row-primary">${E(BA.title(c.row.function))}</div><div class="row-secondary mono">${E(c.row.function_code)} · ${E(c.row.jornada)}</div></div><div><div class="row-primary">${E(BA.title(c.row.municipality))}</div><div class="row-secondary">${E(BA.title(c.row.center))}</div></div><div class="change-delta">${E(c.before)} <span class="muted">→</span> ${E(c.after)}</div></div>`,
-     )
-     .join("") || '<div class="empty">Sin cambios de este tipo.</div>'
- }</div>${U.pagination(m.changePage, filtered.length, size, "change-page")}`
-        : U.empty(
-            "Se necesitan dos copias aprobadas",
-            "La comparación aparecerá al incorporar dos procesos distintos.",
-          ))
-    );
+    const docs=m.state.documents.filter(d=>['approved','superseded'].includes(d.status));
+    const laterCandidates=docs.filter(d=>docs.some(p=>BA.compatiblePublications(p,d)));
+    const latest=laterCandidates.find(d=>d.id===m.compareLater)||laterCandidates.find(d=>d.id===m.state.current_id)||laterCandidates[0];
+    const earlierCandidates=docs.filter(d=>BA.compatiblePublications(d,latest));
+    const prev=earlierCandidates.find(d=>d.id===m.compareEarlier)||earlierCandidates.find(d=>d.id===m.state.previous_id)||earlierCandidates[0];
+    m.compareLater=latest?.id;m.compareEarlier=prev?.id;
+    if(!prev||!latest)return header('Comparar publicaciones')+vacancyTabs('changes')+U.empty('Se necesitan dos publicaciones compatibles','Solo se comparan listados de vacantes sin cubrir del mismo ámbito.');
+    const f=m.compareFilters||{},all=BA.comparison(prev,latest).filter(c=>BA.filter([c.row],f).length);
+    const filtered=all.filter(c=>!m.changeKind||c.kind===m.changeKind),size=25;
+    m.changePage=Math.min(Math.max(1,m.changePage||1),Math.max(1,Math.ceil(filtered.length/size)));
+    const names={appeared:'Aparecen en la posterior',disappeared:'No figuran en la posterior',quantity_changed:'Cambia la cantidad'};
+    const selector=(id,label,items,selected)=>`<label class="field">${label}<select id="${id}">${items.map(d=>`<option value="${E(d.id)}" ${d.id===selected.id?'selected':''}>${E(BA.date(d.published_at))} · proceso ${E(d.process_id)}</option>`).join('')}</select></label>`;
+    const filter=(key,label,values)=>`<label class="field">${label}<select id="compare-${key}" data-compare-filter="${key}"><option value="">Todos</option>${values.map(([value,label])=>`<option value="${E(value)}" ${f[key]===value?'selected':''}>${E(BA.title(label))}</option>`).join('')}</select></label>`;
+    const evidence=(doc,rows)=>rows.length?[...new Set(rows.map(r=>r.page||1))].map(page=>U.pdfLink(doc,page,'Página '+page)).join(''):'No figura en esta publicación';
+    return header('Comparar publicaciones')+vacancyTabs('changes')+U.notice('Los cambios entre listados no confirman adjudicaciones.','','neutral')+
+      `<div class="comparison-selectors">${selector('compare-earlier','Publicación anterior',earlierCandidates,prev)}${selector('compare-later','Publicación posterior',laterCandidates,latest)}</div>
+      <div class="comparison-provenance"><p>Anterior: ${BA.places(prev.rows)} plazas · ${prev.rows.length} registros. ${E(U.provenance(prev))}</p><p>Posterior: ${BA.places(latest.rows)} plazas · ${latest.rows.length} registros. ${E(U.provenance(latest))}</p></div>
+      <div class="archive-filters">${filter('function_code','Función',BA.unique([...prev.rows,...latest.rows],'function_code','function'))}${filter('municipality','Municipio',BA.unique([...prev.rows,...latest.rows],'municipality'))}</div>
+      <div class="tabs" role="group" aria-label="Tipo de cambio">${[['','Todos'],...Object.entries(names)].map(([key,label])=>`<button class="tab ${m.changeKind===key||!m.changeKind&&!key?'active':''}" data-action="change-kind" data-kind="${key}" aria-pressed="${(m.changeKind||'')===key}">${label} <span>${key?all.filter(c=>c.kind===key).length:all.length}</span></button>`).join('')}</div>
+      <p role="status">${filtered.length} grupos de registros con cambios. Las cantidades son plazas; las filas idénticas se suman para comparar.</p>
+      ${filtered.length?`<div class="comparison-scroll" tabindex="0" role="region" aria-label="Tabla de cambios; desplazamiento horizontal disponible"><table class="comparison-table"><caption>De ${E(BA.date(prev.published_at))} a ${E(BA.date(latest.published_at))}</caption><thead><tr><th scope="col">Cambio observado</th><th scope="col">Función y destino</th><th scope="col">Plazas anteriores → posteriores</th><th scope="col">Documento anterior</th><th scope="col">Documento posterior</th></tr></thead><tbody>${filtered.slice((m.changePage-1)*size,m.changePage*size).map(c=>`<tr><td>${names[c.kind]}</td><th scope="row">${E(BA.title(c.row.function))}<span class="row-secondary">${E(BA.title(c.row.center))} · ${E(BA.title(c.row.municipality))}</span><span class="row-secondary">${E(c.row.jornada)}</span></th><td>${c.before} → ${c.after}</td><td>${evidence(prev,c.beforeRows)}</td><td>${evidence(latest,c.afterRows)}</td></tr>`).join('')}</tbody></table></div><p class="small muted comparison-scroll-hint">Desplaza la tabla para consultar las dos fuentes.</p>`:U.empty('Sin cambios con estos filtros','Puedes elegir otra función, municipio o pareja de publicaciones.')}${U.pagination(m.changePage,filtered.length,size,'change-page')}`;
   }
+
   function acts(m) {
-    const notices = m.state.catalog.notices || [],
-      docs = m.state.documents.filter((d) => d.status === "approved");
-    return (
-      header(
-        "Actos y publicaciones",
-        U.button("mark-seen", "Marcar mi revisión", "check"),
-      ) +
-      U.notice(
-        "Consulta la convocatoria oficial para conocer plazos y requisitos.",
-        "",
-        "neutral",
-      ) +
-      `<div class="section-head"><h2>Listados de vacantes <span class="count">${docs.length}</span></h2></div><div class="document-grid">${docs.map((d) => `<article class="panel document-card"><div class="act-top"><div><span class="eyebrow">Acto · proceso ${E(d.process_id)}</span><h2>${E(BA.date(d.act_date))}</h2></div><span class="pill observed">Listado disponible</span></div><p>${E(d.act_title)}</p><div class="document-counts"><strong>${E(d.places)} plazas</strong><span>${E(d.row_count)} registros · ${E(d.pages)} páginas</span></div><p>Publicada: ${E(BA.date(d.published_at, { hour: "2-digit", minute: "2-digit" }))}</p><p>${E(U.provenance(d))}</p><div class="buttons mt16">${U.button("open-copy", "Ver vacantes", "grid", "primary", `data-id="${E(d.id)}"`)}${U.pdfLink(d)}${U.external(d.source_url, "Origen oficial")}</div></article>`).join("")}</div>
- <div class="section-head"><h2>Anuncios oficiales <span class="count">${notices.length}</span></h2></div><div class="timeline">${
-   notices
-     .map(
-       (n) =>
-         `<article class="act ${BA.isPendingNotice(n, m.state.documents, m.state.history_documents) ? "pending" : ""}"><div class="act-top"><div><div class="eyebrow">${E(BA.date(n.date))}</div><h3>${E(n.title || "Publicación")}</h3></div><span class="pill ${BA.isPendingNotice(n, m.state.documents, m.state.history_documents) ? "pending" : ""}">${n.kind !== "vacancies" ? "Aviso informativo" : BA.isPendingNotice(n, m.state.documents, m.state.history_documents) ? "Documento sin incorporar" : "Documento incorporado"}</span></div><p>${E(n.note || statusName(n.status) || "Anuncio oficial detectado")}</p><div class="buttons">${U.external(n.url, "Página oficial")}${(
-           n.pdf_urls || [n.pdf_url]
-         )
-           .filter(Boolean)
-           .map((url) => U.external(url, "PDF en origen"))
-           .join("")}</div></article>`,
-     )
-     .join("") || '<p class="muted">Sin anuncios en esta copia.</p>'
- }</div>` +
-      U.notice(
-        "Convocatorias, resultados e incidencias: cobertura incompleta.",
-        "",
-        "neutral",
-      ) +
-      (m.state.catalog.weekly_schedule?.length
-        ? `<details class="panel schedule"><summary>Calendario semanal orientativo de RRHH</summary><p>${E(m.state.catalog.schedule_warning)}</p><table class="table-small"><thead><tr><th>Día</th><th>Hora</th><th>Previsión general</th></tr></thead><tbody>${m.state.catalog.weekly_schedule.map((x) => `<tr><td>${E(x.day)}</td><td>${E(x.time)}</td><td>${E(x.event)}</td></tr>`).join("")}</tbody></table></details>`
-        : "")
-    );
+    const all=BA.publicationEntries(m.state,m.positionCatalog),f=m.archiveFilters||{},entries=BA.filterPublications(all,f),size=12;
+    m.archivePage=Math.min(Math.max(1,m.archivePage||1),Math.max(1,Math.ceil(entries.length/size)));
+    const types={vacancies:'Vacantes',list:'Listas',award:'Adjudicaciones',amendment:'Correcciones',notice:'Avisos y otras comunicaciones'};
+    const field=(key,label,values)=>`<label class="field">${label}<select id="archive-${key}" data-archive-filter="${key}"><option value="">Todos</option>${values.map(([v,l])=>`<option value="${E(v)}" ${f[key]===v?'selected':''}>${E(l)}</option>`).join('')}</select></label>`;
+    const courses=[...new Set(all.map(e=>e.course).filter(Boolean))].sort().reverse().map(x=>[x,x]);
+    const bodies=[...new Set(all.flatMap(e=>e.bodies))].sort().map(x=>[x,{'0590':'Secundaria (0590)','0591':'Profesores técnicos FP (0591)','0592':'Escuelas de idiomas (0592)','0593':'Catedráticos de música y artes escénicas (0593)','0594':'Música y artes escénicas (0594)','0595':'Artes plásticas y diseño (0595)','0596':'Taller de artes plásticas y diseño (0596)','0597':'Maestros (0597)','0598':'Sectores singulares FP (0598)'}[x]||x]);
+    return header('Publicaciones')+`<p>Documentos incorporados y comunicaciones enlazadas. La convocatoria oficial determina plazos y requisitos.</p><form class="archive-search" id="archive-search-form" role="search"><label for="archive-query">Buscar en títulos y autoría</label><div class="buttons"><input id="archive-query" type="search" name="q" value="${E(f.q||'')}" placeholder="Título o autor"><button class="button primary" type="submit">Buscar</button></div></form>
+      <div class="archive-filters">${field('type','Tipo',Object.entries(types))}${field('body','Cuerpo consignado',[...bodies,['unknown','Sin cuerpo consignado']])}${field('course','Curso consignado',[...courses,['unknown','Sin curso consignado']])}<label class="field">Publicada desde<input id="archive-from" data-archive-filter="from" type="date" value="${E(f.from||'')}"></label><label class="field">Publicada hasta<input id="archive-to" data-archive-filter="to" type="date" value="${E(f.to||'')}"></label></div>
+      <div class="section-head"><p id="archive-count" role="status" tabindex="-1">${U.count(entries.length,'publicación','publicaciones')}${entries.length!==all.length?' de '+all.length:''}</p>${U.button('clear-archive','Limpiar filtros','','text')}</div>${m.positionCatalogError?U.notice('No se han podido cargar los metadatos de las listas y adjudicaciones.','El archivo sigue mostrando las vacantes y avisos de la copia disponible. Reintenta desde Fuentes y cobertura.'):''}
+      <div class="publication-archive">${entries.slice((m.archivePage-1)*size,m.archivePage*size).map(e=>`<article class="panel publication-entry"><div class="act-top"><div><p class="eyebrow">${types[e.type]}</p><h2>${E(e.title)}</h2></div><span class="pill ${e.status.includes('pendiente')?'pending':'observed'}">${E(e.status)}</span></div><p>Publicación: ${E(BA.date(e.date))}${e.actDate?` · Acto: ${E(BA.date(e.actDate))}`:''}${e.signedAt?` · Firma: ${E(BA.date(e.signedAt))}`:''} · Curso: ${E(e.course||'no consignado')}</p><p>${E(e.author)} · Alojado en ${E(e.host)}</p>${e.document?`<p>${BA.places(e.document.rows)} plazas en ${e.document.rows.length} registros · ${E(U.provenance(e.document))}</p>`:''}<div class="buttons">${e.document?U.button('open-copy','Ver vacantes','grid','primary',`data-id="${E(e.document.id)}"`)+U.pdfLink(e.document):''}${U.external(e.url,e.type==='notice'?'Abrir comunicación':'Abrir documento en CARM')}${e.personal?'<a href="#position" data-view="position">Buscar una ficha</a>':''}</div>${e.notice?`<details class="technical-details"><summary>Detección y documentos enlazados</summary><p>${e.notice.checked_at?'Página comprobada: '+E(BA.date(e.notice.checked_at,{hour:'2-digit',minute:'2-digit'})):'Fecha de comprobación de esta página no consignada.'} La fecha de detección o del aviso no certifica que su contenido esté incorporado.</p>${(e.notice.pdf_urls||[e.notice.pdf_url]).filter(Boolean).map(url=>U.external(url,'PDF enlazado')).join('')}</details>`:''}</article>`).join('')||U.empty('Sin publicaciones con estos filtros','Amplía el intervalo o elimina filtros; las fechas y ámbitos sin consignar no se deducen.')}</div>${U.pagination(m.archivePage,entries.length,size,'archive-page')}
+      ${m.state.catalog.weekly_schedule?.length?`<details class="panel schedule"><summary>Calendario orientativo de RRHH</summary><p>${E(m.state.catalog.schedule_warning||'No sustituye a una convocatoria oficial.')}</p><ul>${m.state.catalog.weekly_schedule.map(x=>`<li>${E(x.day)} · ${E(x.time)} · ${E(x.event)}</li>`).join('')}</ul></details>`:''}`;
+  }
+
+  function savedPublications(m) {
+    const saved = allRows(m).filter(r => m.prefs.favorites.includes(r.id));
+    return `<section class="saved-summary panel"><div>${U.icon("bookmark")}<div><h2>${U.count(saved.length, "registro guardado", "registros guardados")}${Number(m.state.history_window?.omitted_documents) > 0 ? " disponibles" : ""}</h2><p>Guardados por publicación, incluidas las históricas.</p></div></div><div class="buttons">${saved.length?U.button("view-saved", "Ver guardadas", "arrow", "primary"):'<a class="button primary" href="#vacancies" data-view="vacancies">Buscar vacantes para guardar</a>'}${U.button("export-preferences", "Exportar preferencias", "download")}</div></section>
+ ${BA.savedGroups(m.state.documents,m.prefs.favorites).map(g=>`<section class="panel section"><h2>${E(BA.date(g.document.published_at))}</h2><p>${U.count(g.rows.length,'registro guardado','registros guardados')} · ${E(U.provenance(g.document))}</p><ul class="saved-items">${g.rows.map(r=>`<li><button class="row-link" data-action="detail" data-id="${E(r.id)}">${E(BA.title(r.function))} · ${E(BA.title(r.center))}</button><span>${E(r.jornada)} · ${U.count(r.quantity,'plaza')}</span></li>`).join('')}</ul></section>`).join('')}`;
   }
   function profile(m) {
-    const functions = BA.unique(allRows(m), "function_code", "function"),
-      saved = allRows(m).filter((r) => m.prefs.favorites.includes(r.id));
+    const functions = BA.unique(allRows(m), "function_code", "function");
     return (
-      header("Mi seguimiento") +
+      header("Guardados") +
       historyNotice(m) +
       (m.storageAvailable === false
         ? U.notice(
@@ -357,10 +321,9 @@
             "Las preferencias solo durarán esta sesión. El navegador no permite conservarlas al cerrar.",
           )
         : "") +
-      `<section class="saved-summary panel"><div>${U.icon("bookmark")}<div><h2>${U.count(saved.length, "registro guardado", "registros guardados")}${Number(m.state.history_window?.omitted_documents) > 0 ? " disponibles" : ""}</h2><p>Guardados por publicación.</p></div></div><div class="buttons">${U.button("view-saved", "Ver guardadas", "arrow", "primary")}${U.button("export-preferences", "Exportar preferencias", "download")}</div></section>
- <div class="two-col"><section class="panel"><h2>Funciones que sigo</h2><p>Funciones presentes en los listados disponibles.</p><div class="search-input mt15">${U.icon("search")}<input class="input" id="profile-search" type="search" placeholder="Función o código…" aria-label="Buscar funciones"></div><div class="profile-functions" id="function-list">${functions.map(([code, name]) => `<label class="function-option" data-function-search="${E(BA.norm(code + " " + name))}"><input type="checkbox" data-profile-function="${E(code)}" ${m.prefs.functions.includes(code) ? "checked" : ""}><span>${E(BA.title(name))}<span class="row-secondary mono">${E(code)}</span></span></label>`).join("")}</div><p id="profile-empty" class="hidden" role="status">No hay funciones que coincidan con la búsqueda.</p><div class="profile-footer"><p class="profile-count" id="profile-count">${U.count(m.prefs.functions.length, "función seleccionada", "funciones seleccionadas")}</p>${U.button("apply-profile", "Aplicar mis funciones", "arrow", "primary")}</div></section>
- <div><section class="panel section"><h2>Mi posición</h2><p><a href="#position" data-view="position">Consultar mi ficha en la lista publicada</a></p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
- <section class="panel"><h2>Preferencias y privacidad</h2><p>Las preferencias se guardan en este navegador. Las alertas externas no están disponibles.</p><p>Última revisión personal: <strong>${E(BA.date(m.prefs.lastSeen))}</strong>.</p><div class="buttons mt16">${U.button("reset-preferences", "Borrar preferencias locales", "", "danger")}</div></section></div></div>`
+      `<div id="saved-publications">${savedPublications(m)}</div><div class="two-col"><section class="panel"><h2>Funciones que sigo</h2><p>La selección limita el filtro «Mis funciones» de Vacantes. Se guarda en este navegador.</p><div class="search-input mt15">${U.icon("search")}<input class="input" id="profile-search" type="search" placeholder="Función o código…" aria-label="Buscar funciones"></div><div class="profile-functions" id="function-list">${functions.map(([code, name]) => `<label class="function-option" data-function-search="${E(BA.norm(code + " " + name))}"><input type="checkbox" data-profile-function="${E(code)}" ${m.prefs.functions.includes(code) ? "checked" : ""}><span>${E(BA.title(name))}<span class="row-secondary mono">${E(code)}</span></span></label>`).join("")}</div><p id="profile-empty" class="hidden" role="status">No hay funciones que coincidan con la búsqueda.</p><div class="profile-footer"><p class="profile-count" id="profile-count">${U.count(m.prefs.functions.length, "función seleccionada", "funciones seleccionadas")}</p>${U.button("apply-profile", "Aplicar mis funciones", "arrow", "primary")}</div></section>
+ <div><section class="panel section"><h2>Mi ficha</h2><p><a href="#position" data-view="position">Consultar mi ficha en la lista publicada</a></p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
+ <section class="panel"><h2>Preferencias y privacidad</h2><p>Las preferencias se guardan en este navegador. No se envían avisos externos. El archivo exportado contiene identificadores de favoritos, funciones y fecha de revisión; no incluye la ficha personal ni permite una restauración automática.</p><p>Archivo de publicaciones: última marca de revisión local: <strong>${E(BA.date(m.prefs.lastSeen))}</strong>.</p><p>Esta marca no comprueba novedades oficiales.</p><div class="buttons mt16">${U.button("mark-seen", "Marcar archivo como revisado", "check")}${U.button("reset-preferences", "Borrar preferencias locales", "", "danger")}</div></section></div></div>`
     );
   }
   function sameSourceUrl(a, b) {
@@ -395,7 +358,7 @@
     const total=inventory.document_count??inventory.total??(Object.keys(counts).length?Object.values(counts).reduce((n,x)=>n+Number(x||0),0):null);
     const totalLabel=total===null?'Recuento de documentos sin publicar.':`${E(total)} documentos inventariados.`;
     const pending=(x,key,label)=>Number.isInteger(x[key])?`${x[key]} ${label}`:`${label}: sin datos`;
-    return `<section class="panel section"><h2>Cobertura del inventario</h2><p>${totalLabel} Completar un recorrido no acredita la descarga y revisión de sus documentos, un historial completo ni disponibilidad actual. Ampliar las fuentes iniciales no incorpora automáticamente sus documentos.</p>${Object.keys(counts).length?`<dl class="freshness-grid">${Object.entries(counts).map(([key,value])=>`<div><dt>${E(statusName(key))}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>`:''}${rows.length?`<div class="data-table-wrap"><table class="table-small"><thead><tr><th>Fuente</th><th>Familia / cuerpo / curso</th><th>Recorrido, evidencia y pendientes</th><th>Fechas de evidencia</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${E(x.source_id||x.source||'Sin identificar')}</td><td>${E(x.family||'Sin clasificar')} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}</td><td><p>${E(statusName(x.status))}</p>${scopeEvidence(x)}${scopeDocuments(x)}<p>${E(pending(x,'pending_pages','páginas pendientes'))} · ${E(pending(x,'pending_details','detalles pendientes'))}</p></td><td>${checkDates(x)||"Sin fechas registradas"}</td></tr>`).join('')}</tbody></table></div>`:'<p>Desglose por fuente y curso pendiente de publicar.'}${families.length?`<details class="technical-details"><summary>Familias de publicaciones</summary><ul>${families.filter(x=>x&&typeof x==='object').map(x=>`<li>${E(x.family)} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}${scopeEvidence(x)}${scopeDocuments(x)}</li>`).join('')}</ul></details>`:''}<details class="technical-details"><summary>Cómo interpretar los estados</summary><p>Omitido por presupuesto indica trabajo aplazado, sin un nuevo intento de descarga. Las fechas de comprobación o descarga anteriores siguen siendo evidencia histórica. Que un enlace deje de observarse no acredita la revocación del documento. La cobertura del ámbito combina el recorrido observado y la verificación de los documentos; las etapas sin datos siguen sin confirmar.</p></details></section>`;
+    return `<section class="panel section"><h2>Cobertura del inventario</h2><p>${totalLabel} Completar un recorrido no acredita la descarga y revisión de sus documentos, un historial completo ni disponibilidad actual. Ampliar las fuentes iniciales no incorpora automáticamente sus documentos.</p>${Object.keys(counts).length?`<dl class="freshness-grid">${Object.entries(counts).map(([key,value])=>`<div><dt>${E(statusName(key))}</dt><dd>${E(value)}</dd></div>`).join('')}</dl>`:''}${rows.length?`<div class="data-table-wrap"><table class="table-small"><thead><tr><th>Fuente</th><th>Familia / cuerpo / curso</th><th>Recorrido, evidencia y pendientes</th><th>Fechas de evidencia</th></tr></thead><tbody>${rows.map(x=>`<tr><td data-label="Fuente">${E(x.source_id||x.source||'Sin identificar')}</td><td data-label="Ámbito">${E(x.family||'Sin clasificar')} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}</td><td data-label="Estado y pendientes"><p>${E(statusName(x.status))}</p>${scopeEvidence(x)}${scopeDocuments(x)}<p>${E(pending(x,'pending_pages','páginas pendientes'))} · ${E(pending(x,'pending_details','detalles pendientes'))}</p></td><td data-label="Fechas de evidencia">${checkDates(x)||"Sin fechas registradas"}</td></tr>`).join('')}</tbody></table></div>`:'<p>Desglose por fuente y curso pendiente de publicar.'}${families.length?`<details class="technical-details"><summary>Familias de publicaciones</summary><ul>${families.filter(x=>x&&typeof x==='object').map(x=>`<li>${E(x.family)} · ${E(x.body||'Sin cuerpo')} · ${E(scopeCourse(x.course))}${scopeEvidence(x)}${scopeDocuments(x)}</li>`).join('')}</ul></details>`:''}<details class="technical-details"><summary>Cómo interpretar los estados</summary><p>Trabajo aplazado indica trabajo aplazado, sin un nuevo intento de descarga. Las fechas de comprobación o descarga anteriores siguen siendo evidencia histórica. Que un enlace deje de observarse no acredita la revocación del documento. La cobertura del ámbito combina el recorrido observado y la verificación de los documentos; las etapas sin datos siguen sin confirmar.</p></details></section>`;
   }
   function checkDates(check) {
     const fmt={hour:"2-digit",minute:"2-digit"};
@@ -405,14 +368,26 @@
   function positionCheck(m) {
     const p=m.state.position_status;
     if(!p||typeof p!=='object')return '';
-    const label={verified:'Comprobación verificada',failed:'Comprobación fallida',pending_budget:'Pausada por presupuesto',degraded:'Evidencia revisada conservada'}[p.status]||'Comprobación pendiente';
+    const label={verified:'Comprobación verificada',failed:'Comprobación fallida',pending_budget:'Aplazada por límite diario',degraded:'Evidencia revisada conservada'}[p.status]||'Comprobación pendiente';
     const dates=[['Último intento',p.attempted_at],['Última comprobación satisfactoria',p.checked_at],['Reanudar a partir de',p.resume_after]].filter(([key,value])=>value||key==='Última comprobación satisfactoria');
-    const counts=[Number.isInteger(p.record_count)?`${p.record_count.toLocaleString('es')} registros declarados en la comprobación`:null,Number.isInteger(p.verified_documents)?`${p.verified_documents} documentos verificados`:null,Number.isInteger(p.pending_documents)?`${p.pending_documents} documentos pendientes`:null].filter(Boolean);
+    const counts=[Number.isInteger(p.record_count)?`${p.record_count.toLocaleString('es')} registros en listas y adjudicaciones`:null,Number.isInteger(p.verified_documents)?`${p.verified_documents} documentos verificados`:null,Number.isInteger(p.pending_documents)?`${p.pending_documents} documentos pendientes en el conjunto activo`:null].filter(Boolean);
     const originCounts=[['origin_verified_documents','documento comprobado en origen','documentos comprobados en origen'],['origin_failed_documents','documento con fallo de origen','documentos con fallo de origen'],['cached_documents','documento servido desde evidencia conservada','documentos servidos desde evidencia conservada']].filter(([key])=>Number.isInteger(p[key])).map(([key,single,plural])=>U.count(p[key],single,plural));
     const officialCheck=p.origin_check_complete===true?'La comprobación oficial registrada está completa.':p.origin_check_complete===false?(p.origin_verified_documents>0?'La última comprobación oficial fue parcial.':p.origin_failed_documents>0?'La última comprobación oficial falló.':'La última comprobación oficial está incompleta.'):'El resultado de la última comprobación oficial no está consignado.';
-    const notice=p.status==='degraded'?`${officialCheck} La generación activa puede incorporar evidencia revisada conservada tras el fallo de acceso al origen; servir esa generación no acredita una nueva comprobación oficial completa.`:p.status==='verified'?'La comprobación registrada no acredita disponibilidad actual ni cobertura completa del corpus.':`${p.status==='pending_budget'?'La comprobación está pausada al alcanzar el presupuesto de escritura.':'No se ha completado la comprobación de estas publicaciones.'} ${p.active_version?'Se conserva la generación activa y su evidencia fechada en las consultas.':'No se acredita una generación activa en estos metadatos.'}`;
+    const notice=p.status==='degraded'?`${officialCheck} Se conserva evidencia revisada y fechada; mostrarla no acredita una nueva comprobación completa del origen.`:p.status==='verified'?'Estos documentos no cubren todas las publicaciones oficiales ni confirman disponibilidad actual.':`${p.status==='pending_budget'?'La comprobación está pausada al alcanzar el presupuesto de escritura.':'No se ha completado la comprobación de estas publicaciones.'} ${p.active_version?'Se conservan los datos publicados y su evidencia fechada.':'Estos metadatos no acreditan datos activos.'}`;
     const cacheLabel={unconfigured:'No configurada',ready:'Disponible',failed:'Con fallo'}[p.cache_status];
-    return `<section class="panel section" data-position-check><div class="act-top"><h2>Comprobación de listas y adjudicaciones</h2><span class="pill ${p.status==='verified'?'observed':'pending'}">${E(label)}</span></div><p>${E(notice)}</p><dl class="freshness-grid">${dates.map(([key,value])=>`<div><dt>${key}</dt><dd>${E(value?BA.date(value,{hour:'2-digit',minute:'2-digit'}):'Sin fecha acreditada')}</dd></div>`).join('')}</dl>${counts.length?`<p>${E(counts.join(' · '))}.</p>`:''}${originCounts.length?`<p>${E(originCounts.join(' · '))}.</p>`:''}${p.active_version||p.staged_version||p.error_code||cacheLabel?`<details class="technical-details"><summary>Estado de las generaciones</summary><dl>${p.active_version?`<dt>Generación activa</dt><dd class="hash">${E(p.active_version)}</dd>`:''}${p.staged_version?`<dt>Generación preparada, pendiente de activar</dt><dd class="hash">${E(p.staged_version)}</dd>`:''}${cacheLabel?`<dt>Conservación de evidencia</dt><dd>${cacheLabel}</dd>`:''}${p.error_code?`<dt>Motivo registrado</dt><dd><code>${E(p.error_code)}</code></dd>`:''}</dl></details>`:''}</section>`;
+    return `<section id="sources-positions" tabindex="-1" class="panel section" data-position-check><div class="act-top"><h2>Comprobación de listas y adjudicaciones</h2><span class="pill ${p.status==='verified'?'observed':'pending'}">${E(label)}</span></div><p>${E(notice)}</p><dl class="freshness-grid">${dates.map(([key,value])=>`<div><dt>${key}</dt><dd>${E(value?BA.date(value,{hour:'2-digit',minute:'2-digit'}):'Sin fecha acreditada')}</dd></div>`).join('')}</dl>${counts.length?`<p>${E(counts.join(' · '))}.</p>`:''}${originCounts.length?`<p>${E(originCounts.join(' · '))}.</p>`:''}${p.active_version||p.staged_version||p.error_code||cacheLabel?`<details class="technical-details"><summary>Estado de las generaciones</summary><dl>${p.active_version?`<dt>Generación activa</dt><dd class="hash">${E(p.active_version)}</dd>`:''}${p.staged_version?`<dt>Generación preparada, pendiente de activar</dt><dd class="hash">${E(p.staged_version)}</dd>`:''}${cacheLabel?`<dt>Conservación de evidencia</dt><dd>${cacheLabel}</dd>`:''}${p.error_code?`<dt>Motivo registrado</dt><dd><code>${E(p.error_code)}</code></dd>`:''}</dl></details>`:''}</section>`;
+  }
+  function personalDocuments(m) {
+    const docs=BA.publicationEntries(m.state,m.positionCatalog).filter(e=>e.personal);
+    if(!docs.length)return `<section class="panel section"><h2>Documentos de listas y adjudicaciones</h2><p>${m.positionCatalogError?'No se han podido cargar sus metadatos.':'Los metadatos de estos documentos aún no están disponibles en esta vista.'} <a href="#position" data-view="position">Consultar fichas y sus fuentes</a></p></section>`;
+    return `<section class="section"><h2>Documentos de listas y adjudicaciones</h2><p>Los recuentos son registros; una persona puede figurar en varios documentos.</p><div class="document-grid">${docs.map(e=>`<article class="panel document-card"><h3>${E(e.title)}</h3><p>${e.date?'Publicación: '+E(BA.date(e.date)):'Firma: '+E(BA.date(e.signedAt))} · Curso: ${E(e.course||'no consignado')}</p><p>${e.personal.row_count?e.personal.row_count.toLocaleString('es')+' registros · ':''}${E(e.status)}</p>${U.external(e.url,'Ver documento oficial')}<details class="technical-details"><summary>Evidencia técnica</summary><p>Identificador: ${E(e.personal.content_id)}</p><div class="hash">SHA-256 · ${E(e.personal.sha256)}</div></details></article>`).join('')}</div></section>`;
+  }
+  function coverageGaps(m) {
+    const inventory=m.state.source_inventory||m.state.catalog.source_inventory,counts={...(inventory?.status_counts||inventory?.statuses||{})};
+    const deferredKeys=['budget_deferred','skipped','deferred'].filter(k=>Number.isInteger(counts[k]));
+    if(deferredKeys.length)counts.budget_deferred=deferredKeys.reduce((n,k)=>n+counts[k],0);
+    const labels={pending_review:['Pendientes de revisión','Detectados, pero sin datos aptos para la consulta.'],unavailable:['Acceso sin resolver','No se ha podido obtener evidencia suficiente del origen.'],budget_deferred:['Trabajo aplazado','Esperan a una ejecución posterior; no es un nuevo fallo de descarga.']};
+    return `<section class="panel section"><h2>Qué falta por incorporar</h2><p>El inventario explora más ámbitos que los documentos ya consultables. Sus pendientes no se suman a los del conjunto activo ni equivalen a errores nuevos.</p><div class="coverage-gaps">${Object.entries(labels).map(([key,[label,description]])=>`<div><h3>${label}</h3><p><strong>${Number.isInteger(counts[key])?counts[key]+' documentos':'Recuento no consignado'}</strong></p><p>${description}</p></div>`).join('')}</div><p>No se acredita la cobertura completa de listas urgentes, extraordinarias, abiertas, habilitaciones, correcciones y resultados. <a href="#acts" data-view="acts">Explorar publicaciones</a></p></section>`;
   }
   function sources(m) {
     const cat = m.state.catalog,
@@ -421,26 +396,23 @@
         BA.isPendingNotice(n, m.state.documents, m.state.history_documents),
       );
     return (
-      header("Fuentes", refreshButton(m)) +
+      header("Fuentes y cobertura", refreshButton(m)) +
       refreshFeedback(m) +
       historyNotice(m) +
-      `<section class="panel section source-overview"><div class="act-top"><h2>Comprobaciones</h2></div>${freshness(m)}<p><strong>${U.count(pending.length, "publicación pendiente", "publicaciones pendientes")}.</strong> Los documentos sin validar no sustituyen al último listado válido.</p></section>` +
+      `<h2>Qué puedes consultar</h2><p>La cobertura es parcial. Cada conjunto conserva su propia fecha de comprobación.</p>` +
+      `<section id="sources-vacancies" tabindex="-1" class="panel section source-overview"><div class="act-top"><h2>Vacantes de Secundaria y otros cuerpos</h2></div>${freshness(m)}<p><strong>${pending.length} publicaciones de vacantes pendientes de incorporar.</strong> Los documentos sin validar no sustituyen al último listado válido.</p></section>` +
       positionCheck(m) +
-      inventoryCoverage(m) +
-      U.notice(
-        "Alcance de esta vista: vacantes sin cubrir de Secundaria y otros cuerpos",
-        `${canCheck(m) ? "Consulta del RSS, índice y anuncios de RRHH." : "Recargar datos consulta la última copia publicada. La comprobación a petición no está conectada."} Convocatorias, resultados e incidencias: cobertura incompleta.`,
-        "neutral",
-      ) +
-      `<section class="section"><div class="section-head"><div><h2>Documentos y procedencia</h2></div><span class="count">${m.state.documents.length}</span></div><div class="document-grid">${m.state.documents.map((d) => `<article class="panel document-card"><div class="act-top"><h3>${E(BA.date(d.published_at))}</h3><span class="pill ${d.status === "pending" ? "pending" : "observed"}">${E({ approved: "Incorporada", pending: "En revisión", superseded: "Sustituida" }[d.status] || d.status)}</span></div><div class="document-counts"><strong>${E(d.places)} plazas</strong><span>${E(d.row_count)} registros</span></div><p>${E(U.provenance(d))}</p><div class="buttons mt13">${U.pdfLink(d)}${U.external(d.source_url, "Origen oficial")}</div><details class="technical-details"><summary>Huella del documento · SHA-256</summary><div class="hash">${E(d.sha256)}</div>${d.warnings.length ? `<p>${E(d.warnings.join(" "))}</p>` : ""}</details></article>`).join("")}</div></section>` +
-      `<section class="section"><div class="section-head"><div><h2>Registro de fuentes</h2></div><span class="count">${cat.sources.length}</span></div><div class="data-table-wrap">${cat.sources
+      coverageGaps(m) +
+      `<section class="section"><div class="section-head"><div><h2>Documentos y procedencia</h2></div><span class="count">${m.state.documents.length}</span></div><div class="document-grid">${m.state.documents.map((d) => `<article id="source-document-${E(d.id)}" tabindex="-1" class="panel document-card"><div class="act-top"><h3>${E(BA.date(d.published_at))}</h3><span class="pill ${d.status === "pending" ? "pending" : "observed"}">${E({ approved: "Incorporada", pending: "En revisión", superseded: "Sustituida" }[d.status] || d.status)}</span></div><div class="document-counts"><strong>${E(d.places)} plazas</strong><span>${E(d.row_count)} registros</span></div><p>${E(U.provenance(d))}</p><div class="buttons mt13">${U.pdfLink(d)}${U.external(d.source_url, "Origen oficial")}</div><details class="technical-details"><summary>Huella del documento · SHA-256</summary><div class="hash">${E(d.sha256)}</div>${d.warnings.length ? `<p>${E(d.warnings.join(" "))}</p>` : ""}</details></article>`).join("")}</div></section>` +
+      personalDocuments(m) + `<details class="panel section technical-log"><summary>Inventario técnico por fuente y curso</summary>${inventoryCoverage(m)}</details>` +
+      `<details class="panel section technical-log"><summary>Registro de fuentes y comprobaciones</summary><div class="section-head"><div><h2>Registro de fuentes</h2></div><span class="count">${cat.sources.length}</span></div><div class="data-table-wrap">${cat.sources
         .map((s) => {
           const check = checks
             .filter((c) => c.id === s.id || sameSourceUrl(c.url, s.url))
             .at(-1);
-          return `<article class="source-row"><div><h3>${E(s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `${checkDates(check)}${check.error?`<p>${E(check.error)}</p>`:""}` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.id === "aepd-information" ? "Las preferencias se guardan en este navegador." : s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success&&!(["skipped","budget_deferred","deferred"].includes(check.work_status||check.status)) ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.work_status||check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
+          return `<article class="source-row"><div><h3>${E(s.name?.includes("Último PDF")?"Referencia de PDF de vacantes":s.name || s.id)}</h3><div class="source-role">${E(s.type || s.role || "Referencia oficial")}</div>${check ? `${checkDates(check)}${check.error?`<p>${E(check.error)}</p>`:""}` : "<p>Sin comprobación reciente registrada para esta referencia.</p>"}<details class="technical-details"><summary>Observaciones</summary><p>${E(s.id === "aepd-information" ? "Las preferencias se guardan en este navegador." : s.note || "Sin nota adicional.")}</p></details></div><div class="source-status ${check?.success&&!(["skipped","budget_deferred","deferred"].includes(check.work_status||check.status)) ? "ok" : ""}"><span class="dot"></span>${E(check ? statusName(check.work_status||check.status) : "Referencia de auditoría")}</div><div class="source-external">${U.external(s.url, "Abrir", "")}</div></article>`;
         })
-        .join("")}</div></section>` +
+        .join("")}</div></details>` +
       (checks.length
         ? `<details class="panel section technical-log"><summary>Trabajo y comprobaciones por recurso <span class="count">${checks.length}</span></summary><ol class="event-list">${checks.map((c) => `<li class="event"><div><strong>${E(statusName(c.work_status||c.status))}</strong>${checkDates(c)}<p>${E(c.error || "")} ${U.external(c.url, "Recurso oficial", "")}</p><code class="resource-id">${E(c.id)}</code></div></li>`).join("")}</ol></details>`
         : "") +
@@ -456,48 +428,30 @@
     );
   }
   function home(m) {
-    const doc = (m.state?.documents || []).find(
-      (d) => d.id === m.state?.current_id && d.status === "approved",
-    );
-    const seen = new Set();
-    const sample = (doc?.rows || [])
-      .filter((row) => {
-        if (seen.has(row.function_code)) return false;
-        seen.add(row.function_code);
-        return true;
-      })
-      .slice(0, 3);
-    const places = (doc?.rows || []).reduce(
-      (total, row) => total + row.quantity,
-      0,
-    );
-    return `<div class="landing">
-      <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#position" data-view="position">Mi posición ${U.icon("arrow")}</a></nav></header>
-      <main id="main" class="landing-main" tabindex="-1">
-        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Listas docentes y adjudicaciones publicadas</p><h1 id="landing-title">Consulta tu puesto en las listas docentes de Murcia.</h1><p class="landing-lead">Busca tu ficha en las publicaciones incorporadas y consulta su ordinal oficial o su adjudicación fechada. La cobertura es parcial y la disponibilidad actual no está confirmada.</p><a class="button primary landing-cta" href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
-        <aside class="landing-publication" aria-label="Última publicación incorporada"><div class="landing-publication-head"><span>Último listado incorporado</span>${U.icon("calendar")}</div>${doc ? `<h2>${E(BA.date(doc.published_at))}</h2><p class="landing-scope">Vacantes sin cubrir</p><ul class="landing-sample">${sample.map((row) => `<li><strong>${E(BA.title(row.function))}</strong><span>${E(BA.title(row.municipality))} · ${row.workload === "full" ? "Jornada completa" : E(row.hours) + " h"}</span></li>`).join("")}</ul><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Ver ${U.count(places, "plaza", "plazas")}${U.icon("arrow")}</button><p class="landing-availability">La publicación no confirma la disponibilidad actual.</p>` : `<h2>Consulta de publicaciones</h2><p class="landing-scope">Todavía no hay un listado validado disponible.</p><a class="landing-publication-link" href="#sources" data-view="sources">Ver fuentes ${U.icon("arrow")}</a>`}</aside></section>
-        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Encuentra tu ficha</h2><p>Busca por nombre o número de lista y filtra por lista o función.</p><a href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, dejan de figurar o cambian entre publicaciones, sin inferir adjudicaciones o revocaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Consulta las vacantes</h2><p>Busca las plazas por especialidad, municipio y jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article></section>
-        <section class="landing-origin" aria-labelledby="landing-origin-title"><div><h2 id="landing-origin-title">El origen de los datos</h2><p>Los datos proceden de RRHH Educación y CARM. Puedes consultar la fecha de cada publicación y abrir su fuente.</p></div><a href="#sources" data-view="sources">Consultar fuentes ${U.icon("arrow")}</a></section>
-      </main><footer class="landing-footer"><p>Bolsa Abierta es un proyecto independiente de la CARM. Las solicitudes y adjudicaciones se tramitan por los canales oficiales.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
+    const doc=(m.state?.documents||[]).find(d=>d.id===m.state?.current_id&&d.status==='approved');
+    return `<div class="landing"><header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#position" data-view="position">Mi ficha</a><a href="#vacancies" data-view="vacancies">Vacantes</a><a href="#sources" data-view="sources">Fuentes y cobertura</a></nav></header>
+      <main id="main" class="landing-main" tabindex="-1"><section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><h1 id="landing-title">Listas y vacantes docentes de Murcia</h1><p class="landing-lead">Consulta tu ficha y las vacantes de las publicaciones incorporadas.</p><div class="buttons landing-actions"><a class="button primary landing-cta" href="#position" data-view="position">Buscar mi ficha ${U.icon('arrow')}</a><a class="button" href="#vacancies" data-view="vacancies">Ver vacantes</a></div><p class="landing-access">Cobertura parcial. Cada resultado indica su publicación.</p></div>
+      <aside class="landing-publication" aria-label="Última publicación de vacantes incorporada"><div class="landing-publication-head">Última publicación de vacantes incorporada</div>${doc?`<h2>${E(BA.date(doc.published_at))}</h2><p class="publication-total"><strong>${U.count(BA.places(doc.rows),'plaza')}</strong> en ${U.count(doc.rows.length,'registro')}</p><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Consultar esta publicación ${U.icon('arrow')}</button><p class="landing-availability">Disponibilidad actual sin confirmar.</p>`:m.loadError?'<p role="alert">No se han podido cargar las publicaciones.</p><button class="button" data-action="sync">Reintentar</button>':!m.state?'<p role="status">Cargando publicaciones…</p>':'<p>No hay publicaciones de vacantes incorporadas en esta copia.</p>'}</aside></section>
+      <section class="landing-uses" aria-label="Otras consultas"><article><h2>Publicaciones</h2><p>Busca documentos y avisos por tipo y fecha.</p><a href="#acts" data-view="acts">Abrir archivo ${U.icon('arrow')}</a></article><article><h2>Comparar publicaciones</h2><p>Localiza las diferencias entre dos listados de vacantes.</p><a href="#changes" data-view="changes">Comparar listados ${U.icon('arrow')}</a></article><article><h2>Guardados</h2><p>Consulta tus vacantes y funciones guardadas en este navegador.</p><a href="#profile" data-view="profile">Abrir guardados ${U.icon('arrow')}</a></article></section></main><footer class="landing-footer"><p>Proyecto independiente de la CARM. La publicación oficial prevalece.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
   }
+
   function position() {
-    return '<div class="position-workspace"><header class="position-heading"><h1>Mi posición</h1></header><div id="position-root"></div></div>';
+    return '<div class="position-workspace"><header class="position-heading"><h1>Mi ficha</h1></header><div id="position-root"></div></div>';
   }
   const views = { position, vacancies, changes, acts, profile, sources };
   function shell(m) {
     if (m.view === "home") return home(m);
     const nav = [
-      ["position", "Mi posición", "person"],
+      ["position", "Mi ficha", "person"],
       ["vacancies", "Vacantes", "grid"],
-      ["changes", "Cambios", "changes"],
-      ["acts", "Actos", "calendar"],
-      ["profile", "Mi seguimiento", "bookmark"],
-      ["sources", "Fuentes", "shield"],
+            ["acts", "Publicaciones", "calendar"],
+      ["profile", "Guardados", "bookmark"],
+      ["sources", "Fuentes y cobertura", "shield"],
     ];
-    const navItem=([id,name,ico])=>`<button class="nav-button ${m.view===id?'active':''}" data-view="${id}" ${m.view===id?'aria-current="page"':''}>${U.icon(ico)}<span>${name}</span></button>`;
+    const navItem=([id,name,ico])=>`<button class="nav-button ${(m.view===id||(id==='vacancies'&&m.view==='changes'))?'active':''}" data-view="${id}" ${(m.view===id||(id==='vacancies'&&m.view==='changes'))?'aria-current="page"':''}>${U.icon(ico)}<span>${name}</span></button>`;
     const secondary=nav.slice(2), selected=secondary.find(([id])=>id===m.view);
-    const more=`<details class="mobile-more"><summary class="nav-button ${selected?'active':''}"><span aria-hidden="true">☰</span><span>Más</span></summary><div class="mobile-more-panel">${secondary.map(navItem).join('')}<button class="nav-button" data-action="about">${U.icon('info')}<span>Sobre el proyecto</span></button></div></details>`;
+    const more=`<details class="mobile-more"><summary class="nav-button ${selected?'active':''}"><span aria-hidden="true">☰</span><span>${selected?selected[1]:'Más'}</span></summary><div class="mobile-more-panel">${secondary.map(navItem).join('')}<button class="nav-button" data-action="about">${U.icon('info')}<span>Sobre el proyecto</span></button></div></details>`;
     return `<div class="shell"><aside class="sidebar" id="site-nav"><a class="brand brand-home" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span><span class="brand-name">Bolsa Abierta</span><span class="brand-subtitle">Región de Murcia</span></span></a><nav class="nav" aria-label="Navegación principal">${nav.map(navItem).join('')}${more}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${m.state || m.view === "position" ? views[m.view](m) : '<p role="status">No se han podido cargar las publicaciones. <a href="#position" data-view="position">Consultar mi posición</a></p>'}</main></div></div>`;
   }
-  window.BAV = { current, allRows, displayed, shell, results };
+  window.BAV = { current, allRows, displayed, shell, results, savedPublications };
 })();

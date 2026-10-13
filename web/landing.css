@@ -63,9 +63,9 @@
 }
 .landing-intro h1 {
   max-width: 640px;
-  font-size: clamp(36px, 4.3vw, 60px);
+  font-size: clamp(32px, 3.5vw, 44px);
   line-height: 1.08;
-  letter-spacing: -1.8px;
+  letter-spacing: -1px;
   text-wrap: balance;
 }
 .landing-lead {
@@ -85,7 +85,7 @@
 .landing-access {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .landing-publication {
   background: var(--surface);
@@ -100,7 +100,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   margin-bottom: 12px;
 }
@@ -131,7 +131,7 @@
 }
 .landing-sample span {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 .landing-publication-link {
@@ -140,7 +140,7 @@
 }
 .landing-availability {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -158,7 +158,7 @@
   align-items: flex-start;
 }
 .landing-step {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--accent);
   margin-bottom: 16px;
 }
@@ -199,7 +199,7 @@
   border-top: 1px solid var(--border);
   padding: 24px 0 32px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .landing-footer p {
   max-width: 650px;
@@ -229,7 +229,7 @@
   }
   .landing-intro h1 {
     max-width: 520px;
-    font-size: clamp(36px, 7vw, 48px);
+    font-size: 30px;
     letter-spacing: -1px;
   }
   .landing-lead {
@@ -268,11 +268,9 @@
     font-size: 26px;
   }
   .landing-nav {
-    font-size: 13px;
+    font-size: 14px;
   }
-  .landing-nav a:first-child {
-    display: none;
-  }
+
   .landing-nav .icon {
     width: 14px;
   }
@@ -280,3 +278,11 @@
     padding: 24px;
   }
 }
+
+.landing-actions{margin-top:24px;align-items:stretch}
+.landing-actions .landing-cta{margin-top:0}
+.landing-actions .button{min-height:48px;font-size:16px}
+.publication-total{margin:24px 0 16px;font-size:16px}
+.publication-total strong{font-size:24px;font-weight:600}
+.landing-availability{font-size:16px;margin-top:16px}
+@media(max-width:700px){.landing-header{flex-wrap:wrap;gap:8px;padding:16px 0;position:static}.landing-nav{gap:16px;flex-wrap:wrap;width:100%;font-size:14px}.landing-nav a{min-height:36px}.landing-hero{padding:28px 0;gap:24px}.landing-lead{margin-top:16px}.landing-cta{padding:10px 14px}.landing-actions{gap:8px;margin-top:20px}.landing-publication{padding:20px}.landing-access{font-size:14px}.landing-uses h2{font-size:20px}}
