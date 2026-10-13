@@ -67,7 +67,7 @@
     return `<tr>
 <td class="favorite-cell"><button class="icon-button ${saved ? "saved" : ""}" data-action="favorite" data-id="${E(r.id)}" aria-label="${saved ? "Quitar de guardadas" : "Guardar plaza"}: ${E(r.center)}" aria-pressed="${saved}">${icon("bookmark")}</button></td>
 <td class="function-cell"><button class="row-link row-primary" data-action="detail" data-id="${E(r.id)}" aria-label="${E(BA.title(r.function))}: detalle de ${E(BA.title(r.center))}">${E(BA.title(r.function))}</button></td>
-<td class="destination-cell"><div class="row-primary">${E(BA.title(r.municipality))}</div><div class="row-secondary">${E(BA.title(r.center))}</div></td>
+<td class="destination-cell"><div class="row-primary">${E(BA.title(r.center))}</div><div class="row-secondary">${E(BA.title(r.municipality))}</div></td>
 <td class="workload-cell"><span class="workload-label">${r.workload === "full" ? "Completa" : E(r.hours) + " h · parcial"}</span></td>
 <td class="quantity-cell">${r.quantity}<span class="quantity-label"> ${r.quantity === 1 ? "plaza" : "plazas"}</span></td>
 <td class="detail-cell"><button class="icon-button" data-action="detail" data-id="${E(r.id)}" aria-label="Ver detalle de ${E(r.center)}">${icon("arrow")}</button></td></tr>`;
@@ -79,6 +79,7 @@
     return `<div class="data-table-wrap"><div class="empty"><h3>${E(title)}</h3><p>${E(description)}</p>${action}</div></div>`;
   }
   function pagination(page, total, size, action = "page", chooseSize = false) {
+    if(total<=size)return "";
     const max = Math.max(1, Math.ceil(total / size));
     return `<div class="pagination"><div class="page-summary"><span>${total ? (page - 1) * size + 1 + "–" + Math.min(page * size, total) : "0"} de ${total} registros</span>${chooseSize ? `<label for="page-size">Por página <select id="page-size">${[25, 50, 100].map((value) => `<option value="${value}" ${size === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>` : ""}</div><div class="buttons">${button(action, "Anterior", "", "", `data-page="${page - 1}" ${page <= 1 ? "disabled" : ""}`)}<span>Página ${page} de ${max}</span>${button(action, "Siguiente", "", "", `data-page="${page + 1}" ${page >= max ? "disabled" : ""}`)}</div></div>`;
   }
@@ -96,14 +97,15 @@
       "Procedencia no documentada."
     );
   }
-  function detail(row, doc, prefs) {
-    const saved = prefs.favorites.includes(row.id);
-    return `<div class="dialog-head"><div><h2 id="dialog-title">${E(BA.title(row.function))}</h2><p>${E(BA.title(row.center))} · ${E(BA.title(row.municipality))}</p></div><button class="icon-button" data-action="close-dialog" aria-label="Cerrar detalle">${icon("close")}</button></div>
-<div class="dialog-body">${notice(`Publicación del ${E(BA.date(doc.published_at))}`, "Disponibilidad actual sin confirmar.")}
-<dl class="detail-grid"><div><dt>Código de función</dt><dd class="mono">${E(row.function_code)}</dd></div><div><dt>Código de centro</dt><dd class="mono">${E(row.center_code)}</dd></div><div><dt>Jornada publicada</dt><dd>${E(row.jornada)}</dd></div><div><dt>Plazas en esta fila</dt><dd>${row.quantity}</dd></div><div><dt>Cupo publicado</dt><dd>${E(row.cupo)}</dd></div><div><dt>Itinerancia publicada</dt><dd>${row.itinerant === "S" ? "Sí (S)" : "No (N)"}</dd></div><div><dt>Mención bilingüe de la función</dt><dd>${E(row.language)}</dd></div><div><dt>Duración</dt><dd>No indicada</dd></div><div><dt>Acto · proceso</dt><dd>${E(BA.date(doc.act_date))} · ${E(doc.process_id)}</dd></div><div><dt>Ubicación en el PDF</dt><dd>Página ${row.page} · fila de datos ${row.row_number}</dd></div></dl>
-<h3>Procedencia del dato</h3><p>${E(provenance(doc))}</p><details class="technical-details"><summary>Extracción y huella del documento</summary><p>Extracción: ${E(doc.parser_version)}. La huella identifica el archivo; no valida su firma electrónica.</p><div class="hash">SHA-256 · ${E(doc.sha256)}</div></details>
-${doc.warnings.length ? `<p class="detail-footer-note">${E(doc.warnings.join(" "))}</p>` : ""}</div>
-<div class="dialog-footer"><div class="buttons">${pdfLink(doc, row.page, "Abrir página " + row.page)}${external(doc.source_url, "Fuente oficial")}</div>${button("favorite", saved ? "Quitar guardada" : "Guardar", "bookmark", saved ? "" : "primary", `data-id="${E(row.id)}" data-modal="true"`)}</div>`;
+  function detail(row,doc,prefs) {
+    const saved=prefs.favorites.includes(row.id),context=BA.publicationContext(doc,doc.id);
+    return `<div class="dialog-head"><div><h2 id="dialog-title">${E(BA.title(row.function))}</h2><p>${E(BA.title(row.center))} · ${E(BA.title(row.municipality))}</p></div><button class="icon-button" data-action="close-dialog" aria-label="Cerrar detalle">${icon('close')}</button></div>
+      <div class="dialog-body">${notice('Publicación del '+E(BA.date(doc.published_at)),'Disponibilidad actual sin confirmar.')}${!context.pdfAvailable?notice('PDF no conservado','Estos datos históricos no se han contrastado con el original.'):''}
+      <dl class="detail-grid"><div><dt>Jornada publicada</dt><dd>${E(row.jornada)}</dd></div><div><dt>Plazas en este registro</dt><dd>${row.quantity}</dd></div><div><dt>Municipio</dt><dd>${E(BA.title(row.municipality))}</dd></div><div><dt>Duración</dt><dd>${E(BA.durationLabel(row))}</dd></div><div><dt>Itinerancia publicada</dt><dd>${row.itinerant==='S'?'Sí (S)':row.itinerant==='N'?'No (N)':'Sin dato'}</dd></div><div><dt>Mención bilingüe</dt><dd>${E(row.language)}</dd></div></dl>
+      <h3>Documento de origen</h3><p>${E(provenance(doc))}</p><p>Acto: ${E(BA.date(doc.act_date))} · Publicación: ${E(BA.date(doc.published_at))} · Proceso ${E(doc.process_id)}</p><p>Página ${row.page} · fila de datos ${row.row_number}</p>
+      ${(doc.warnings||[]).length?`<p class="data-limit">${E(doc.warnings.join(' '))}</p>`:''}
+      <details class="technical-details"><summary>Códigos, valores originales y extracción</summary><dl><dt>Función</dt><dd>${E(row.function_code)} · ${E(row.function)}</dd><dt>Centro</dt><dd>${E(row.center_code)} · ${E(row.center)}</dd><dt>Cupo (código publicado)</dt><dd>${E(row.cupo)}</dd></dl>${row.raw_cells?`<p>Celdas originales: ${E(row.raw_cells.join(' | '))}</p>`:''}<p>Extractor: ${E(doc.parser_version)}. La huella no valida la firma electrónica.</p><div class="hash">SHA-256 · ${E(doc.sha256)}</div></details></div>
+      <div class="dialog-footer"><div class="buttons">${pdfLink(doc,row.page,'Ver página '+row.page+' del PDF')}${external(doc.source_url,'Abrir en CARM')}</div>${button('favorite',saved?'Quitar guardada':'Guardar','bookmark',saved?'':'primary',`data-id="${E(row.id)}" data-modal="true"`)}</div>`;
   }
   window.BAUI = {
     count,

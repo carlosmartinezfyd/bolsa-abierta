@@ -133,7 +133,7 @@
       Number(!!m.onlySaved) +
       Number(!!m.onlyProfile);
     return `<section class="workspace-toolbar" id="workspace-toolbar" aria-label="Consulta de vacantes">
-      <div class="workspace-heading"><h1>Vacantes sin cubrir</h1><div class="publication-actions"><label for="copy-select" class="copy-label">Publicación<select id="copy-select" aria-label="Publicación consultada" ${m.onlySaved ? "disabled" : ""}>${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}</option>`).join("")}</select></label>${refreshButton(m)}</div></div>
+      <div class="workspace-heading"><h1>Vacantes publicadas</h1><div class="publication-actions"><label for="copy-select" class="copy-label">Publicación<select id="copy-select" aria-label="Publicación consultada" ${m.onlySaved ? "disabled" : ""}>${approved.map((d) => `<option value="${E(d.id)}" ${doc?.id === d.id ? "selected" : ""}>${E(BA.date(d.published_at))}</option>`).join("")}</select></label>${refreshButton(m)}</div></div>
       <div class="primary-filters" aria-label="Filtros de vacantes"><label class="search-input"><span class="sr-only">Buscar vacantes</span>${U.icon("search")}<input class="input" id="search" type="search" value="${E(m.filters.q || "")}" placeholder="Buscar centro o código…"></label>
       ${U.select("function_code", "Función", BA.unique(rows, "function_code", "function"), m.filters.function_code, "Todas las funciones")}
       ${U.select("municipality", "Municipio", BA.unique(rows, "municipality"), m.filters.municipality, "Todos")}
@@ -152,7 +152,7 @@
       ${U.select("language", "Bilingüe", BA.unique(rows, "language"), m.filters.language, "Todas")}
       ${U.select(
         "cupo",
-        "Cupo",
+        "Cupo (código publicado)",
         [
           ["VP", "VP"],
           ["VS", "VS"],
@@ -170,9 +170,9 @@
         m.filters.itinerant,
         "Todas",
       )}</div>
-      <div class="secondary-checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Solo guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""}>Mis funciones</label></div><div class="extra-filter-footer">${U.button("clear-filters", "Limpiar filtros", "", "text")}${U.button("close-filters", "Ver resultados", "", "primary")}</div></div></details></div>
-      ${coverage(m)}${refreshFeedback(m)}</section>
-      <section id="results" class="results comfortable" aria-label="Resultados">${results(m)}</section><div class="data-actions">${U.button("export-csv", "Exportar CSV", "download", "text")}</div>`;
+      <div class="secondary-checks"><label class="inline-check"><input id="only-saved" type="checkbox" ${m.onlySaved ? "checked" : ""}>Solo guardadas <span class="muted">(${allRows(m).filter((r) => m.prefs.favorites.includes(r.id)).length})</span></label><label class="inline-check"><input id="only-profile" type="checkbox" ${m.onlyProfile ? "checked" : ""} ${m.prefs.functions.length?"":"disabled"}>Mis funciones</label>${m.prefs.functions.length?'':'<a href="#profile" data-view="profile">Seleccionar funciones</a>'}</div><div class="extra-filter-footer">${U.button("clear-filters", "Limpiar filtros", "", "text")}${U.button("close-filters", "Ver resultados", "", "primary")}</div></div></details></div>
+      ${m.onlySaved?'':publicationNotice(doc,m.state.current_id)}${coverage(m)}${refreshFeedback(m)}${vacancyTabs(m.view)}</section>
+      <section id="results" class="results comfortable" aria-label="Resultados">${results(m)}</section>`;
   }
   function filterChips(m) {
     const labels = {
@@ -182,7 +182,7 @@
       municipality: "Municipio",
       workload: "Jornada",
       language: "Bilingüe",
-      cupo: "Cupo",
+      cupo: "Cupo (código publicado)",
       itinerant: "Itinerancia",
     };
     const rows = m.onlySaved ? allRows(m) : current(m)?.rows || [];
@@ -223,7 +223,7 @@
       : `<strong>${U.count(BA.places(rows), "plaza")} <span class="muted">en ${U.count(rows.length, "registro")}</span></strong>`;
     const head =
       filterChips(m) +
-      `<div class="results-head"><div id="result-count" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${summary}</div>${resultTools(m)}</div>`;
+      `<div class="results-head"><div id="result-count" role="status" aria-live="polite" aria-atomic="true" tabindex="-1">${summary}</div>${rows.length?resultTools(m):""}</div>`;
     let content;
     if (m.onlySaved) {
       const groups = m.state.documents
@@ -256,58 +256,41 @@
             U.button("clear-filters", "Restablecer filtros"),
           );
     return (
-      head + content + U.pagination(m.page, rows.length, size, "page", true)
+      head + content + U.pagination(m.page, rows.length, size, "page", true) + (rows.length?`<div class="data-actions">${U.button("export-csv", "Exportar estos resultados (CSV)", "download", "text")}<span class="muted">Incluye fecha, documento y fuente de cada registro.</span></div>`:"")
     );
+  }
+  function vacancyTabs(view) {
+    return `<nav class="view-tabs" aria-label="Vistas de vacantes"><a href="#vacancies" data-view="vacancies" ${view==='vacancies'?'aria-current="page"':''}>Listado</a><a href="#changes" data-view="changes" ${view==='changes'?'aria-current="page"':''}>Comparar publicaciones</a></nav>`;
+  }
+  function publicationNotice(doc,currentId) {
+    if(!doc)return '';
+    const c=BA.publicationContext(doc,currentId);
+    return `<div class="publication-context"><p><strong>${c.historical?'Publicación histórica':'Más reciente incorporada'}</strong> · Publicada: ${E(BA.date(c.publishedAt))}${doc.act_date&&doc.act_date!==doc.published_at?.slice(0,10)?` · Acto: ${E(BA.date(doc.act_date))}`:''}</p>${!c.pdfAvailable?'<p class="data-limit">PDF no conservado. Estos datos históricos no se han contrastado con el original.</p>':''}<a href="#sources" data-view="sources" data-source-anchor="source-document-${E(doc.id)}">Documento y procedencia</a></div>`;
   }
   function changes(m) {
-    const prev = m.state.documents.find((d) => d.id === m.state.previous_id),
-      latest = m.state.documents.find((d) => d.id === m.state.current_id),
-      all = m.state.changes;
-    const filtered = all.filter(
-        (c) => !m.changeKind || c.kind === m.changeKind,
-      ),
-      names = {
-        appeared: "Figuran ahora",
-        disappeared: "Ya no figuran",
-        quantity_changed: "Cambia la cantidad",
-      };
-    const size = 25;
-    m.changePage = Math.min(
-      Math.max(1, m.changePage),
-      Math.max(1, Math.ceil(filtered.length / size)),
-    );
-    return (
-      header("Cambios entre publicaciones") +
-      U.notice(
-        "Los cambios entre listados no confirman adjudicaciones.",
-        "",
-        "neutral",
-      ) +
-      (prev && latest
-        ? `<section class="comparison-bar"><div><span class="eyebrow">Publicación anterior</span><h2>${E(BA.date(prev.published_at))}</h2><p>Proceso ${E(prev.process_id)} · ${E(prev.places)} plazas</p></div>${U.icon("arrow")}<div><span class="eyebrow">Publicación más reciente</span><h2>${E(BA.date(latest.published_at))}</h2><p>Proceso ${E(latest.process_id)} · ${E(latest.places)} plazas</p></div><span class="pill observed">Comparación histórica</span></section><details class="technical-details comparison-note"><summary>Procedencia de los listados</summary><p>Anterior: ${E(U.provenance(prev))} Actual: ${E(U.provenance(latest))}</p></details>
- <div class="tabs" role="group" aria-label="Tipo de cambio"><button class="tab ${!m.changeKind ? "active" : ""}" data-action="change-kind" aria-pressed="${!m.changeKind}" data-kind="">Todos <span>${all.length}</span></button>${Object.entries(
-   names,
- )
-   .map(
-     ([k, v]) =>
-       `<button class="tab ${m.changeKind === k ? "active" : ""}" data-action="change-kind" aria-pressed="${m.changeKind === k}" data-kind="${k}">${v} <span>${all.filter((c) => c.kind === k).length}</span></button>`,
-   )
-   .join("")}</div>
- <div class="data-table-wrap"><div class="change-row change-heading" aria-hidden="true"><span>Cambio observado</span><span>Función</span><span>Destino</span><span>Plazas</span></div>${
-   filtered
-     .slice((m.changePage - 1) * size, m.changePage * size)
-     .map(
-       (c) =>
-         `<div class="change-row"><div class="change-type"><span class="pill ${c.kind === "appeared" ? "full" : c.kind === "disappeared" ? "pending" : "observed"}">${names[c.kind]}</span></div><div><div class="row-primary">${E(BA.title(c.row.function))}</div><div class="row-secondary mono">${E(c.row.function_code)} · ${E(c.row.jornada)}</div></div><div><div class="row-primary">${E(BA.title(c.row.municipality))}</div><div class="row-secondary">${E(BA.title(c.row.center))}</div></div><div class="change-delta">${E(c.before)} <span class="muted">→</span> ${E(c.after)}</div></div>`,
-     )
-     .join("") || '<div class="empty">Sin cambios de este tipo.</div>'
- }</div>${U.pagination(m.changePage, filtered.length, size, "change-page")}`
-        : U.empty(
-            "Se necesitan dos copias aprobadas",
-            "La comparación aparecerá al incorporar dos procesos distintos.",
-          ))
-    );
+    const docs=m.state.documents.filter(d=>['approved','superseded'].includes(d.status));
+    const laterCandidates=docs.filter(d=>docs.some(p=>BA.compatiblePublications(p,d)));
+    const latest=laterCandidates.find(d=>d.id===m.compareLater)||laterCandidates.find(d=>d.id===m.state.current_id)||laterCandidates[0];
+    const earlierCandidates=docs.filter(d=>BA.compatiblePublications(d,latest));
+    const prev=earlierCandidates.find(d=>d.id===m.compareEarlier)||earlierCandidates.find(d=>d.id===m.state.previous_id)||earlierCandidates[0];
+    m.compareLater=latest?.id;m.compareEarlier=prev?.id;
+    if(!prev||!latest)return header('Comparar publicaciones')+vacancyTabs('changes')+U.empty('Se necesitan dos publicaciones compatibles','Solo se comparan listados de vacantes sin cubrir del mismo ámbito.');
+    const f=m.compareFilters||{},all=BA.comparison(prev,latest).filter(c=>BA.filter([c.row],f).length);
+    const filtered=all.filter(c=>!m.changeKind||c.kind===m.changeKind),size=25;
+    m.changePage=Math.min(Math.max(1,m.changePage||1),Math.max(1,Math.ceil(filtered.length/size)));
+    const names={appeared:'Aparecen en la posterior',disappeared:'No figuran en la posterior',quantity_changed:'Cambia la cantidad'};
+    const selector=(id,label,items,selected)=>`<label class="field">${label}<select id="${id}">${items.map(d=>`<option value="${E(d.id)}" ${d.id===selected.id?'selected':''}>${E(BA.date(d.published_at))} · proceso ${E(d.process_id)}</option>`).join('')}</select></label>`;
+    const filter=(key,label,values)=>`<label class="field">${label}<select id="compare-${key}" data-compare-filter="${key}"><option value="">Todos</option>${values.map(([value,label])=>`<option value="${E(value)}" ${f[key]===value?'selected':''}>${E(BA.title(label))}</option>`).join('')}</select></label>`;
+    const evidence=(doc,rows)=>rows.length?[...new Set(rows.map(r=>r.page||1))].map(page=>U.pdfLink(doc,page,'Página '+page)).join(''):'No figura en esta publicación';
+    return header('Comparar publicaciones')+vacancyTabs('changes')+U.notice('Los cambios entre listados no confirman adjudicaciones.','','neutral')+
+      `<div class="comparison-selectors">${selector('compare-earlier','Publicación anterior',earlierCandidates,prev)}${selector('compare-later','Publicación posterior',laterCandidates,latest)}</div>
+      <div class="comparison-provenance"><p>Anterior: ${BA.places(prev.rows)} plazas · ${prev.rows.length} registros. ${E(U.provenance(prev))}</p><p>Posterior: ${BA.places(latest.rows)} plazas · ${latest.rows.length} registros. ${E(U.provenance(latest))}</p></div>
+      <div class="archive-filters">${filter('function_code','Función',BA.unique([...prev.rows,...latest.rows],'function_code','function'))}${filter('municipality','Municipio',BA.unique([...prev.rows,...latest.rows],'municipality'))}</div>
+      <div class="tabs" role="group" aria-label="Tipo de cambio">${[['','Todos'],...Object.entries(names)].map(([key,label])=>`<button class="tab ${m.changeKind===key||!m.changeKind&&!key?'active':''}" data-action="change-kind" data-kind="${key}" aria-pressed="${(m.changeKind||'')===key}">${label} <span>${key?all.filter(c=>c.kind===key).length:all.length}</span></button>`).join('')}</div>
+      <p role="status">${filtered.length} grupos de registros con cambios. Las cantidades son plazas; las filas idénticas se suman para comparar.</p>
+      ${filtered.length?`<div class="comparison-scroll" tabindex="0" role="region" aria-label="Tabla de cambios; desplazamiento horizontal disponible"><table class="comparison-table"><caption>De ${E(BA.date(prev.published_at))} a ${E(BA.date(latest.published_at))}</caption><thead><tr><th scope="col">Cambio observado</th><th scope="col">Función y destino</th><th scope="col">Plazas anteriores → posteriores</th><th scope="col">Documento anterior</th><th scope="col">Documento posterior</th></tr></thead><tbody>${filtered.slice((m.changePage-1)*size,m.changePage*size).map(c=>`<tr><td>${names[c.kind]}</td><th scope="row">${E(BA.title(c.row.function))}<span class="row-secondary">${E(BA.title(c.row.center))} · ${E(BA.title(c.row.municipality))}</span><span class="row-secondary">${E(c.row.jornada)}</span></th><td>${c.before} → ${c.after}</td><td>${evidence(prev,c.beforeRows)}</td><td>${evidence(latest,c.afterRows)}</td></tr>`).join('')}</tbody></table></div><p class="small muted comparison-scroll-hint">Desplaza la tabla para consultar las dos fuentes.</p>`:U.empty('Sin cambios con estos filtros','Puedes elegir otra función, municipio o pareja de publicaciones.')}${U.pagination(m.changePage,filtered.length,size,'change-page')}`;
   }
+
   function acts(m) {
     const notices = m.state.catalog.notices || [],
       docs = m.state.documents.filter((d) => d.status === "approved");
@@ -349,7 +332,7 @@
     const functions = BA.unique(allRows(m), "function_code", "function"),
       saved = allRows(m).filter((r) => m.prefs.favorites.includes(r.id));
     return (
-      header("Mi seguimiento") +
+      header("Guardados") +
       historyNotice(m) +
       (m.storageAvailable === false
         ? U.notice(
@@ -357,10 +340,10 @@
             "Las preferencias solo durarán esta sesión. El navegador no permite conservarlas al cerrar.",
           )
         : "") +
-      `<section class="saved-summary panel"><div>${U.icon("bookmark")}<div><h2>${U.count(saved.length, "registro guardado", "registros guardados")}${Number(m.state.history_window?.omitted_documents) > 0 ? " disponibles" : ""}</h2><p>Guardados por publicación.</p></div></div><div class="buttons">${U.button("view-saved", "Ver guardadas", "arrow", "primary")}${U.button("export-preferences", "Exportar preferencias", "download")}</div></section>
- <div class="two-col"><section class="panel"><h2>Funciones que sigo</h2><p>Funciones presentes en los listados disponibles.</p><div class="search-input mt15">${U.icon("search")}<input class="input" id="profile-search" type="search" placeholder="Función o código…" aria-label="Buscar funciones"></div><div class="profile-functions" id="function-list">${functions.map(([code, name]) => `<label class="function-option" data-function-search="${E(BA.norm(code + " " + name))}"><input type="checkbox" data-profile-function="${E(code)}" ${m.prefs.functions.includes(code) ? "checked" : ""}><span>${E(BA.title(name))}<span class="row-secondary mono">${E(code)}</span></span></label>`).join("")}</div><p id="profile-empty" class="hidden" role="status">No hay funciones que coincidan con la búsqueda.</p><div class="profile-footer"><p class="profile-count" id="profile-count">${U.count(m.prefs.functions.length, "función seleccionada", "funciones seleccionadas")}</p>${U.button("apply-profile", "Aplicar mis funciones", "arrow", "primary")}</div></section>
- <div><section class="panel section"><h2>Mi posición</h2><p><a href="#position" data-view="position">Consultar mi ficha en la lista publicada</a></p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
- <section class="panel"><h2>Preferencias y privacidad</h2><p>Las preferencias se guardan en este navegador. Las alertas externas no están disponibles.</p><p>Última revisión personal: <strong>${E(BA.date(m.prefs.lastSeen))}</strong>.</p><div class="buttons mt16">${U.button("reset-preferences", "Borrar preferencias locales", "", "danger")}</div></section></div></div>`
+      `<section class="saved-summary panel"><div>${U.icon("bookmark")}<div><h2>${U.count(saved.length, "registro guardado", "registros guardados")}${Number(m.state.history_window?.omitted_documents) > 0 ? " disponibles" : ""}</h2><p>Guardados por publicación, incluidas las históricas.</p></div></div><div class="buttons">${saved.length?U.button("view-saved", "Ver guardadas", "arrow", "primary"):'<a class="button primary" href="#vacancies" data-view="vacancies">Buscar vacantes para guardar</a>'}${U.button("export-preferences", "Exportar preferencias", "download")}</div></section>
+ ${BA.savedGroups(m.state.documents,m.prefs.favorites).map(g=>`<section class="panel section"><h2>${E(BA.date(g.document.published_at))}</h2><p>${g.rows.length} registros guardados · ${E(U.provenance(g.document))}</p><ul class="saved-items">${g.rows.map(r=>`<li><button class="row-link" data-action="detail" data-id="${E(r.id)}">${E(BA.title(r.function))} · ${E(BA.title(r.center))}</button><span>${E(r.jornada)} · ${r.quantity} plazas</span></li>`).join('')}</ul></section>`).join('')}<div class="two-col"><section class="panel"><h2>Funciones que sigo</h2><p>La selección limita el filtro «Mis funciones» de Vacantes. Se guarda en este navegador.</p><div class="search-input mt15">${U.icon("search")}<input class="input" id="profile-search" type="search" placeholder="Función o código…" aria-label="Buscar funciones"></div><div class="profile-functions" id="function-list">${functions.map(([code, name]) => `<label class="function-option" data-function-search="${E(BA.norm(code + " " + name))}"><input type="checkbox" data-profile-function="${E(code)}" ${m.prefs.functions.includes(code) ? "checked" : ""}><span>${E(BA.title(name))}<span class="row-secondary mono">${E(code)}</span></span></label>`).join("")}</div><p id="profile-empty" class="hidden" role="status">No hay funciones que coincidan con la búsqueda.</p><div class="profile-footer"><p class="profile-count" id="profile-count">${U.count(m.prefs.functions.length, "función seleccionada", "funciones seleccionadas")}</p>${U.button("apply-profile", "Aplicar mis funciones", "arrow", "primary")}</div></section>
+ <div><section class="panel section"><h2>Mi ficha</h2><p><a href="#position" data-view="position">Consultar mi ficha en la lista publicada</a></p><div class="buttons mt16">${U.external(m.state.catalog.sources.find((s) => s.id === "educarm-position")?.url, "Ir a Educarm")}</div></section>
+ <section class="panel"><h2>Preferencias y privacidad</h2><p>Las preferencias se guardan en este navegador. No se envían avisos externos. El archivo exportado contiene identificadores de favoritos, funciones y fecha de revisión; no incluye la ficha personal ni permite una restauración automática.</p><p>Archivo de publicaciones: última marca de revisión local: <strong>${E(BA.date(m.prefs.lastSeen))}</strong>.</p><p>Esta marca no comprueba novedades oficiales.</p><div class="buttons mt16">${U.button("mark-seen", "Marcar archivo como revisado", "check")}${U.button("reset-preferences", "Borrar preferencias locales", "", "danger")}</div></section></div></div>`
     );
   }
   function sameSourceUrl(a, b) {
@@ -456,47 +439,29 @@
     );
   }
   function home(m) {
-    const doc = (m.state?.documents || []).find(
-      (d) => d.id === m.state?.current_id && d.status === "approved",
-    );
-    const seen = new Set();
-    const sample = (doc?.rows || [])
-      .filter((row) => {
-        if (seen.has(row.function_code)) return false;
-        seen.add(row.function_code);
-        return true;
-      })
-      .slice(0, 3);
-    const places = (doc?.rows || []).reduce(
-      (total, row) => total + row.quantity,
-      0,
-    );
-    return `<div class="landing">
-      <header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#sources" data-view="sources">Fuentes</a><a href="#position" data-view="position">Mi posición ${U.icon("arrow")}</a></nav></header>
-      <main id="main" class="landing-main" tabindex="-1">
-        <section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><p class="landing-eyebrow">Listas docentes y adjudicaciones publicadas</p><h1 id="landing-title">Consulta tu puesto en las listas docentes de Murcia.</h1><p class="landing-lead">Busca tu ficha en las publicaciones incorporadas y consulta su ordinal oficial o su adjudicación fechada. La cobertura es parcial y la disponibilidad actual no está confirmada.</p><a class="button primary landing-cta" href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a><p class="landing-access">Gratis y sin registro.</p></div>
-        <aside class="landing-publication" aria-label="Última publicación incorporada"><div class="landing-publication-head"><span>Último listado incorporado</span>${U.icon("calendar")}</div>${doc ? `<h2>${E(BA.date(doc.published_at))}</h2><p class="landing-scope">Vacantes sin cubrir</p><ul class="landing-sample">${sample.map((row) => `<li><strong>${E(BA.title(row.function))}</strong><span>${E(BA.title(row.municipality))} · ${row.workload === "full" ? "Jornada completa" : E(row.hours) + " h"}</span></li>`).join("")}</ul><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Ver ${U.count(places, "plaza", "plazas")}${U.icon("arrow")}</button><p class="landing-availability">La publicación no confirma la disponibilidad actual.</p>` : `<h2>Consulta de publicaciones</h2><p class="landing-scope">Todavía no hay un listado validado disponible.</p><a class="landing-publication-link" href="#sources" data-view="sources">Ver fuentes ${U.icon("arrow")}</a>`}</aside></section>
-        <section class="landing-uses" aria-label="Qué puedes hacer"><article><span class="landing-step" aria-hidden="true">01</span><h2>Encuentra tu ficha</h2><p>Busca por nombre o número de lista y filtra por lista o función.</p><a href="#position" data-view="position">Consultar mi posición ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">02</span><h2>Compara los listados</h2><p>Consulta qué registros aparecen, dejan de figurar o cambian entre publicaciones, sin inferir adjudicaciones o revocaciones.</p><a href="#changes" data-view="changes">Ver cambios ${U.icon("arrow")}</a></article><article><span class="landing-step" aria-hidden="true">03</span><h2>Consulta las vacantes</h2><p>Busca las plazas por especialidad, municipio y jornada.</p><a href="#vacancies" data-view="vacancies">Buscar vacantes ${U.icon("arrow")}</a></article></section>
-        <section class="landing-origin" aria-labelledby="landing-origin-title"><div><h2 id="landing-origin-title">El origen de los datos</h2><p>Los datos proceden de RRHH Educación y CARM. Puedes consultar la fecha de cada publicación y abrir su fuente.</p></div><a href="#sources" data-view="sources">Consultar fuentes ${U.icon("arrow")}</a></section>
-      </main><footer class="landing-footer"><p>Bolsa Abierta es un proyecto independiente de la CARM. Las solicitudes y adjudicaciones se tramitan por los canales oficiales.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
+    const doc=(m.state?.documents||[]).find(d=>d.id===m.state?.current_id&&d.status==='approved');
+    return `<div class="landing"><header class="landing-header"><a class="brand landing-brand" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span class="brand-name">Bolsa Abierta</span></a><nav class="landing-nav" aria-label="Navegación principal"><a href="#position" data-view="position">Mi ficha</a><a href="#vacancies" data-view="vacancies">Vacantes</a><a href="#sources" data-view="sources">Fuentes y cobertura</a></nav></header>
+      <main id="main" class="landing-main" tabindex="-1"><section class="landing-hero" aria-labelledby="landing-title"><div class="landing-intro"><h1 id="landing-title">Listas y vacantes docentes de Murcia</h1><p class="landing-lead">Consulta tu ficha y las vacantes de las publicaciones incorporadas.</p><div class="buttons landing-actions"><a class="button primary landing-cta" href="#position" data-view="position">Buscar mi ficha ${U.icon('arrow')}</a><a class="button" href="#vacancies" data-view="vacancies">Ver vacantes</a></div><p class="landing-access">Cobertura parcial. Cada resultado indica su publicación.</p></div>
+      <aside class="landing-publication" aria-label="Última publicación de vacantes incorporada"><div class="landing-publication-head">Última publicación de vacantes incorporada</div>${doc?`<h2>${E(BA.date(doc.published_at))}</h2><p class="publication-total"><strong>${U.count(BA.places(doc.rows),'plaza')}</strong> en ${U.count(doc.rows.length,'registro')}</p><button class="landing-publication-link" data-action="open-copy" data-id="${E(doc.id)}">Consultar esta publicación ${U.icon('arrow')}</button><p class="landing-availability">Disponibilidad actual sin confirmar.</p>`:m.loadError?'<p role="alert">No se han podido cargar las publicaciones.</p><button class="button" data-action="sync">Reintentar</button>':!m.state?'<p role="status">Cargando publicaciones…</p>':'<p>No hay publicaciones de vacantes incorporadas en esta copia.</p>'}</aside></section>
+      <section class="landing-uses" aria-label="Otras consultas"><article><h2>Publicaciones</h2><p>Busca documentos y avisos por tipo y fecha.</p><a href="#acts" data-view="acts">Abrir archivo ${U.icon('arrow')}</a></article><article><h2>Comparar publicaciones</h2><p>Localiza las diferencias entre dos listados de vacantes.</p><a href="#changes" data-view="changes">Comparar listados ${U.icon('arrow')}</a></article><article><h2>Guardados</h2><p>Consulta tus vacantes y funciones guardadas en este navegador.</p><a href="#profile" data-view="profile">Abrir guardados ${U.icon('arrow')}</a></article></section></main><footer class="landing-footer"><p>Proyecto independiente de la CARM. La publicación oficial prevalece.</p><button data-action="about">Sobre el proyecto</button></footer></div>`;
   }
+
   function position() {
-    return '<div class="position-workspace"><header class="position-heading"><h1>Mi posición</h1></header><div id="position-root"></div></div>';
+    return '<div class="position-workspace"><header class="position-heading"><h1>Mi ficha</h1></header><div id="position-root"></div></div>';
   }
   const views = { position, vacancies, changes, acts, profile, sources };
   function shell(m) {
     if (m.view === "home") return home(m);
     const nav = [
-      ["position", "Mi posición", "person"],
+      ["position", "Mi ficha", "person"],
       ["vacancies", "Vacantes", "grid"],
-      ["changes", "Cambios", "changes"],
-      ["acts", "Actos", "calendar"],
-      ["profile", "Mi seguimiento", "bookmark"],
-      ["sources", "Fuentes", "shield"],
+            ["acts", "Publicaciones", "calendar"],
+      ["profile", "Guardados", "bookmark"],
+      ["sources", "Fuentes y cobertura", "shield"],
     ];
-    const navItem=([id,name,ico])=>`<button class="nav-button ${m.view===id?'active':''}" data-view="${id}" ${m.view===id?'aria-current="page"':''}>${U.icon(ico)}<span>${name}</span></button>`;
+    const navItem=([id,name,ico])=>`<button class="nav-button ${(m.view===id||(id==='vacancies'&&m.view==='changes'))?'active':''}" data-view="${id}" ${(m.view===id||(id==='vacancies'&&m.view==='changes'))?'aria-current="page"':''}>${U.icon(ico)}<span>${name}</span></button>`;
     const secondary=nav.slice(2), selected=secondary.find(([id])=>id===m.view);
-    const more=`<details class="mobile-more"><summary class="nav-button ${selected?'active':''}"><span aria-hidden="true">☰</span><span>Más</span></summary><div class="mobile-more-panel">${secondary.map(navItem).join('')}<button class="nav-button" data-action="about">${U.icon('info')}<span>Sobre el proyecto</span></button></div></details>`;
+    const more=`<details class="mobile-more"><summary class="nav-button ${selected?'active':''}"><span aria-hidden="true">☰</span><span>${selected?selected[1]:'Más'}</span></summary><div class="mobile-more-panel">${secondary.map(navItem).join('')}<button class="nav-button" data-action="about">${U.icon('info')}<span>Sobre el proyecto</span></button></div></details>`;
     return `<div class="shell"><aside class="sidebar" id="site-nav"><a class="brand brand-home" href="#home" data-view="home" aria-label="Bolsa Abierta · Inicio"><span class="brand-symbol" aria-hidden="true">b.</span><span><span class="brand-name">Bolsa Abierta</span><span class="brand-subtitle">Región de Murcia</span></span></a><nav class="nav" aria-label="Navegación principal">${nav.map(navItem).join('')}${more}</nav><div class="sidebar-bottom"><button class="about" data-action="about">${U.icon("code")}Sobre el proyecto</button></div></aside><div class="content"><main id="main" class="main" tabindex="-1">${m.state || m.view === "position" ? views[m.view](m) : '<p role="status">No se han podido cargar las publicaciones. <a href="#position" data-view="position">Consultar mi posición</a></p>'}</main></div></div>`;
   }
   window.BAV = { current, allRows, displayed, shell, results };

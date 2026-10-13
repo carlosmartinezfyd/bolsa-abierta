@@ -15,6 +15,9 @@
     prefs: { favorites: [], functions: [], lastSeen: null },
     view: "home",
     filters: {},
+    compareFilters: {},
+    archiveFilters: {},
+    archivePage: 1,
     selectedDoc: null,
     page: 1,
     pageSize: 25,
@@ -338,6 +341,7 @@
         return;
       event.preventDefault();
       navigate(nav.dataset.view);
+      if(nav.dataset.sourceAnchor){const section=document.getElementById(nav.dataset.sourceAnchor);section?.scrollIntoView({block:"start"});section?.focus({preventScroll:true});}
       return;
     }
     const button = event.target.closest("[data-action]");
@@ -444,11 +448,12 @@
     else if (action === "mark-seen") {
       model.prefs.lastSeen = new Date().toISOString();
       save();
-      toast("Revisión guardada.");
+      toast("Marca de revisión guardada en este navegador.");
+      render();
     } else if (action === "reset-preferences") {
       show(
         dialogHeader("Borrar preferencias locales") +
-          `<div class="dialog-body"><p>Se eliminarán favoritos, funciones seguidas y fecha de revisión de este navegador. No se borrarán documentos ni datos del servidor.</p></div><div class="dialog-footer">${U.button("close-dialog", "Cancelar")}${U.button("confirm-reset", "Borrar preferencias", "", "danger")}</div>`,
+          `<div class="dialog-body"><p>Se eliminarán favoritos, funciones seguidas y fecha de revisión de este navegador. La ficha personal recordada se gestiona por separado en Mi ficha. No se borrarán documentos ni datos del servidor.</p></div><div class="dialog-footer">${U.button("close-dialog", "Cancelar")}${U.button("confirm-reset", "Borrar preferencias", "", "danger")}</div>`,
       );
     } else if (action === "confirm-reset") {
       model.prefs = BA.preferences(null);
@@ -516,6 +521,11 @@
   });
   document.addEventListener("change", (event) => {
     const el = event.target;
+    if(el.id==='compare-earlier'||el.id==='compare-later'||el.dataset.compareFilter){
+      if(el.dataset.compareFilter)model.compareFilters[el.dataset.compareFilter]=el.value;
+      else model[el.id==='compare-earlier'?'compareEarlier':'compareLater']=el.value;
+      model.changePage=1;render();document.getElementById(el.id)?.focus({preventScroll:true});return;
+    }
     if (el.id === "sort-by") {
       model.sortBy = [
         "original",
@@ -644,7 +654,8 @@
       await reload();
       if (model.view !== "position") render();
     } catch (err) {
-      if (["position", "home"].includes(model.view)) return;
+      model.loadError=true;if(model.view==="home"){render();return;}
+      if(model.view==="position")return;
       app.innerHTML = `<div class="loading"><span class="brand-symbol">b.</span><h1>No se pudo cargar la consulta</h1><p>${E(err.message)}</p><p>No se ha podido leer el servicio ni la copia publicada. Vuelve a cargar la página cuando esté disponible la conexión.</p></div>`;
     }
   })();

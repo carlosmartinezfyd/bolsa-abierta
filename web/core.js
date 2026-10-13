@@ -445,6 +445,26 @@
     return row.duration || (row.duration_status === 'absent'
       ? 'No indicada en el documento' : 'No extraída; consulta el documento');
   }
+  function compatiblePublications(a,b) {
+    const scope=d=>norm(d?.title).includes('vacantes sin cubrir') && norm(d?.title).includes('secundaria');
+    return !!(a && b && a.id!==b.id && ['approved','superseded'].includes(a.status) && ['approved','superseded'].includes(b.status)
+      && scope(a) && scope(b) && (!a.course || !b.course || a.course===b.course)
+      && Number.isFinite(Date.parse(a.published_at)) && Date.parse(a.published_at)<Date.parse(b.published_at));
+  }
+  function comparison(previous,later) {
+    if(!compatiblePublications(previous,later))throw Error('Selecciona dos publicaciones compatibles en orden cronológico.');
+    const group=doc=>{const groups=new Map();for(const row of doc.rows){
+      const key=JSON.stringify(['center_code','function_code','cupo','itinerant','jornada'].map(k=>row[k]??''));
+      if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);
+    }return groups;};
+    const before=group(previous),after=group(later),result=[];
+    for(const key of [...new Set([...before.keys(),...after.keys()])].sort()){
+      const beforeRows=before.get(key)||[],afterRows=after.get(key)||[],old=places(beforeRows),current=places(afterRows);
+      if(old===current)continue;
+      result.push({kind:!old?'appeared':!current?'disappeared':'quantity_changed',before:old,after:current,
+        row:(afterRows.length?afterRows:beforeRows)[0],beforeRows,afterRows});
+    }return result;
+  }
   function unique(rows, key, label = key) {
     return [...new Map(rows.map((r) => [r[key], r[label]])).entries()].sort(
       (a, b) => String(a[1]).localeCompare(String(b[1]), "es"),
@@ -472,5 +492,7 @@
     unique,
     publicationContext,
     durationLabel,
+    compatiblePublications,
+    comparison,
   };
 });
