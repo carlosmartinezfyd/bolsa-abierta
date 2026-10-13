@@ -2318,7 +2318,7 @@
       "trigger": "schedule",
       "request_id": null,
       "started_at": "2026-10-13T08:27:55.436000Z",
-      "ended_at": "2026-10-13T08:32:41.227Z",
+      "ended_at": "2026-10-13T08:32:41.227000Z",
       "scheduled_at": null,
       "clock_received_at": null,
       "dispatch_at": null,
@@ -2350,6 +2350,49 @@
           "started_at": "2026-10-13T08:32:41.039000Z",
           "ended_at": "2026-10-13T08:32:41.139000Z",
           "elapsed_seconds": 0.097,
+          "status": "success",
+          "exit_code": 0
+        }
+      }
+    },
+    {
+      "run_id": "38381211824:1",
+      "code_sha": "7ed89c450acefe6b7793271f090c03be08729d20",
+      "trigger": "worker_cron",
+      "request_id": "4861ad555b684b229689f07596d3dd48",
+      "started_at": "2026-10-13T10:08:32.485000Z",
+      "ended_at": "2026-10-13T10:12:54.026Z",
+      "scheduled_at": "2026-10-13T10:07:32Z",
+      "clock_received_at": "2026-10-13T10:07:32.316000Z",
+      "dispatch_at": "2026-10-13T10:07:34.563000Z",
+      "elapsed_seconds": 261.541,
+      "status": "partial",
+      "phases": {
+        "inventory": {
+          "started_at": "2026-10-13T10:09:06.870000Z",
+          "ended_at": "2026-10-13T10:12:53.483000Z",
+          "elapsed_seconds": 226.61,
+          "status": "partial",
+          "exit_code": 3
+        },
+        "positions": {
+          "started_at": "2026-10-13T10:08:51.364000Z",
+          "ended_at": "2026-10-13T10:09:06.749000Z",
+          "elapsed_seconds": 15.382,
+          "status": "success",
+          "exit_code": 0
+        },
+        "vacancies": {
+          "started_at": "2026-10-13T10:08:32.632000Z",
+          "ended_at": "2026-10-13T10:08:51.221000Z",
+          "elapsed_seconds": 18.586,
+          "status": "partial",
+          "exit_code": 0
+        },
+        "build": {
+          "started_at": "2026-10-13T10:12:53.792000Z",
+          "ended_at": "2026-10-13T10:12:53.919000Z",
+          "elapsed_seconds": 0.124,
           "status": "success",
           "exit_code": 0
         }
