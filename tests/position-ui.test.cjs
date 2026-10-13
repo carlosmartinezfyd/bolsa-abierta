@@ -112,6 +112,12 @@ test('specialty picker is searchable without accents and distinguishes teaching 
   assert.deepEqual(P.filterSpecialties(options,'dibujo plasticas').map(s=>s.code),['0595508']);
   assert.deepEqual(P.filterSpecialties(options,'0590009').map(s=>s.code),['0590009']);
 });
+test('result filters distinguish awards from lists without merging repeated identities',()=>{
+  const rows=[person,{...person,id:'2'.repeat(32),record_type:'award'}];
+  assert.deepEqual(P.filterMatches(rows,'award','SECUNDARIA').map(x=>x.id),['2'.repeat(32)]);
+  assert.deepEqual(P.filterMatches(rows,'list','SECUNDARIA').map(x=>x.id),[person.id]);
+  assert.equal(P.filterMatches(rows,'','MAESTROS').length,0);
+});
 
 test('empty results offer recovery and never claim that the person is excluded',async()=>{
   const model=P.createModel({request:async(path)=>path.endsWith('/search')?{version,results:[],more:false}:catalog});

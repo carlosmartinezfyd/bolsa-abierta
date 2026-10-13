@@ -729,7 +729,7 @@ test("announcements outside the vacancy parser scope are informational", () => {
       status: "detected_not_read",
     },
   ];
-  assert.match(context.window.BAV.shell(m), /Aviso informativo/);
+  assert.match(context.window.BAV.shell(m), /Aviso enlazado; contenido sin incorporar/);
 });
 test("refresh continues through a nineteen minute deployment queue", async () => {
   let clock = 0;
@@ -838,10 +838,10 @@ test("approved historical metadata keeps an omitted copy incorporated", () => {
   m.state.history_documents = history;
   m.state.catalog.notices = [notice];
   m.view = "acts";
-  assert.match(context.window.BAV.shell(m), /Documento incorporado/);
+  assert.match(context.window.BAV.shell(m), /Documento vinculado a datos incorporados/);
   assert.doesNotMatch(context.window.BAV.shell(m), /Documento sin incorporar/);
   m.view = "sources";
-  assert.match(context.window.BAV.shell(m), /0 publicaciones pendientes/);
+  assert.match(context.window.BAV.shell(m), /0 publicaciones de vacantes pendientes/);
 });
 test("official source status matches reordered and encoded equivalent PDF query parameters", () => {
   const m = model();
@@ -902,7 +902,7 @@ test('closing About opened from the mobile menu restores focus to its visible su
 
 test('coverage is scoped by source family and course and never turns a completed traversal into complete history',()=>{
   const m=model();m.view='sources';m.state.source_inventory={document_count:4,status_counts:{verified:2,skipped:2},coverage:{sources:[{source_id:'maestros',family:'maestros',body:'0597',course:'2026/2027',status:'skipped',scope_complete:true,history_complete:false,pending_pages:0,pending_details:2,checked_at:'2026-10-01T09:00:00Z'}],families:[{family:'maestros',body:'0597',course:'2026/2027',scope_complete:true,history_complete:false}]}};
-  const html=context.window.BAV.shell(m);assert.match(html,/4 documentos inventariados/);assert.match(html,/0597.*2026\/2027/);assert.match(html,/Cobertura del ámbito: completa/);assert.match(html,/Historial incompleto/);assert.match(html,/2 detalles pendientes/);assert.match(html,/Omitido por presupuesto/);assert.match(html,/no hubo un nuevo intento de descarga/);assert.doesNotMatch(html,/>Corpus completo<|>Cobertura completa</i);
+  const html=context.window.BAV.shell(m);assert.match(html,/4 documentos inventariados/);assert.match(html,/0597.*2026\/2027/);assert.match(html,/Cobertura del ámbito: completa/);assert.match(html,/Historial incompleto/);assert.match(html,/2 detalles pendientes/);assert.match(html,/Trabajo aplazado/);assert.match(html,/no hubo un nuevo intento de descarga/);assert.doesNotMatch(html,/>Corpus completo<|>Cobertura completa</i);
 });
 test('deferred checks retain separate previous evidence dates and do not invent a new attempt',()=>{
   const m=model();m.view='sources';m.state.catalog.sources=[{id:'test',name:'Referencia',url:'https://www.carm.es/web/pagina?IDCONTENIDO=1'}];m.state.catalog.checks=[{id:'test',status:'read',work_status:'skipped',checked_at:'2026-10-01T09:00:00Z',downloaded_at:'2026-09-30T12:00:00Z',queued_at:'2026-10-02T10:00:00Z',success:true}];
@@ -922,9 +922,9 @@ test('personal-list checks expose budget pauses or failures while retaining the 
   for(const status of ['pending_budget','failed']){
     const m=model();m.view='sources';m.state.position_status={status,attempted_at:'2026-10-04T10:00:00Z',checked_at:'2026-10-02T09:00:00Z',active_version:'a'.repeat(64),staged_version:'b'.repeat(64),resume_after:status==='pending_budget'?'2026-10-05T00:00:00Z':null,record_count:13045,pending_documents:2,verified_documents:4,error_code:status==='pending_budget'?'daily_write_budget':'download_failed'};
     const html=context.window.BAV.shell(m);const section=html.match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];
-    assert.ok(section,'personal-list check summary is visible');assert.match(section,status==='pending_budget'?/Pausada por presupuesto/:/Comprobación fallida/);
+    assert.ok(section,'personal-list check summary is visible');assert.match(section,status==='pending_budget'?/Aplazada por límite diario/:/Comprobación fallida/);
     assert.match(section,/Último intento.*4 oct 2026/s);assert.match(section,/Última comprobación satisfactoria.*2 oct 2026/s);
-    assert.match(section,/Se conserva la generación activa/);assert.match(section,/Generación preparada, pendiente de activar/);assert.match(section,/13\.045 registros/);assert.match(section,/2 documentos pendientes/);
+    assert.match(section,/Se conservan los datos publicados/);assert.match(section,/Generación preparada, pendiente de activar/);assert.match(section,/13\.045 registros/);assert.match(section,/2 documentos pendientes/);
     assert.match(section,new RegExp('Generación activa</dt><dd[^>]*>'+m.state.position_status.active_version));assert.doesNotMatch(section,new RegExp('Generación activa</dt><dd[^>]*>'+m.state.position_status.staged_version));
     if(status==='pending_budget')assert.match(section,/Reanudar a partir de.*5 oct 2026/s);
   }
@@ -942,7 +942,7 @@ test('cached reviewed evidence is served with explicit incomplete official check
   for(const checked_at of ['2026-10-02T09:00:00Z',null]){
     const m=model();m.view='sources';m.state.position_status={status:'degraded',attempted_at:'2026-10-04T10:00:00Z',checked_at,active_version:'a'.repeat(64),origin_check_complete:false,origin_verified_documents:2,origin_failed_documents:1,cached_documents:1,cache_status:'ready',error_code:'origin_unavailable_cached_evidence'};
     const section=context.window.BAV.shell(m).match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];
-    assert.match(section,/Evidencia revisada conservada/);assert.match(section,/última comprobación oficial fue parcial/);assert.match(section,/generación activa puede incorporar evidencia revisada conservada/);assert.match(section,/2 documentos comprobados en origen/);assert.match(section,/1 documento con fallo de origen/);assert.match(section,/1 documento servido desde evidencia conservada/);assert.match(section,/Último intento.*4 oct 2026/s);
+    assert.match(section,/Evidencia revisada conservada/);assert.match(section,/última comprobación oficial fue parcial/);assert.match(section,/Se conserva evidencia revisada y fechada/);assert.match(section,/2 documentos comprobados en origen/);assert.match(section,/1 documento con fallo de origen/);assert.match(section,/1 documento servido desde evidencia conservada/);assert.match(section,/Último intento.*4 oct 2026/s);
     if(checked_at)assert.match(section,/Última comprobación satisfactoria.*2 oct 2026/s);else assert.match(section,/Última comprobación satisfactoria.*Sin fecha acreditada/s);
     assert.doesNotMatch(section,/Comprobación verificada|comprobado hoy|comprobación satisfactoria.*4 oct 2026|1970/i);
     m.state.position_status.origin_verified_documents=0;const failed=context.window.BAV.shell(m).match(/<section[^>]*data-position-check[^>]*>(.*?)<\/section>/s)?.[1];assert.match(failed,/última comprobación oficial falló/);assert.doesNotMatch(failed,/Comprobación verificada|comprobado hoy/i);

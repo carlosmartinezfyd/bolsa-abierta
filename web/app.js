@@ -215,6 +215,15 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
+  async function loadPositionCatalog() {
+    if(!window.BA_CONFIG?.apiBase)return;
+    try {
+      const response=await fetch(BA.composeAPIURL('positions',window.BA_CONFIG),{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(20000)});
+      if(!response.ok)throw Error('metadata');
+      model.positionCatalog=window.BAPosition.validateResponse(await response.json());model.positionCatalogError=false;
+    } catch {model.positionCatalogError=true;}
+    if(['sources','acts'].includes(model.view))render();
+  }
   async function reload(snapshotOnly = false, requireAPI = false) {
     const state = await BA.loadState(
       fetch,
@@ -227,7 +236,7 @@
       );
     const previous = model.selectedDoc,
       wasLatest = previous === model.state?.current_id;
-    model.state = state;
+    model.state = state;model.loadError=false;
     if (
       wasLatest ||
       !state.documents.some((d) => d.id === previous && d.status === "approved")
@@ -381,6 +390,8 @@
       model.page = Number(button.dataset.page);
       renderResults();
       document.getElementById("results")?.scrollIntoView({ block: "start" });
+    } else if(action==='clear-archive') {model.archiveFilters={};model.archivePage=1;render();document.getElementById('archive-query')?.focus();
+    } else if(action==='archive-page') {model.archivePage=Number(button.dataset.page);render();document.getElementById('archive-count')?.focus();document.getElementById('archive-count')?.scrollIntoView({block:'start'});
     } else if (action === "change-page") {
       model.changePage = Number(button.dataset.page);
       render();
@@ -464,7 +475,7 @@
       render();
       toast("Preferencias locales eliminadas.");
     } else if (action === "about") about();
-    else if (action === "sync") return sync(button);
+    else if (action === "sync") {void loadPositionCatalog();return sync(button);}
   });
   function closeFilters() {
     model.extraFiltersOpen = false;
@@ -496,6 +507,10 @@
       closeFilters();
     }
   });
+  document.addEventListener('submit',event=>{
+    if(event.target.id!=='archive-search-form')return;event.preventDefault();
+    model.archiveFilters.q=new FormData(event.target).get('q')||'';model.archivePage=1;render();document.getElementById('archive-query')?.focus({preventScroll:true});
+  });
   document.addEventListener("input", (event) => {
     const el = event.target;
     if (el.id === "search") {
@@ -521,6 +536,7 @@
   });
   document.addEventListener("change", (event) => {
     const el = event.target;
+    if(el.dataset.archiveFilter){model.archiveFilters[el.dataset.archiveFilter]=el.value;model.archivePage=1;render();document.getElementById(el.id)?.focus({preventScroll:true});return;}
     if(el.id==='compare-earlier'||el.id==='compare-later'||el.dataset.compareFilter){
       if(el.dataset.compareFilter)model.compareFilters[el.dataset.compareFilter]=el.value;
       else model[el.id==='compare-earlier'?'compareEarlier':'compareLater']=el.value;
@@ -652,6 +668,7 @@
       model.view = route();
       if (["position", "home"].includes(model.view)) render();
       await reload();
+      void loadPositionCatalog();
       if (model.view !== "position") render();
     } catch (err) {
       model.loadError=true;if(model.view==="home"){render();return;}

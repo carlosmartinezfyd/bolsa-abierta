@@ -220,7 +220,7 @@
   }
   function composeAPIURL(path, config = {}) {
     if (
-      !/^(?:state|refresh(?:\/[a-zA-Z0-9_-]+)?|documents\/[a-zA-Z0-9._-]+\.pdf)$/.test(
+      !/^(?:state|positions|refresh(?:\/[a-zA-Z0-9_-]+)?|documents\/[a-zA-Z0-9._-]+\.pdf)$/.test(
         path,
       )
     )
@@ -465,6 +465,35 @@
         row:(afterRows.length?afterRows:beforeRows)[0],beforeRows,afterRows});
     }return result;
   }
+  function publicationEntries(state, catalog) {
+    const host=url=>{try{return new URL(url).hostname;}catch{return 'Portal no consignado';}};
+    const entries=(state.documents||[]).map(d=>({id:'document-'+d.id,document:d,type:'vacancies',title:d.title||'Vacantes sin cubrir',
+      date:d.published_at,actDate:d.act_date,url:d.source_url,host:host(d.source_url),author:'CARM · documento administrativo',
+      bodies:[...new Set((d.rows||[]).map(r=>r.body_code))],course:d.course||'',status:'Datos incorporados'}));
+    const version=catalog?.version;
+    if(version){
+      const personal=[{...version,kind:'roster',content_id:new URL(version.source_url).searchParams.get('IDCONTENIDO')},...(version.documents||[])];
+      for(const d of personal){
+        const type=d.kind==='award'?'award':'list';
+        entries.push({id:'personal-'+d.content_id,type,title:d.title||(d.kind==='maestros_roster'?'Lista única de Maestros':type==='award'?'Adjudicaciones publicadas':'Listas de Secundaria y otros cuerpos'),
+          date:d.published_at,url:d.source_url,host:host(d.source_url),author:'CARM · documento administrativo',
+          bodies:d.kind==='maestros_roster'?['0597']:[],course:d.course||version.course||'',status:'Datos incorporados',personal:d});
+        for(const a of d.amendments||[])entries.push({id:'personal-'+a.content_id,type:'amendment',title:'Corrección de '+(d.kind==='maestros_roster'?'la lista única de Maestros':'las listas publicadas'),
+          date:null,signedAt:a.signed_at,url:a.source_url,host:host(a.source_url),author:'CARM · documento administrativo',
+          bodies:d.kind==='maestros_roster'?['0597']:[],course:d.course||version.course||'',status:'Corrección incorporada',personal:a});
+      }
+    }
+    for(const n of state.catalog?.notices||[])entries.push({id:'notice-'+n.id,type:'notice',title:n.title||'Aviso',date:n.date,url:n.url,host:host(n.url),
+      author:n.author||'Autoría no consignada',bodies:n.body_code?[n.body_code]:[],course:n.course||'',notice:n,
+      status:n.kind==='vacancies'?(isPendingNotice(n,state.documents,state.history_documents)?'Documento pendiente de incorporar':'Documento vinculado a datos incorporados'):'Aviso enlazado; contenido sin incorporar'});
+    return entries.sort((a,b)=>(Date.parse(b.date||b.signedAt)||0)-(Date.parse(a.date||a.signedAt)||0)||a.id.localeCompare(b.id));
+  }
+  function filterPublications(entries,f={}) {
+    const words=norm(f.q).trim().split(/\s+/).filter(Boolean);
+    return entries.filter(e=>words.every(w=>norm(e.title+' '+e.author).includes(w))&&(!f.type||e.type===f.type)
+      &&(!f.body||e.bodies.includes(f.body))&&(!f.course||(f.course==='unknown'?!e.course:e.course===f.course))
+      &&(!f.from||!!e.date&&e.date.slice(0,10)>=f.from)&&(!f.to||!!e.date&&e.date.slice(0,10)<=f.to));
+  }
   function unique(rows, key, label = key) {
     return [...new Map(rows.map((r) => [r[key], r[label]])).entries()].sort(
       (a, b) => String(a[1]).localeCompare(String(b[1]), "es"),
@@ -494,5 +523,7 @@
     durationLabel,
     compatiblePublications,
     comparison,
+    publicationEntries,
+    filterPublications,
   };
 });

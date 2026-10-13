@@ -6,6 +6,10 @@ vm.runInContext(fs.readFileSync(require.resolve('../web/ui.js'),'utf8'),context)
 context.BAUI=context.window.BAUI;
 vm.runInContext(fs.readFileSync(require.resolve('../web/views.js'),'utf8'),context);
 const U=context.window.BAUI,V=context.window.BAV;
+test('public metadata endpoint uses the configured API origin without accepting personal query paths',()=>{
+ assert.equal(BA.composeAPIURL('positions',{apiBase:'https://example.org'}),'https://example.org/api/positions');
+ assert.throws(()=>BA.composeAPIURL('positions?query=Ana',{apiBase:'https://example.org'}));
+});
 function model(){const state=JSON.parse(fs.readFileSync(require.resolve('../data/state.json'),'utf8'));return {state,prefs:{favorites:[],functions:[]},filters:{},page:1,changePage:1,view:'vacancies'};}
 const row=(id,quantity=1)=>({id,center_code:'30000001',function_code:'0590001',cupo:'VP',itinerant:'N',jornada:'Completa',quantity});
 const doc=(id,date,rows)=>({id,status:'approved',title:'Vacantes sin cubrir de Secundaria',published_at:date,act_date:date,rows});
@@ -32,6 +36,19 @@ test('selected legacy document warns beside results and inside detail',()=>{
 });
 test('loading home does not claim that no valid publication exists',()=>{
  const html=V.shell({...model(),view:'home',state:null});assert.match(html,/Cargando publicaciones/);assert.doesNotMatch(html,/no hay un listado validado/);
+});
+test('archive keeps portal hosting separate from authorship and filters dates without inventing missing dates',()=>{
+ const m=model();m.state.catalog.notices=[{id:'n1',title:'ANPE ACTUALIDAD',url:'https://rrhheducacion.carm.es/noticia',date:'2026-09-30',kind:'announcement'},{id:'n2',title:'Aviso sin fecha',kind:'announcement'}];
+ const entries=BA.publicationEntries(m.state);
+ const notice=entries.find(x=>x.id==='notice-n1');assert.equal(notice.author,'Autoría no consignada');assert.equal(notice.host,'rrhheducacion.carm.es');assert.equal(notice.type,'notice');
+ assert.deepEqual(BA.filterPublications(entries,{type:'notice',from:'2026-09-01',to:'2026-09-30'}).map(x=>x.id),['notice-n1']);
+ assert.equal(BA.filterPublications(entries,{q:'sin fecha'}).length,1);
+ assert.equal(BA.filterPublications(entries,{body:'0597'}).length,0);
+});
+test('sources exposes scope-specific pending counts before its folded technical inventory',()=>{
+ const m=model();m.view='sources';const html=V.shell(m);
+ assert.match(html,/Qué puedes consultar/);assert.match(html,/publicaciones de vacantes pendientes/);
+ assert.ok(html.indexOf('Documentos y procedencia')<html.indexOf('Inventario técnico'));
 });
 test('duration distinguishes unextracted, absent and explicit source values',()=>{
  assert.equal(BA.durationLabel({}),'No extraída; consulta el documento');
