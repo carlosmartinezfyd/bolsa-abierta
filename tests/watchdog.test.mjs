@@ -31,7 +31,7 @@ test('zero pending counters cannot turn incomplete discovery into complete cover
  const report=assessHealth({...health,pending_documents:0,unavailable_documents:0,vacancy_status:'success',coverage_complete:false},active,now);
  assert.equal(report.status,'partial');assert.ok(report.issues.includes('coverage_partial'));
 });
-test('watchdog persists incidents and bounds duplicate/ongoing/capped refresh attempts',async()=>{
+test('watchdog continues after four attempts while spacing requests and avoiding active workflows',async()=>{
  const db=new DatabaseSync(':memory:');
  for(const file of ['0003-search-blocks.sql','0004-watchdog.sql'])db.exec(readFileSync(new URL('../gateway/migrations/'+file,import.meta.url),'utf8'));
  const binding={withSession:()=>binding,prepare:sql=>({args:[],bind(...a){this.args=a;return this;},async first(){return db.prepare(sql).get(...this.args)||null;},async run(){return {meta:db.prepare(sql).run(...this.args)};}})};
@@ -45,7 +45,32 @@ test('watchdog persists incidents and bounds duplicate/ongoing/capped refresh at
   time+=3600001;running=true;await watchdog({},env);assert.equal(calls,1);
   time+=3600001;running=false;await watchdog({},env);assert.equal(calls,2);
   db.exec('UPDATE gateway_watchdog SET retries=4,next_retry=0,lease_until=0');
-  time+=3600001;await watchdog({},env);assert.equal(calls,2);
+  time+=3600001;await watchdog({},env);assert.equal(calls,3);
+  assert.equal(db.prepare('SELECT retries FROM gateway_watchdog').get().retries,5);
+  time+=30*60000;await watchdog({},env);assert.equal(calls,3);
+  time+=30*60000;await watchdog({},env);assert.equal(calls,4);
   assert.ok(JSON.parse(db.prepare('SELECT issues FROM gateway_watchdog').get().issues).includes('position_stale'));
+ }finally{db.close();}
+});
+
+test('uncertain dispatches keep their hourly reservation across midnight without stopping later recovery',async()=>{
+ const db=new DatabaseSync(':memory:');
+ for(const file of ['0003-search-blocks.sql','0004-watchdog.sql'])db.exec(readFileSync(new URL('../gateway/migrations/'+file,import.meta.url),'utf8'));
+ const binding={withSession:()=>binding,prepare:sql=>({args:[],bind(...a){this.args=a;return this;},async first(){return db.prepare(sql).get(...this.args)||null;},async run(){return {meta:db.prepare(sql).run(...this.args)};}})};
+ const env={DB:binding,WATCHDOG_ENABLED:'true'};
+ let time=Date.parse('2026-10-13T23:40:00Z'),calls=0,recovered=false;
+ const watchdog=createWatchdog({now:()=>time,readActive:async()=>({...active,checked_at:new Date(time).toISOString()}),
+  readPublished:async()=>recovered?{...health,published_at:new Date(time).toISOString(),checked_at:new Date(time).toISOString()}:health,
+  isRunning:async()=>false,dispatch:async()=>{calls++;throw new Error('Response lost');}});
+ try{
+  assert.equal((await watchdog({},env)).dispatch_status,'dispatch_unavailable');
+  time+=30*60000;await watchdog({},env);assert.equal(calls,1);
+  for(let attempt=2;attempt<=7;attempt++){
+   time+=attempt===2?30*60000:3600000;
+   await watchdog({},env);assert.equal(calls,attempt);
+  }
+  assert.equal(db.prepare('SELECT retries FROM gateway_watchdog').get().retries,6);
+  recovered=true;time+=3600000;
+  assert.equal((await watchdog({},env)).dispatch_status,'not_needed');assert.equal(calls,7);
  }finally{db.close();}
 });
