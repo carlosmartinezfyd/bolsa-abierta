@@ -1,19 +1,21 @@
 {
   "version": 1,
   "worker": "bolsa-abierta-gateway",
-  "code_sha": "3e8c1d3655be44c975679ec9103a74b6f9248f17",
-  "worker_source_sha": "42827de5d0f6104d9f6afedbe3a8a4598e1f6e21",
+  "code_sha": "172941dafa578c58ded74d4aeb814a4f1e193de3",
+  "worker_source_sha": "54efdc3025aa950c8b4309c7685679676fedb16b",
   "status": "deployed",
   "reason": "verified_local_wrangler_deployment",
-  "updated_at": "2026-10-12T23:13:17.456165+00:00",
-  "worker_version": "be5732fe-861b-4b32-afdf-2bb4c2c86cc9",
+  "updated_at": "2026-10-15T08:18:16.708046+00:00",
+  "worker_version": "8b228aa4-1fe8-49a3-95d0-b2c36a7ec849",
   "position_storage": "blocks-v1",
   "daily_resumption": false,
   "watchdog_enabled": true,
   "native_schedule_enabled": true,
-  "validated_refresh_run": "38320263409",
+  "watchdog_min_retry_minutes": 60,
+  "watchdog_daily_counter_is_limit": false,
+  "validated_refresh_run": "38703801360",
   "validated_records": 22393,
+  "origin_checked_at": "2026-10-15T08:12:15.205694+00:00",
   "encrypted_restore": "verified",
-  "production_cpu_sample_events": 4,
-  "production_cpu_sample_max_ms": 8
+  "recovery_checked_at": "2026-10-15T08:16:29.460862+00:00"
 }
