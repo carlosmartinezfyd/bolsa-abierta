@@ -1,6 +1,7 @@
 import socket
 import unittest
-from unittest.mock import Mock
+from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 import requests
 
@@ -211,6 +212,13 @@ class ClientTests(unittest.TestCase):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def setUp(self):
+        # Fixtures describe September 2026; the wall clock must not age them out.
+        clock_patch = patch('bolsa_abierta.sources.datetime', wraps=datetime)
+        self.clock = clock_patch.start()
+        self.addCleanup(clock_patch.stop)
+        self.clock.now.return_value = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
     def client(self, mapping):
         client = Mock()
         def fetch(url, **kwargs):
@@ -248,6 +256,18 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(notice['pdf_urls'], [PDF_URL])
         self.assertEqual(notice['error_code'], 'network_error')
         self.assertTrue(any(not c['success'] for c in result['checks']))
+
+    def test_retained_notice_leaves_recent_window_after_fourteen_days(self):
+        known = {'id':'old', 'url':NOTICE_URL, 'title':TITLE, 'date':'2026-09-30', 'kind':'vacancies', 'pdf_urls':[PDF_URL]}
+        for day, should_check in ((14, True), (15, False)):
+            with self.subTest(day=day):
+                self.clock.now.return_value = datetime(2026, 10, day, tzinfo=timezone.utc)
+                result = discover_notices(self.client(self.roots()), [known])
+                notice = next(n for n in result['notices'] if n['url'] == NOTICE_URL)
+                self.assertEqual(notice['should_check'], should_check)
+                self.assertEqual(result['complete'], not should_check)
+                self.assertEqual(notice['pdf_urls'], [PDF_URL])
+                self.assertEqual(notice.get('error_code'), 'network_error' if should_check else None)
 
     def test_malformed_feed_and_empty_html_are_partial(self):
         result = discover_notices(self.client(self.roots('<rss><broken>', '<html></html>')))

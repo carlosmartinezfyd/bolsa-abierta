@@ -50,7 +50,9 @@ export function createWatchdog(dependencies={}){
    last_good=CASE WHEN ? THEN last_good ELSE ? END WHERE singleton=1`).bind(start,report.status,JSON.stringify(report.issues),report.needs_refresh?1:0,start,report.needs_refresh?1:0,start).run();
   let dispatchStatus='not_needed';
   const transient=report.status==='unavailable'&&!previous.first_failure;
-  if(report.needs_refresh&&!transient&&previous.next_retry<=start&&(previous.day!==day||previous.retries<4)){
+  // The hourly reservation bounds attempts throughout the day. A daily counter
+  // must not disable recovery after several successful or failed refreshes.
+  if(report.needs_refresh&&!transient&&previous.next_retry<=start){
    try{
     let running;
     if(dependencies.isRunning)running=await dependencies.isRunning();

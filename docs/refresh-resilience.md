@@ -40,7 +40,9 @@ El estado público de recuperación exige un simulacro verificado dentro de la m
 
 El observador lee un estado pequeño de Pages y los metadatos activos de D1. Detecta comprobaciones reales o publicaciones de más de 90 minutos, origen no verificado, errores de colección y discrepancias API/Pages. Tolera veinte minutos para una publicación en curso. Una indisponibilidad aislada necesita otra observación. La cobertura incompleta y la recuperación no preparada se mantienen visibles sin provocar reintentos infinitos de documentos pendientes de revisión.
 
-Antes de solicitar un refresco consulta los estados no terminales del workflow en `main`. Usa la misma compuerta que el botón público, una reserva previa al envío, un intervalo mínimo de una hora y un máximo de cuatro solicitudes diarias. Una respuesta incierta consume el intento. `/api/health` expone únicamente el estado agregado persistente y el resultado del último intento. Una caída de GitHub, Cloudflare o CARM puede impedir la recuperación; los errores no se convierten en verificaciones nuevas.
+Antes de solicitar un refresco consulta los estados no terminales del workflow en `main`. Usa la misma compuerta que el botón público, una reserva previa al envío y un intervalo mínimo de una hora entre intentos, también al cruzar medianoche. Puede continuar durante todo el día: el contador diario es informativo y no bloquea la recuperación al llegar a cuatro. El intervalo limita a 24 los intentos por día; una respuesta incierta también consume la espera de una hora. No solicita otro refresco si ya hay un workflow activo o la comprobación vuelve a estar al día. `/api/health` expone únicamente el estado agregado persistente y el resultado del último intento. Una caída de GitHub, Cloudflare o CARM puede impedir la recuperación; los errores no se convierten en verificaciones nuevas.
+
+Las pruebas de descubrimiento usan un reloj fijo coherente con sus documentos de ejemplo. Una prueba específica comprueba el límite de catorce días; el paso del calendario real no puede dejar sin ejecutar la recogida de fuentes.
 
 ## Alcance de CARM observado antes del despliegue
 
