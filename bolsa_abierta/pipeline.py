@@ -6,7 +6,7 @@ import sys
 import time
 
 from .store import now
-from .sources import SourceError, TRANSIENT_SOURCE_ERRORS
+from .sources import SourceError, TRANSIENT_SOURCE_ERRORS, FEED_URL, INDEX_URL
 
 
 def isolated_parse(data, source_url, retrieved_at):
@@ -54,6 +54,7 @@ def run_refresh(store, client=None, discover=None, parser=None):
         and not (
             c.get('error_code') == 'http_error'
             and c.get('error') == 'Official origin returned HTTP 404'
+            and c.get('url') not in (FEED_URL, INDEX_URL)
             and notice_kinds.get(c.get('url')) == 'announcement'
         )
         for c in checks
