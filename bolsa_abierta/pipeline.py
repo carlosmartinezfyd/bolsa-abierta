@@ -42,8 +42,22 @@ def run_refresh(store, client=None, discover=None, parser=None):
         store.publish(state)
         return {'status': 'failed', 'message': 'No se pudo consultar el catálogo oficial.', 'errors': [str(exc)[:600]]}
     checks.extend(discovered['checks'])
-    operational_failure = any(not c.get('success') and c.get('error_code') not in
-        TRANSIENT_SOURCE_ERRORS | {'discovery_limit'} for c in checks)
+    # Deleted non-vacancy articles (for example, unrelated union news in the
+    # official RSS) reduce discovery completeness, but cannot invalidate a
+    # vacancy refresh. Preserve their failed checks and partial status.
+    # A missing vacancy notice, feed/index error or other unexpected failure
+    # remains operationally fatal.
+    notice_kinds = {n.get('url'): n.get('kind') for n in discovered['notices']}
+    operational_failure = any(
+        not c.get('success')
+        and c.get('error_code') not in TRANSIENT_SOURCE_ERRORS | {'discovery_limit'}
+        and not (
+            c.get('error_code') == 'http_error'
+            and c.get('error') == 'Official origin returned HTTP 404'
+            and notice_kinds.get(c.get('url')) == 'announcement'
+        )
+        for c in checks
+    )
     notices = discovered['notices']
     documents = {doc['id']: doc for doc in state['documents']}
     seen = {}
