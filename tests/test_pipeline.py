@@ -71,7 +71,9 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result['operational_status'], 'success')
         state = self.store.state()
         self.assertIsNone(state['freshness']['last_success_at'])
-        self.assertEqual(state['catalog']['checks'][-1]['error_code'], 'http_error')
+        self.assertTrue(any(c.get('error_code') == 'http_error' and
+            c.get('url') == 'https://rrhheducacion.carm.es/sterm-old-unrelated-news/'
+            for c in state['catalog']['checks']))
         self.assertEqual(len(state['documents']), 3)
 
     def test_missing_vacancy_or_discovery_root_still_fails_operationally(self):
