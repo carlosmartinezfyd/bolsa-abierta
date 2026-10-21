@@ -52,6 +52,61 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.store.state()['freshness']['operational_status'], 'failed')
         self.assertIsNone(self.store.state()['freshness']['last_success_at'])
 
+    def test_deleted_unrelated_announcement_is_partial_not_operational_failure(self):
+        # The RSS also references unrelated news. A vanished article is recorded
+        # as incomplete discovery, without failing the vacancy CI job.
+        def unrelated_404(client, known_notices=()):
+            data = discovery(client)
+            url = 'https://rrhheducacion.carm.es/sterm-old-unrelated-news/'
+            data['complete'] = False
+            data['notices'].append({'id': 'unrelated', 'url': url,
+                'kind': 'announcement', 'date': '2026-10-21', 'pdf_urls': []})
+            data['checks'].append({'id': 'unrelated', 'url': url,
+                'success': False, 'status': 'failed',
+                'error_code': 'http_error',
+                'error': 'Official origin returned HTTP 404'})
+            return data
+        result = self.run_it(discover=unrelated_404)
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(result['operational_status'], 'success')
+        state = self.store.state()
+        self.assertIsNone(state['freshness']['last_success_at'])
+        self.assertTrue(any(c.get('error_code') == 'http_error' and
+            c.get('url') == 'https://rrhheducacion.carm.es/sterm-old-unrelated-news/'
+            for c in state['catalog']['checks']))
+        self.assertEqual(len(state['documents']), 3)
+
+    def test_missing_vacancy_or_discovery_root_still_fails_operationally(self):
+        for kind, url in (('vacancies', 'https://rrhheducacion.carm.es/missing-vacancies/'),
+                          ('announcement', 'https://rrhheducacion.carm.es/feed/')):
+            with self.subTest(kind=kind):
+                def broken(client, known_notices=()):
+                    data = discovery(client)
+                    data['complete'] = False
+                    data['notices'].append({'id': 'missing', 'url': url,
+                        'kind': kind, 'date': '2026-10-21', 'pdf_urls': []})
+                    data['checks'].append({'id': 'missing', 'url': url,
+                        'success': False, 'status': 'failed',
+                        'error_code': 'http_error',
+                        'error': 'Official origin returned HTTP 404'})
+                    return data
+                result = self.run_it(discover=broken)
+                self.assertEqual(result['operational_status'], 'failed')
+
+    def test_other_nonvacancy_failure_still_fails_operationally(self):
+        def broken(client, known_notices=()):
+            data = discovery(client)
+            data['complete'] = False
+            url = 'https://rrhheducacion.carm.es/announcement/'
+            data['notices'].append({'id': 'other', 'url': url,
+                'kind': 'announcement', 'date': '2026-10-21', 'pdf_urls': []})
+            data['checks'].append({'id': 'other', 'url': url,
+                'success': False, 'status': 'failed',
+                'error_code': 'invalid_response',
+                'error': 'Unexpected content'})
+            return data
+        self.assertEqual(self.run_it(discover=broken)['operational_status'], 'failed')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
