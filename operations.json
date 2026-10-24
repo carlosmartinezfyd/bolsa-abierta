@@ -8510,7 +8510,7 @@
       "trigger": "worker_cron",
       "request_id": "54ac6acc025346cc89edf1c17b78805c",
       "started_at": "2026-10-24T11:08:59.998000Z",
-      "ended_at": "2026-10-24T11:13:45.497Z",
+      "ended_at": "2026-10-24T11:13:45.497000Z",
       "scheduled_at": "2026-10-24T11:07:37.688000Z",
       "clock_received_at": "2026-10-24T11:07:38.781000Z",
       "dispatch_at": "2026-10-24T11:07:40.993000Z",
@@ -8542,6 +8542,49 @@
           "started_at": "2026-10-24T11:13:45.256000Z",
           "ended_at": "2026-10-24T11:13:45.394000Z",
           "elapsed_seconds": 0.131,
+          "status": "success",
+          "exit_code": 0
+        }
+      }
+    },
+    {
+      "run_id": "40096801119:1",
+      "code_sha": "506976751c8512e046ad85db4739018ddefa2648",
+      "trigger": "worker_cron",
+      "request_id": "e285a920833d46b1a6c34eefad3903ea",
+      "started_at": "2026-10-24T13:08:52.374000Z",
+      "ended_at": "2026-10-24T13:13:33.421Z",
+      "scheduled_at": "2026-10-24T13:07:37.688000Z",
+      "clock_received_at": "2026-10-24T13:07:38.351000Z",
+      "dispatch_at": "2026-10-24T13:07:40.983000Z",
+      "elapsed_seconds": 281.047,
+      "status": "partial",
+      "phases": {
+        "inventory": {
+          "started_at": "2026-10-24T13:09:33.725000Z",
+          "ended_at": "2026-10-24T13:13:32.866000Z",
+          "elapsed_seconds": 239.115,
+          "status": "partial",
+          "exit_code": 3
+        },
+        "positions": {
+          "started_at": "2026-10-24T13:09:17.845000Z",
+          "ended_at": "2026-10-24T13:09:33.601000Z",
+          "elapsed_seconds": 15.748,
+          "status": "success",
+          "exit_code": 0
+        },
+        "vacancies": {
+          "started_at": "2026-10-24T13:08:52.716000Z",
+          "ended_at": "2026-10-24T13:09:17.596000Z",
+          "elapsed_seconds": 24.872,
+          "status": "partial",
+          "exit_code": 0
+        },
+        "build": {
+          "started_at": "2026-10-24T13:13:33.176000Z",
+          "ended_at": "2026-10-24T13:13:33.320000Z",
+          "elapsed_seconds": 0.137,
           "status": "success",
           "exit_code": 0
         }
