@@ -9,7 +9,7 @@
       "kind": "baseline",
       "published_at": "2026-07-22",
       "source_status": "cached",
-      "attempted_at": "2026-10-28T01:09:23.950153+00:00",
+      "attempted_at": "2026-10-28T02:09:07.067271+00:00",
       "origin_checked_at": "2026-10-27T23:13:19.287268+00:00",
       "error_code": "time_limit",
       "received_at": "2026-10-12T22:57:03.777361+00:00",
@@ -22,9 +22,9 @@
       "kind": "correction",
       "signed_at": "2026-07-28",
       "source_status": "fresh",
-      "attempted_at": "2026-10-28T01:09:53.961618+00:00",
-      "origin_checked_at": "2026-10-28T01:09:57.952260+00:00",
-      "received_at": "2026-10-28T01:09:57.952260+00:00",
+      "attempted_at": "2026-10-28T02:09:07.067935+00:00",
+      "origin_checked_at": "2026-10-28T02:09:09.261394+00:00",
+      "received_at": "2026-10-28T02:09:09.261394+00:00",
       "received_via": "official_download"
     },
     {
@@ -34,9 +34,9 @@
       "kind": "correction",
       "signed_at": "2026-08-04",
       "source_status": "fresh",
-      "attempted_at": "2026-10-28T01:09:57.952280+00:00",
-      "origin_checked_at": "2026-10-28T01:09:58.395929+00:00",
-      "received_at": "2026-10-28T01:09:58.395929+00:00",
+      "attempted_at": "2026-10-28T02:09:09.261416+00:00",
+      "origin_checked_at": "2026-10-28T02:09:09.741990+00:00",
+      "received_at": "2026-10-28T02:09:09.741990+00:00",
       "received_via": "official_download"
     },
     {
@@ -46,7 +46,7 @@
       "kind": "maestros_roster",
       "published_at": "2026-07-28",
       "source_status": "cached",
-      "attempted_at": "2026-10-28T01:09:58.395950+00:00",
+      "attempted_at": "2026-10-28T02:09:09.742012+00:00",
       "origin_checked_at": "2026-10-27T23:13:25.363600+00:00",
       "error_code": "time_limit",
       "received_at": "2026-10-12T22:57:09.495904+00:00",
@@ -59,9 +59,9 @@
       "kind": "maestros_correction",
       "published_at": "2026-09-09",
       "source_status": "fresh",
-      "attempted_at": "2026-10-28T01:10:28.639685+00:00",
-      "origin_checked_at": "2026-10-28T01:10:29.770915+00:00",
-      "received_at": "2026-10-28T01:10:29.770915+00:00",
+      "attempted_at": "2026-10-28T02:09:09.742414+00:00",
+      "origin_checked_at": "2026-10-28T02:09:12.194385+00:00",
+      "received_at": "2026-10-28T02:09:12.194385+00:00",
       "received_via": "official_download"
     },
     {
@@ -71,9 +71,9 @@
       "kind": "award",
       "published_at": "2026-09-24",
       "source_status": "fresh",
-      "attempted_at": "2026-10-28T01:10:29.770936+00:00",
-      "origin_checked_at": "2026-10-28T01:10:32.633654+00:00",
-      "received_at": "2026-10-28T01:10:32.633654+00:00",
+      "attempted_at": "2026-10-28T02:09:12.194407+00:00",
+      "origin_checked_at": "2026-10-28T02:09:14.502568+00:00",
+      "received_at": "2026-10-28T02:09:14.502568+00:00",
       "received_via": "official_download"
     },
     {
@@ -83,9 +83,9 @@
       "kind": "award",
       "published_at": "2026-09-30",
       "source_status": "fresh",
-      "attempted_at": "2026-10-28T01:10:32.633676+00:00",
-      "origin_checked_at": "2026-10-28T01:10:39.736311+00:00",
-      "received_at": "2026-10-28T01:10:39.736311+00:00",
+      "attempted_at": "2026-10-28T02:09:14.502589+00:00",
+      "origin_checked_at": "2026-10-28T02:09:16.951729+00:00",
+      "received_at": "2026-10-28T02:09:16.951729+00:00",
       "received_via": "official_download"
     }
   ],
@@ -104,7 +104,7 @@
       "signed_at": "2026-07-28",
       "pages": 2,
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599",
-      "checked_at": "2026-10-28T01:09:57.952260+00:00",
+      "checked_at": "2026-10-28T02:09:09.261394+00:00",
       "kind": "correction",
       "incorporated": true
     },
@@ -114,7 +114,7 @@
       "signed_at": "2026-08-04",
       "pages": 1,
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599",
-      "checked_at": "2026-10-28T01:09:58.395929+00:00",
+      "checked_at": "2026-10-28T02:09:09.741990+00:00",
       "kind": "correction",
       "incorporated": true
     }
@@ -875,7 +875,7 @@
           "bytes": 243631,
           "signed_at": "2026-09-09",
           "published_at": "2026-09-09",
-          "checked_at": "2026-10-28T01:10:29.770915+00:00",
+          "checked_at": "2026-10-28T02:09:12.194385+00:00",
           "pages": 4,
           "page_inclusion_counts": [
             0,
@@ -974,7 +974,7 @@
       "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJCONPLAZASECUNDARIA-210732.pdf&IDCONTENIDO=209126&RASTRO=c77%24m22725%2C22759%2C4254",
       "sha256": "1b06bc4d1e55b615cfdb64acd12c28392385d0b13f941e83409608081e6aa2c1",
       "published_at": "2026-09-24",
-      "checked_at": "2026-10-28T01:10:32.633654+00:00",
+      "checked_at": "2026-10-28T02:09:14.502568+00:00",
       "process_id": "3125",
       "pages": 25,
       "row_count": 147,
@@ -1273,7 +1273,7 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJCONPLAZASECUNDARIA-216302.pdf&ALIAS=ARCH&IDCONTENIDO=209314&RASTRO=c798$m3911,4036,24219",
       "sha256": "cd130841878cb2caa0443f34a9cf52ef0d3ddd79865100172b81c078cfc29067",
       "published_at": "2026-09-30",
-      "checked_at": "2026-10-28T01:10:39.736311+00:00",
+      "checked_at": "2026-10-28T02:09:16.951729+00:00",
       "process_id": "3133",
       "pages": 24,
       "parser_revision": "award-v3-affirmative-administrative-facts",
