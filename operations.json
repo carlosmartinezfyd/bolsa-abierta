@@ -14358,7 +14358,7 @@
       "trigger": "schedule",
       "request_id": null,
       "started_at": "2026-11-02T06:52:20.786000Z",
-      "ended_at": "2026-11-02T06:57:09.174Z",
+      "ended_at": "2026-11-02T06:57:09.174000Z",
       "scheduled_at": null,
       "clock_received_at": null,
       "dispatch_at": null,
@@ -14390,6 +14390,49 @@
           "started_at": "2026-11-02T06:57:08.817000Z",
           "ended_at": "2026-11-02T06:57:09.040000Z",
           "elapsed_seconds": 0.208,
+          "status": "success",
+          "exit_code": 0
+        }
+      }
+    },
+    {
+      "run_id": "41414456486:1",
+      "code_sha": "506976751c8512e046ad85db4739018ddefa2648",
+      "trigger": "worker_cron",
+      "request_id": "ca98098e8df042819f79950575280159",
+      "started_at": "2026-11-02T08:38:52.968000Z",
+      "ended_at": "2026-11-02T08:43:44.176Z",
+      "scheduled_at": "2026-11-02T08:37:37.688000Z",
+      "clock_received_at": "2026-11-02T08:37:38.623000Z",
+      "dispatch_at": "2026-11-02T08:37:40.943000Z",
+      "elapsed_seconds": 291.208,
+      "status": "partial",
+      "phases": {
+        "inventory": {
+          "started_at": "2026-11-02T08:39:41.312000Z",
+          "ended_at": "2026-11-02T08:43:43.254000Z",
+          "elapsed_seconds": 241.93,
+          "status": "partial",
+          "exit_code": 3
+        },
+        "positions": {
+          "started_at": "2026-11-02T08:39:23.566000Z",
+          "ended_at": "2026-11-02T08:39:41.189000Z",
+          "elapsed_seconds": 17.611,
+          "status": "success",
+          "exit_code": 0
+        },
+        "vacancies": {
+          "started_at": "2026-11-02T08:38:53.695000Z",
+          "ended_at": "2026-11-02T08:39:23.415000Z",
+          "elapsed_seconds": 29.708,
+          "status": "partial",
+          "exit_code": 0
+        },
+        "build": {
+          "started_at": "2026-11-02T08:43:43.620000Z",
+          "ended_at": "2026-11-02T08:43:44.063000Z",
+          "elapsed_seconds": 0.428,
           "status": "success",
           "exit_code": 0
         }
