@@ -14616,7 +14616,7 @@
       "trigger": "schedule",
       "request_id": null,
       "started_at": "2026-11-02T17:03:09.115000Z",
-      "ended_at": "2026-11-02T17:08:12.153Z",
+      "ended_at": "2026-11-02T17:08:12.153000Z",
       "scheduled_at": null,
       "clock_received_at": null,
       "dispatch_at": null,
@@ -14647,6 +14647,49 @@
         "build": {
           "started_at": "2026-11-02T17:08:11.872000Z",
           "ended_at": "2026-11-02T17:08:12.058000Z",
+          "elapsed_seconds": 0.174,
+          "status": "success",
+          "exit_code": 0
+        }
+      }
+    },
+    {
+      "run_id": "41502381321:1",
+      "code_sha": "506976751c8512e046ad85db4739018ddefa2648",
+      "trigger": "worker_cron",
+      "request_id": "15c1d1f49a0a44848c5debd4f6c9f61a",
+      "started_at": "2026-11-02T18:39:01.648000Z",
+      "ended_at": "2026-11-02T18:43:47.320Z",
+      "scheduled_at": "2026-11-02T18:37:37.688000Z",
+      "clock_received_at": "2026-11-02T18:37:38.377000Z",
+      "dispatch_at": "2026-11-02T18:37:41.363000Z",
+      "elapsed_seconds": 285.672,
+      "status": "partial",
+      "phases": {
+        "inventory": {
+          "started_at": "2026-11-02T18:39:45.477000Z",
+          "ended_at": "2026-11-02T18:43:46.188000Z",
+          "elapsed_seconds": 240.699,
+          "status": "partial",
+          "exit_code": 3
+        },
+        "positions": {
+          "started_at": "2026-11-02T18:39:27.101000Z",
+          "ended_at": "2026-11-02T18:39:45.349000Z",
+          "elapsed_seconds": 18.218,
+          "status": "success",
+          "exit_code": 0
+        },
+        "vacancies": {
+          "started_at": "2026-11-02T18:39:02.065000Z",
+          "ended_at": "2026-11-02T18:39:26.951000Z",
+          "elapsed_seconds": 24.868,
+          "status": "partial",
+          "exit_code": 0
+        },
+        "build": {
+          "started_at": "2026-11-02T18:43:47.021000Z",
+          "ended_at": "2026-11-02T18:43:47.208000Z",
           "elapsed_seconds": 0.174,
           "status": "success",
           "exit_code": 0
