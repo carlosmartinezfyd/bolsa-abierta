@@ -8,10 +8,11 @@
       "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=Resoluci%C3%B3n+Definitiva+listas+de+interinos+2026-2027.pdf&IDCONTENIDO=208095&IDTIPO=60&RASTRO=c77%24m22725%2C22759%2C4491%2C72314%2C4500%2C4092%2C75599",
       "kind": "baseline",
       "published_at": "2026-07-22",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:39:57.676612+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:28.825666+00:00",
       "origin_checked_at": "2026-11-16T18:39:59.638229+00:00",
-      "received_at": "2026-11-16T18:39:59.638229+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:03.777361+00:00",
       "received_via": "official_download"
     },
     {
@@ -20,10 +21,11 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599",
       "kind": "correction",
       "signed_at": "2026-07-28",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:39:59.638253+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:28.938739+00:00",
       "origin_checked_at": "2026-11-16T18:40:00.287039+00:00",
-      "received_at": "2026-11-16T18:40:00.287039+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:04.383512+00:00",
       "received_via": "official_download"
     },
     {
@@ -32,10 +34,11 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599",
       "kind": "correction",
       "signed_at": "2026-08-04",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:40:00.287065+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:31.155203+00:00",
       "origin_checked_at": "2026-11-16T18:40:02.081109+00:00",
-      "received_at": "2026-11-16T18:40:02.081109+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:06.227056+00:00",
       "received_via": "official_download"
     },
     {
@@ -44,10 +47,11 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=1_res_anexos_int_def.pdf&ALIAS=ARCH&IDCONTENIDO=208253&IDTIPO=60&RASTRO=c$m3977,75239,75501",
       "kind": "maestros_roster",
       "published_at": "2026-07-28",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:40:02.081134+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:32.951304+00:00",
       "origin_checked_at": "2026-11-16T18:40:05.146158+00:00",
-      "received_at": "2026-11-16T18:40:05.146158+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:09.495904+00:00",
       "received_via": "official_download"
     },
     {
@@ -56,10 +60,11 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=C.%20errores%20Definitiva%20cambio%20n%20lista%20%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208782&IDTIPO=60&RASTRO=c$m3977,75239,75501",
       "kind": "maestros_correction",
       "published_at": "2026-09-09",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:40:05.146183+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:35.123833+00:00",
       "origin_checked_at": "2026-11-16T18:40:06.292633+00:00",
-      "received_at": "2026-11-16T18:40:06.292633+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:10.740803+00:00",
       "received_via": "official_download"
     },
     {
@@ -68,10 +73,11 @@
       "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJCONPLAZASECUNDARIA-210732.pdf&IDCONTENIDO=209126&RASTRO=c77%24m22725%2C22759%2C4254",
       "kind": "award",
       "published_at": "2026-09-24",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:40:06.292659+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:36.949593+00:00",
       "origin_checked_at": "2026-11-16T18:40:08.305964+00:00",
-      "received_at": "2026-11-16T18:40:08.305964+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:12.587449+00:00",
       "received_via": "official_download"
     },
     {
@@ -80,10 +86,11 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJCONPLAZASECUNDARIA-216302.pdf&ALIAS=ARCH&IDCONTENIDO=209314&RASTRO=c798$m3911,4036,24219",
       "kind": "award",
       "published_at": "2026-09-30",
-      "source_status": "fresh",
-      "attempted_at": "2026-11-16T18:40:08.305991+00:00",
+      "source_status": "cached",
+      "attempted_at": "2026-11-16T18:57:38.954893+00:00",
       "origin_checked_at": "2026-11-16T18:40:10.284822+00:00",
-      "received_at": "2026-11-16T18:40:10.284822+00:00",
+      "error_code": "access_challenge",
+      "received_at": "2026-10-12T22:57:14.532064+00:00",
       "received_via": "official_download"
     }
   ],
@@ -102,7 +109,6 @@
       "signed_at": "2026-07-28",
       "pages": 2,
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Orden+complementaria+listas+definitivas+de+interinos+26_27+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208249&IDTIPO=60&RASTRO=c%24m75599",
-      "checked_at": "2026-11-16T18:40:00.287039+00:00",
       "kind": "correction",
       "incorporated": true
     },
@@ -112,7 +118,6 @@
       "signed_at": "2026-08-04",
       "pages": 1,
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=Correcci%C3%B3n+errores+RESOLUCION+DEFINITIVA+LISTAS+INTERINO+%28COPIA%29.pdf&ALIAS=ARCH&IDCONTENIDO=208379&IDTIPO=60&RASTRO=c%24m75599",
-      "checked_at": "2026-11-16T18:40:02.081109+00:00",
       "kind": "correction",
       "incorporated": true
     }
@@ -130,7 +135,7 @@
       "bytes": 4057379,
       "signed_at": "2026-07-28",
       "published_at": "2026-07-28",
-      "checked_at": "2026-11-16T18:40:05.146158+00:00",
+      "checked_at": "2026-10-04T10:54:08Z",
       "pages": 651,
       "baseline_row_count": 9207,
       "row_count": 9211,
@@ -873,7 +878,7 @@
           "bytes": 243631,
           "signed_at": "2026-09-09",
           "published_at": "2026-09-09",
-          "checked_at": "2026-11-16T18:40:06.292633+00:00",
+          "checked_at": "2026-10-04T10:54:08Z",
           "pages": 4,
           "page_inclusion_counts": [
             0,
@@ -972,7 +977,7 @@
       "source_url": "https://www.carm.es/web/descarga?ALIAS=ARCH&ARCHIVO=ADJCONPLAZASECUNDARIA-210732.pdf&IDCONTENIDO=209126&RASTRO=c77%24m22725%2C22759%2C4254",
       "sha256": "1b06bc4d1e55b615cfdb64acd12c28392385d0b13f941e83409608081e6aa2c1",
       "published_at": "2026-09-24",
-      "checked_at": "2026-11-16T18:40:08.305964+00:00",
+      "checked_at": "2026-10-02T20:06:59Z",
       "process_id": "3125",
       "pages": 25,
       "row_count": 147,
@@ -1271,7 +1276,7 @@
       "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJCONPLAZASECUNDARIA-216302.pdf&ALIAS=ARCH&IDCONTENIDO=209314&RASTRO=c798$m3911,4036,24219",
       "sha256": "cd130841878cb2caa0443f34a9cf52ef0d3ddd79865100172b81c078cfc29067",
       "published_at": "2026-09-30",
-      "checked_at": "2026-11-16T18:40:10.284822+00:00",
+      "checked_at": "2026-10-04T09:32:49.444540+00:00",
       "process_id": "3133",
       "pages": 24,
       "parser_revision": "award-v3-affirmative-administrative-facts",
