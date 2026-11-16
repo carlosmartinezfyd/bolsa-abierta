@@ -1,16 +1,15 @@
 {
-  "status": "degraded",
-  "attempted_at": "2026-11-16T18:57:20.531689+00:00",
-  "checked_at": "2026-11-16T18:39:59.638229+00:00",
+  "status": "verified",
+  "attempted_at": "2026-11-16T20:09:50.437858+00:00",
+  "checked_at": "2026-11-16T20:10:04.234032+00:00",
   "resume_after": null,
   "active_version": "65c33ad61b3f5c73771e20fc2ec73b9f1841dae8f05f9e3965d6a918391a54a3",
   "record_count": 22393,
   "pending_documents": 5,
   "verified_documents": 7,
-  "origin_verified_documents": 0,
-  "origin_failed_documents": 7,
-  "cached_documents": 7,
-  "origin_check_complete": false,
-  "cache_status": "ready",
-  "error_code": "origin_unavailable_cached_evidence"
+  "origin_verified_documents": 7,
+  "origin_failed_documents": 0,
+  "cached_documents": 0,
+  "origin_check_complete": true,
+  "cache_status": "ready"
 }
