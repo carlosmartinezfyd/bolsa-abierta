@@ -1,7 +1,7 @@
 """Fail-closed parser for the reviewed CARM weekly unfilled-vacancies template.
 
 Acceptance is structural, not electronic-signature authentication. The reviewed
-corpus is tests/fixtures/carm-2026-09-30.pdf; only its seven-column landscape
+corpus is tests/fixtures/carm-2026-*.pdf; only its seven-column landscape
 template is accepted. Function codes are validated structurally; their labels
 are retained from the original instead of guessed from a speciality dictionary.
 No OCR, network or filesystem access is performed. A caller must enforce process
@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 import pdfplumber
 
 
-PARSER_VERSION = "carm-sin-cubrir/1.0.1"
+PARSER_VERSION = "carm-sin-cubrir/1.0.2"
 MAX_BYTES = 10 * 1024 * 1024
 MAX_PAGES = 50
 TITLE = "Listado de Vacantes Sin Cubrir de Secundaria"
@@ -88,6 +88,7 @@ def validate_table(header, cells, *, page, document_id, cell_bboxes):
     Every row has seven nonempty cells and seven contiguous, finite, increasing
     cell rectangles. Murcia centre IDs have eight digits starting 30, function
     codes have body 05xx and a three-digit or A/F/I plus two-digit speciality,
+    or the reviewed professional piano accompanist code 0594B23,
     label is nonempty original text, Cupo is VS/VP, Iti is N/S,
     jornada is Completa or Tiempo Parcial 1..40 horas, quantity is 1..999.
     """
@@ -101,7 +102,7 @@ def validate_table(header, cells, *, page, document_id, cell_bboxes):
             raise ParseError("Incomplete row or coordinates")
         values = [_normal(v) for v in raw]
         center = re.fullmatch(r"(30\d{6}) (\S.*)", values[0])
-        function = re.fullmatch(r"(05\d{2}(?:\d{3}|[AFI]\d{2})) (\S.*)", values[2])
+        function = re.fullmatch(r"(05\d{2}(?:\d{3}|[AFI]\d{2})|0594B23) (\S.*)", values[2])
         if not center or not function:
             raise ParseError("Invalid centre or function code")
         code, label = function.groups()
