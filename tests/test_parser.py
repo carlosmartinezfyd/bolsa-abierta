@@ -93,6 +93,30 @@ def template_pdf(counts, *, process_ids=None, dates=None, bad_footer=False, bad_
 
 
 class ParserTests(unittest.TestCase):
+    def test_november_original_with_professional_piano_accompanist(self):
+        data = FIXTURE.with_name('carm-2026-11-04.pdf').read_bytes()
+        self.assertEqual(hashlib.sha256(data).hexdigest(),
+            '3ab4dc3b979b6746ce98d78440f1a825b7e8242276fe3ab81aebf415e9b0dc32')
+        doc = self.parse(data, source='https://www.carm.es/web/descarga?IDCONTENIDO=210296',
+                         retrieved='2026-11-17T20:00:00+00:00')
+        self.assertEqual((doc['process_id'], doc['published_at']), ('3163', '2026-11-04T11:25:00+00:00'))
+        self.assertEqual((doc['row_count'], doc['places'], doc['page_counts']), (9, 9, [9]))
+        piano = doc['rows'][7]
+        self.assertEqual((piano['center_code'], piano['function_code'], piano['function']),
+            ('30009721', '0594B23', 'PIANO ACOMPAÑANTE PROFESIONAL'))
+        self.assertEqual((piano['body_code'], piano['language']), ('0594', 'Sin mención bilingüe'))
+        with pdfplumber.open(io.BytesIO(data)) as pdf:
+            originals = [row for page in pdf.pages for table in page.extract_tables() for row in table[1:]]
+        self.assertEqual([row['raw_cells'] for row in doc['rows']], originals)
+
+    def test_professional_piano_exception_does_not_accept_other_unreviewed_codes(self):
+        parser = self.require_parser()
+        for code in ('0590B23', '0593B23', '0594B24', '0594X23'):
+            row = ROW.copy()
+            row[2] = code + ' PIANO ACOMPAÑANTE PROFESIONAL'
+            with self.subTest(code=code), self.assertRaises(parser.ParseError):
+                parser.validate_table(HEADER, [row], page=1, document_id=SHA256, cell_bboxes=[BOXES])
+
     def test_october_original_with_signature_below_last_table(self):
         data = FIXTURE.with_name('carm-2026-10-07.pdf').read_bytes()
         self.assertEqual(hashlib.sha256(data).hexdigest(),

@@ -1,0 +1,20 @@
+{
+  "file": "carm-2026-11-04.pdf",
+  "publisher": "Región de Murcia, Consejería de Educación y Formación Profesional",
+  "source_url": "https://www.carm.es/web/descarga?ARCHIVO=ADJVACANTESSEC_SINCUBRIR-209910.pdf&ALIAS=ARCH&IDCONTENIDO=210296&IDTIPO=60&RASTRO=c77$m22725,22759,4254",
+  "announcement_url": "https://rrhheducacion.carm.es/05-11-2026-relacion-vacantes-sin-cubrir-secundaria-y-otros-cuerpos/",
+  "collected_on": "2026-11-17",
+  "document_issued_at": "2026-11-04T12:25:00+01:00",
+  "process_id": "3163",
+  "sha256": "3ab4dc3b979b6746ce98d78440f1a825b7e8242276fe3ab81aebf415e9b0dc32",
+  "byte_size": 159067,
+  "pages": 1,
+  "page_counts": [
+    9
+  ],
+  "rows": 9,
+  "places": 9,
+  "evidence": "Original bytes downloaded directly from the official URL. The rendered page and extracted table agree on nine rows and nine places. Row 8 contains the official 0594B23 PIANO ACOMPAÑANTE PROFESIONAL function. All seven raw cells per row are retained; the dated closing signature is below the table.",
+  "authentication": "Electronic signature and signer identity were not cryptographically authenticated.",
+  "scope": "Existing reviewed seven-column landscape template with the exact additional function code 0594B23. Other unreviewed letter codes remain rejected."
+}
