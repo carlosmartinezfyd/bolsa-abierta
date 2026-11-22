@@ -8,52 +8,9 @@
   "retention": {
     "max_runs": 1024,
     "days": 30,
-    "discarded_runs": 182
+    "discarded_runs": 183
   },
   "runs": [
-    {
-      "run_id": "39947405870:1",
-      "code_sha": "506976751c8512e046ad85db4739018ddefa2648",
-      "trigger": "worker_cron",
-      "request_id": "f4fbb477c04a4af48a35795627ec25ec",
-      "started_at": "2026-10-23T11:38:50.172000Z",
-      "ended_at": "2026-10-23T11:43:34.872000Z",
-      "scheduled_at": "2026-10-23T11:37:37.688000Z",
-      "clock_received_at": "2026-10-23T11:37:38.745000Z",
-      "dispatch_at": "2026-10-23T11:37:41.433000Z",
-      "elapsed_seconds": 284.7,
-      "status": "partial",
-      "phases": {
-        "inventory": {
-          "started_at": "2026-10-23T11:39:32.590000Z",
-          "ended_at": "2026-10-23T11:43:34.398000Z",
-          "elapsed_seconds": 241.803,
-          "status": "partial",
-          "exit_code": 3
-        },
-        "positions": {
-          "started_at": "2026-10-23T11:39:16.715000Z",
-          "ended_at": "2026-10-23T11:39:32.491000Z",
-          "elapsed_seconds": 15.771,
-          "status": "success",
-          "exit_code": 0
-        },
-        "vacancies": {
-          "started_at": "2026-10-23T11:38:50.485000Z",
-          "ended_at": "2026-10-23T11:39:16.604000Z",
-          "elapsed_seconds": 26.114,
-          "status": "partial",
-          "exit_code": 0
-        },
-        "build": {
-          "started_at": "2026-10-23T11:43:34.654000Z",
-          "ended_at": "2026-10-23T11:43:34.784000Z",
-          "elapsed_seconds": 0.125,
-          "status": "success",
-          "exit_code": 0
-        }
-      }
-    },
     {
       "run_id": "39962797735:1",
       "code_sha": "506976751c8512e046ad85db4739018ddefa2648",
@@ -23280,7 +23237,7 @@
       "trigger": "worker_cron",
       "request_id": "92b83dace7e1422ba88852dda9df8314",
       "started_at": "2026-11-22T11:09:00.031000Z",
-      "ended_at": "2026-11-22T11:13:40.100Z",
+      "ended_at": "2026-11-22T11:13:40.100000Z",
       "scheduled_at": "2026-11-22T11:07:37.688000Z",
       "clock_received_at": "2026-11-22T11:07:38.208000Z",
       "dispatch_at": "2026-11-22T11:07:40.091000Z",
@@ -23312,6 +23269,49 @@
           "started_at": "2026-11-22T11:13:39.614000Z",
           "ended_at": "2026-11-22T11:13:39.938000Z",
           "elapsed_seconds": 0.299,
+          "status": "success",
+          "exit_code": 0
+        }
+      }
+    },
+    {
+      "run_id": "45019957284:1",
+      "code_sha": "f1b6492e7d36d799df2b63329eb93317d0af8500",
+      "trigger": "schedule",
+      "request_id": null,
+      "started_at": "2026-11-22T12:00:49.408000Z",
+      "ended_at": "2026-11-22T12:05:29.620Z",
+      "scheduled_at": null,
+      "clock_received_at": null,
+      "dispatch_at": null,
+      "elapsed_seconds": 280.212,
+      "status": "partial",
+      "phases": {
+        "inventory": {
+          "started_at": "2026-11-22T12:01:26.503000Z",
+          "ended_at": "2026-11-22T12:05:28.991000Z",
+          "elapsed_seconds": 242.473,
+          "status": "partial",
+          "exit_code": 3
+        },
+        "positions": {
+          "started_at": "2026-11-22T12:00:59.828000Z",
+          "ended_at": "2026-11-22T12:01:26.382000Z",
+          "elapsed_seconds": 26.539,
+          "status": "success",
+          "exit_code": 0
+        },
+        "vacancies": {
+          "started_at": "2026-11-22T12:00:49.825000Z",
+          "ended_at": "2026-11-22T12:00:59.680000Z",
+          "elapsed_seconds": 9.84,
+          "status": "partial",
+          "exit_code": 0
+        },
+        "build": {
+          "started_at": "2026-11-22T12:05:29.272000Z",
+          "ended_at": "2026-11-22T12:05:29.507000Z",
+          "elapsed_seconds": 0.22,
           "status": "success",
           "exit_code": 0
         }
